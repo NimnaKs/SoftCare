@@ -18,6 +18,7 @@ import me.nimnakse.water_management.users.repository.UserRepository;
 import me.nimnakse.water_management.users.repository.UserRoleRepository;
 import me.nimnakse.water_management.users.service.UserMapper;
 import me.nimnakse.water_management.users.service.UserService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +28,18 @@ public class UserServiceImpl implements UserService {
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public UserServiceImpl(UserRepository userRepository,
                            UserRoleRepository userRoleRepository,
                            RoleRepository roleRepository,
-                           UserMapper userMapper) {
+                           UserMapper userMapper,
+                           PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -43,7 +47,7 @@ public class UserServiceImpl implements UserService {
     public UserRes create(UserCreateReq request) {
         User user = new User();
         user.setUsername(request.nic());
-        user.setPasswordHash(request.passwordHash());
+        user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
         user.setNic(request.nic());
         user.setName(request.name());
         user.setMobileNumber(request.mobileNumber());
