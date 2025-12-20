@@ -72,6 +72,22 @@ public class OrganizationServiceImpl implements OrganizationService {
         return toResponse(organization);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public java.util.List<OrganizationRes> getAll() {
+        return organizationRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    @Override
+    public void delete(Long id) {
+        Organization organization = organizationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+        organizationRepository.delete(organization);
+    }
+
     private void applyOrganizationFields(Organization organization,
                                          String nameEn,
                                          String nameSi,

@@ -2,7 +2,9 @@ package me.nimnakse.water_management.organization.service.impl;
 
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import java.util.List;
 import me.nimnakse.water_management.organization.dto.request.OrgNotificationContactCreateReq;
+import me.nimnakse.water_management.organization.dto.request.OrgNotificationContactUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgNotificationContactRes;
 import me.nimnakse.water_management.organization.entity.OrgNotificationContact;
 import me.nimnakse.water_management.organization.repository.OrgNotificationContactRepository;
@@ -39,8 +41,53 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
         return toResponse(saved);
     }
 
+    @Transactional
+    @Override
+    public OrgNotificationContactRes update(Long organizationId, Long contactId,
+                                            OrgNotificationContactUpdateReq request) {
+        OrgNotificationContact contact = getContactForOrg(organizationId, contactId);
+        contact.setName(request.name());
+        contact.setMobileNumber(request.mobileNumber());
+        contact.setPriorityOrder(request.priorityOrder());
+        return toResponse(contact);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public OrgNotificationContactRes getById(Long organizationId, Long contactId) {
+        OrgNotificationContact contact = getContactForOrg(organizationId, contactId);
+        return toResponse(contact);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<OrgNotificationContactRes> getAll(Long organizationId) {
+        if (!organizationRepository.existsById(organizationId)) {
+            throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
+        }
+        return contactRepository.findByOrganizationId(organizationId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    @Override
+    public void delete(Long organizationId, Long contactId) {
+        OrgNotificationContact contact = getContactForOrg(organizationId, contactId);
+        contactRepository.delete(contact);
+    }
+
     private OrgNotificationContactRes toResponse(OrgNotificationContact contact) {
         return new OrgNotificationContactRes(contact.getId(), contact.getOrganizationId(), contact.getName(),
                 contact.getMobileNumber(), contact.getPriorityOrder());
+    }
+
+    private OrgNotificationContact getContactForOrg(Long organizationId, Long contactId) {
+        OrgNotificationContact contact = contactRepository.findById(contactId)
+                .orElseThrow(() -> new NotFoundException("Notification contact not found", ErrorCode.NOT_FOUND));
+        if (!contact.getOrganizationId().equals(organizationId)) {
+            throw new NotFoundException("Notification contact not found", ErrorCode.NOT_FOUND);
+        }
+        return contact;
     }
 }
