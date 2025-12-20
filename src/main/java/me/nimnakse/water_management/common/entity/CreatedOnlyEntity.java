@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
+
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,5 +25,5 @@ public abstract class CreatedOnlyEntity {
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 }

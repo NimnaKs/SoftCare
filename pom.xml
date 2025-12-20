@@ -4,10 +4,11 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
+	<!-- ✅ Java 17 compatible Spring Boot -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.1</version>
+		<version>3.5.0</version>
 		<relativePath/>
 	</parent>
 
@@ -25,7 +26,7 @@
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<lombok.version>1.18.30</lombok.version>
 		<lombok.mapstruct.binding.version>0.2.0</lombok.mapstruct.binding.version>
-		<springdoc.version>2.7.0</springdoc.version>
+		<springdoc.version>2.8.13</springdoc.version>
 	</properties>
 
 	<dependencies>
@@ -34,14 +35,17 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
@@ -54,7 +58,7 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Utils -->
+		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -62,7 +66,7 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- MapStruct API -->
+		<!-- MapStruct -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>
 			<artifactId>mapstruct</artifactId>
@@ -75,12 +79,14 @@
 			<artifactId>jjwt-api</artifactId>
 			<version>${jjwt.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-impl</artifactId>
 			<version>${jjwt.version}</version>
 			<scope>runtime</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-jackson</artifactId>
@@ -88,7 +94,7 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- OpenAPI/Swagger UI -->
+		<!-- ✅ OpenAPI / Swagger UI (fixes SecuritySchemeType issue) -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -144,7 +150,7 @@
 							<version>${lombok.version}</version>
 						</path>
 
-						<!-- IMPORTANT: Lombok + MapStruct compatibility -->
+						<!-- Lombok + MapStruct compatibility -->
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok-mapstruct-binding</artifactId>

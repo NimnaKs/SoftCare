@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.connections.dto.response;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 
@@ -28,7 +29,7 @@ public record ConnectionRes(
         Long tariffId,
         BigDecimal connectionFee,
         Long invoiceId,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

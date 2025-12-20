@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.employees.dto.response;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import me.nimnakse.water_management.employees.entity.EmployeeStatus;
@@ -17,7 +18,7 @@ public record EmployeeRes(
         String designation,
         String profilePhotoUrl,
         EmployeeStatus status,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

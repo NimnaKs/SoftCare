@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.members.dto.response;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import me.nimnakse.water_management.members.entity.MemberType;
 
@@ -19,7 +20,7 @@ public record MemberRes(
         String dpNicRearUrl,
         String signatureUrl,
         String brcDocumentUrl,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }
