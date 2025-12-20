@@ -31,7 +31,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/health/**").permitAll()
+                        .requestMatchers(
+                                "/auth/**",
+                                "/health/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .requestMatchers("/roles/**", "/users/**").hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .anyRequest().authenticated()
                 )
