@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.roles.entity;
 
 public enum RoleAppScope {
+    TEMP,
     METER_APP,
     AGENCY_APP,
     BRANCH_APP,
