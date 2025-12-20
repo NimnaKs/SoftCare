@@ -1,5 +1,7 @@
 package me.nimnakse.water_management.employees.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.employees.dto.request.EmployeeCreateReq;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/employees")
+@Tag(name = "Employees", description = "Employee management operations")
 public class EmployeeController {
     private final EmployeeService employeeService;
 
@@ -26,23 +29,27 @@ public class EmployeeController {
     }
 
     @PostMapping
+    @Operation(summary = "Create employee", description = "Creates a new employee record.")
     public ResponseEntity<ApiResponse<EmployeeRes>> create(@Valid @RequestBody EmployeeCreateReq request) {
         return ResponseEntity.ok(ApiResponse.success(employeeService.create(request)));
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update employee", description = "Updates an existing employee.")
     public ResponseEntity<ApiResponse<EmployeeRes>> update(@PathVariable Long id,
                                                            @Valid @RequestBody EmployeeUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(employeeService.update(id, request)));
     }
 
     @PatchMapping("/{id}/deactivate")
+    @Operation(summary = "Deactivate employee", description = "Marks an employee as deactivated.")
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         employeeService.deactivate(id);
         return ResponseEntity.ok(ApiResponse.success("Employee deactivated", null));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get employee", description = "Fetches an employee by identifier.")
     public ResponseEntity<ApiResponse<EmployeeRes>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(employeeService.getById(id)));
     }

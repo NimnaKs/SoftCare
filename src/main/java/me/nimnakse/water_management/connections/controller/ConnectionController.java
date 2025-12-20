@@ -1,5 +1,7 @@
 package me.nimnakse.water_management.connections.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/connections")
+@Tag(name = "Connections", description = "Water connection operations")
 public class ConnectionController {
     private final ConnectionService connectionService;
 
@@ -24,11 +27,13 @@ public class ConnectionController {
     }
 
     @PostMapping
+    @Operation(summary = "Create connection", description = "Creates a new water connection.")
     public ResponseEntity<ApiResponse<ConnectionRes>> create(@Valid @RequestBody ConnectionCreateReq request) {
         return ResponseEntity.ok(ApiResponse.success(connectionService.create(request)));
     }
 
     @GetMapping("/search")
+    @Operation(summary = "Search connections", description = "Searches for connections by membership, account, NIC, or phone.")
     public ResponseEntity<ApiResponse<ConnectionSearchRes>> search(@RequestParam(required = false) String membershipCode,
                                                                    @RequestParam(required = false) String accountNumber,
                                                                    @RequestParam(required = false) String nicNumber,
