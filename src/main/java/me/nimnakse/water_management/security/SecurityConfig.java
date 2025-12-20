@@ -35,8 +35,7 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/health/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui/**"
                         ).permitAll()
                         .requestMatchers("/roles/**", "/users/**").hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .anyRequest().authenticated()
