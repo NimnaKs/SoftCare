@@ -9,14 +9,12 @@ import me.nimnakse.water_management.auth.dto.RefreshReq;
 import me.nimnakse.water_management.auth.service.AuthService;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "Authentication and token management")
+@CrossOrigin
 public class AuthController {
     private final AuthService authService;
 
