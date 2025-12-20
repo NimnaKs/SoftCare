@@ -28,5 +28,5 @@ public class Role {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "app_scope", nullable = false, length = 20)
-    private RoleAppScope appScope = RoleAppScope.WEB;
+    private RoleAppScope appScope = RoleAppScope.TEMP;
 }
