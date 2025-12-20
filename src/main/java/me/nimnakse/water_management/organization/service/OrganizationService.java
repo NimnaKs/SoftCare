@@ -10,4 +10,8 @@ public interface OrganizationService {
     OrganizationRes update(Long id, OrganizationUpdateReq request);
 
     OrganizationRes getById(Long id);
+
+    java.util.List<OrganizationRes> getAll();
+
+    void delete(Long id);
 }

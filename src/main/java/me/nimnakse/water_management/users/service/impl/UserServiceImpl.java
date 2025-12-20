@@ -8,6 +8,7 @@ import me.nimnakse.water_management.roles.dto.RoleRes;
 import me.nimnakse.water_management.roles.entity.Role;
 import me.nimnakse.water_management.roles.entity.RoleAppScope;
 import me.nimnakse.water_management.roles.repository.RoleRepository;
+import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
 import me.nimnakse.water_management.users.dto.response.UserRes;
@@ -29,22 +30,26 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final OrgUnitRepository orgUnitRepository;
 
     public UserServiceImpl(UserRepository userRepository,
                            UserRoleRepository userRoleRepository,
                            RoleRepository roleRepository,
                            UserMapper userMapper,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           OrgUnitRepository orgUnitRepository) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.orgUnitRepository = orgUnitRepository;
     }
 
     @Transactional
     @Override
     public UserRes create(UserCreateReq request) {
+        validateOrgUnit(request.orgUnitId());
         User user = new User();
         user.setUsername(request.nic());
         user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
@@ -71,6 +76,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
+        validateOrgUnit(request.orgUnitId());
         user.setNic(request.nic());
         user.setUsername(request.nic());
         user.setName(request.name());
@@ -127,6 +133,12 @@ public class UserServiceImpl implements UserService {
                 .map(role -> new UserRole(user, role))
                 .toList();
         userRoleRepository.saveAll(mappings);
+    }
+
+    private void validateOrgUnit(Long orgUnitId) {
+        if (orgUnitId != null && !orgUnitRepository.existsById(orgUnitId)) {
+            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+        }
     }
 
     private UserRes buildUserResponse(User user, List<Role> roles) {
