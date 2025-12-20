@@ -37,7 +37,23 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**"
                         ).permitAll()
-                        .requestMatchers("/roles/**", "/users/**", "/water-projects/**").hasAuthority("APP_SCOPE_ADMIN_PORTAL")
+                        .requestMatchers(
+                                "/roles/**",
+                                "/users/**",
+                                "/water-projects/**",
+                                "/org-units/**",
+                                "/organizations/**",
+                                "/members/**",
+                                "/employees/**",
+                                "/address-lines/**",
+                                "/connections/**"
+                                ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
+                        .requestMatchers(
+                                "/members/**",
+                                "/employees/**",
+                                "/address-lines/**",
+                                "/connections/**"
+                        ).hasAuthority("APP_SCOPE_BRANCH_APP")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
