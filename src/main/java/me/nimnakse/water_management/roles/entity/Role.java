@@ -14,7 +14,7 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "roles")
 public class Role extends BaseEntity {
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, unique = true)
     private String name;
 
     @Column(length = 255)

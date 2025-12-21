@@ -49,7 +49,8 @@ public class RoleServiceImpl implements RoleService {
         role.setName(request.name());
         role.setDescription(request.description());
         role.setAppScope(request.appScope());
-        return toRes(role);
+        Role saved = roleRepository.save(role);
+        return toRes(saved);
     }
 
     @Override
@@ -57,6 +58,8 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
         role.setDeletedAt(Instant.now());
+        role.setName(role.getName() + "_deleted_" + id);
+        roleRepository.save(role);
     }
 
     private RoleRes toRes(Role role) {
