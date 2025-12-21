@@ -53,7 +53,7 @@ public class SuperAdminSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        Role role = roleRepository.findByName(SUPER_ADMIN_ROLE)
+        Role role = roleRepository.findByNameAndDeletedAtIsNull(SUPER_ADMIN_ROLE)
                 .orElseGet(this::createSuperAdminRole);
 
         User user = userRepository.findByUsername(username)

@@ -2,6 +2,7 @@ package me.nimnakse.water_management.organization.service.impl;
 
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import java.time.Instant;
 import java.util.List;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerCreateReq;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerUpdateReq;
@@ -27,7 +28,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     @Transactional
     @Override
     public AuthorizedOfficerRes create(Long organizationId, AuthorizedOfficerCreateReq request) {
-        if (!organizationRepository.existsById(organizationId)) {
+        if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
             throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
         }
         AuthorizedOfficer officer = new AuthorizedOfficer();
@@ -67,10 +68,10 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     @Transactional(readOnly = true)
     @Override
     public List<AuthorizedOfficerRes> getAll(Long organizationId) {
-        if (!organizationRepository.existsById(organizationId)) {
+        if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
             throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
         }
-        return authorizedOfficerRepository.findByOrganizationId(organizationId).stream()
+        return authorizedOfficerRepository.findByOrganizationIdAndDeletedAtIsNull(organizationId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -79,7 +80,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     @Override
     public void delete(Long organizationId, Long officerId) {
         AuthorizedOfficer officer = getOfficerForOrg(organizationId, officerId);
-        authorizedOfficerRepository.delete(officer);
+        officer.setDeletedAt(Instant.now());
     }
 
     private AuthorizedOfficerRes toResponse(AuthorizedOfficer officer) {
@@ -89,7 +90,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     }
 
     private AuthorizedOfficer getOfficerForOrg(Long organizationId, Long officerId) {
-        AuthorizedOfficer officer = authorizedOfficerRepository.findById(officerId)
+        AuthorizedOfficer officer = authorizedOfficerRepository.findByIdAndDeletedAtIsNull(officerId)
                 .orElseThrow(() -> new NotFoundException("Authorized officer not found", ErrorCode.NOT_FOUND));
         if (!officer.getOrganizationId().equals(organizationId)) {
             throw new NotFoundException("Authorized officer not found", ErrorCode.NOT_FOUND);

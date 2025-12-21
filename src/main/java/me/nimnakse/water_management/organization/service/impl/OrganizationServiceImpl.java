@@ -3,6 +3,7 @@ package me.nimnakse.water_management.organization.service.impl;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import java.time.Instant;
 import me.nimnakse.water_management.organization.dto.request.OrganizationCreateReq;
 import me.nimnakse.water_management.organization.dto.request.OrganizationUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrganizationRes;
@@ -36,7 +37,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
             throw new BadRequestException("Organizations can only be created for branch org units");
         }
-        if (organizationRepository.findByOrgUnitId(request.orgUnitId()).isPresent()) {
+        if (organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(request.orgUnitId()).isPresent()) {
             throw new BadRequestException("Organization already exists for this org unit");
         }
 
@@ -55,8 +56,21 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional
     @Override
     public OrganizationRes update(Long id, OrganizationUpdateReq request) {
-        Organization organization = organizationRepository.findById(id)
+        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+        if (!organization.getOrgUnitId().equals(request.orgUnitId())) {
+            OrgUnit orgUnit = orgUnitRepository.findById(request.orgUnitId())
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+            if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
+                throw new BadRequestException("Organizations can only be created for branch org units");
+            }
+            organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(request.orgUnitId())
+                    .filter(existing -> !existing.getId().equals(organization.getId()))
+                    .ifPresent(existing -> {
+                        throw new BadRequestException("Organization already exists for this org unit");
+                    });
+            organization.setOrgUnitId(request.orgUnitId());
+        }
         applyOrganizationFields(organization, request.nameEn(), request.nameSi(), request.nameTa(),
                 request.addressEn(), request.addressSi(), request.addressTa(), request.postalCode(),
                 request.registrationNumber(), request.email(), request.mobileNumber(),
@@ -67,7 +81,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional(readOnly = true)
     @Override
     public OrganizationRes getById(Long id) {
-        Organization organization = organizationRepository.findById(id)
+        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
         return toResponse(organization);
     }
@@ -75,7 +89,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional(readOnly = true)
     @Override
     public java.util.List<OrganizationRes> getAll() {
-        return organizationRepository.findAll().stream()
+        return organizationRepository.findAllByDeletedAtIsNull().stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -83,9 +97,9 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional
     @Override
     public void delete(Long id) {
-        Organization organization = organizationRepository.findById(id)
+        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
-        organizationRepository.delete(organization);
+        organization.setDeletedAt(Instant.now());
     }
 
     private void applyOrganizationFields(Organization organization,

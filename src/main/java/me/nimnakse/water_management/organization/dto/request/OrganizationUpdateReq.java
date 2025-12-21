@@ -2,8 +2,10 @@ package me.nimnakse.water_management.organization.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record OrganizationUpdateReq(
+        @NotNull Long orgUnitId,
         @NotBlank String nameEn,
         String nameSi,
         String nameTa,
