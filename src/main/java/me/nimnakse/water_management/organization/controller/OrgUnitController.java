@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitCreateReq;
+import me.nimnakse.water_management.organization.dto.request.OrgUnitUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitRes;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitTreeRes;
 import me.nimnakse.water_management.organization.service.OrgUnitService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,5 +46,12 @@ public class OrgUnitController {
     @Operation(summary = "Get org unit", description = "Fetches an organization unit by identifier.")
     public ResponseEntity<ApiResponse<OrgUnitRes>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.getById(id)));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update org unit", description = "Updates an organization unit by identifier.")
+    public ResponseEntity<ApiResponse<OrgUnitRes>> update(@PathVariable Long id,
+                                                         @Valid @RequestBody OrgUnitUpdateReq request) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.update(id, request)));
     }
 }

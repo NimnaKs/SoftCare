@@ -9,6 +9,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitCreateReq;
+import me.nimnakse.water_management.organization.dto.request.OrgUnitUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitRes;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitTreeRes;
 import me.nimnakse.water_management.organization.entity.OrgUnit;
@@ -89,6 +90,25 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         OrgUnit orgUnit = orgUnitRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
         return toResponse(orgUnit);
+    }
+
+    @Transactional
+    @Override
+    public OrgUnitRes update(Long id, OrgUnitUpdateReq request) {
+        OrgUnit orgUnit = orgUnitRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+        validateParent(request.level(), request.parentId());
+        if (request.waterProjectId() != null && !waterProjectRepository.existsById(request.waterProjectId())) {
+            throw new NotFoundException("Water project not found", ErrorCode.NOT_FOUND);
+        }
+
+        orgUnit.setName(request.name());
+        orgUnit.setLevel(request.level());
+        orgUnit.setParentId(request.parentId());
+        orgUnit.setWaterProjectId(request.waterProjectId());
+
+        OrgUnit saved = orgUnitRepository.save(orgUnit);
+        return toResponse(saved);
     }
 
     private OrgUnitRes toResponse(OrgUnit orgUnit) {
