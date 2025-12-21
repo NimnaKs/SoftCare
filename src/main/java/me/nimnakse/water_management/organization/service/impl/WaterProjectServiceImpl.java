@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.organization.service.impl;
 
+import java.time.Instant;
 import java.util.List;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -36,7 +37,7 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Transactional
     @Override
     public WaterProjectRes update(Long id, WaterProjectUpdateReq request) {
-        WaterProject project = waterProjectRepository.findById(id)
+        WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
         project.setName(request.name());
         project.setStatus(request.status());
@@ -48,7 +49,7 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Transactional(readOnly = true)
     @Override
     public WaterProjectRes getById(Long id) {
-        WaterProject project = waterProjectRepository.findById(id)
+        WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
         return toResponse(project);
     }
@@ -56,7 +57,7 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Transactional(readOnly = true)
     @Override
     public List<WaterProjectRes> getAll() {
-        return waterProjectRepository.findAll().stream()
+        return waterProjectRepository.findAllByDeletedAtIsNull().stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -64,9 +65,9 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Transactional
     @Override
     public void delete(Long id) {
-        WaterProject project = waterProjectRepository.findById(id)
+        WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
-        waterProjectRepository.delete(project);
+        project.setDeletedAt(Instant.now());
     }
 
     private WaterProjectRes toResponse(WaterProject project) {

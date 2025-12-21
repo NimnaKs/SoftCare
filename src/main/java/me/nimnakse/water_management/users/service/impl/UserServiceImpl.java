@@ -8,6 +8,7 @@ import me.nimnakse.water_management.roles.dto.RoleRes;
 import me.nimnakse.water_management.roles.entity.Role;
 import me.nimnakse.water_management.roles.entity.RoleAppScope;
 import me.nimnakse.water_management.roles.repository.RoleRepository;
+import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
@@ -49,7 +50,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public UserRes create(UserCreateReq request) {
-        validateOrgUnit(request.orgUnitId());
+        OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         User user = new User();
         user.setUsername(request.nic());
         user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
@@ -59,7 +60,7 @@ public class UserServiceImpl implements UserService {
         user.setSecondaryContactNumber(request.secondaryContactNumber());
         user.setAddress(request.address());
         user.setProfilePhotoUrl(request.profilePhotoUrl());
-        user.setOrgUnitId(request.orgUnitId());
+        user.setOrgUnit(orgUnit);
         user.setStatus(UserStatus.ACTIVE);
 
         User savedUser = userRepository.save(user);
@@ -76,7 +77,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
-        validateOrgUnit(request.orgUnitId());
+        OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         user.setNic(request.nic());
         user.setUsername(request.nic());
         user.setName(request.name());
@@ -84,7 +85,7 @@ public class UserServiceImpl implements UserService {
         user.setSecondaryContactNumber(request.secondaryContactNumber());
         user.setAddress(request.address());
         user.setProfilePhotoUrl(request.profilePhotoUrl());
-        user.setOrgUnitId(request.orgUnitId());
+        user.setOrgUnit(orgUnit);
 
         List<Role> roles = loadAndValidateRoles(request.roleIds(), request.appScope());
         userRoleRepository.deleteByIdUserId(user.getId());
@@ -117,7 +118,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<Role> loadAndValidateRoles(List<Long> roleIds, RoleAppScope appScope) {
-        List<Role> roles = roleRepository.findByIdIn(roleIds);
+        List<Role> roles = roleRepository.findByIdInAndDeletedAtIsNull(roleIds);
         if (roles.size() != roleIds.size()) {
             throw new NotFoundException("One or more roles not found", ErrorCode.ROLE_NOT_FOUND);
         }
@@ -135,10 +136,12 @@ public class UserServiceImpl implements UserService {
         userRoleRepository.saveAll(mappings);
     }
 
-    private void validateOrgUnit(Long orgUnitId) {
-        if (orgUnitId != null && !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+    private OrgUnit resolveOrgUnit(Long orgUnitId) {
+        if (orgUnitId == null) {
+            return null;
         }
+        return orgUnitRepository.findById(orgUnitId)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
     }
 
     private UserRes buildUserResponse(User user, List<Role> roles) {

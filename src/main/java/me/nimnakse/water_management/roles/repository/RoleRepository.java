@@ -8,9 +8,13 @@ import me.nimnakse.water_management.roles.entity.RoleAppScope;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RoleRepository extends JpaRepository<Role, Long> {
-    List<Role> findByIdIn(Collection<Long> ids);
+    List<Role> findByIdInAndDeletedAtIsNull(Collection<Long> ids);
 
-    List<Role> findByAppScope(RoleAppScope appScope);
+    List<Role> findByAppScopeAndDeletedAtIsNull(RoleAppScope appScope);
 
-    Optional<Role> findByName(String name);
+    Optional<Role> findByNameAndDeletedAtIsNull(String name);
+
+    Optional<Role> findByIdAndDeletedAtIsNull(Long id);
+
+    List<Role> findAllByDeletedAtIsNull();
 }

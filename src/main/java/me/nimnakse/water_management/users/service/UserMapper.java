@@ -10,7 +10,9 @@ import org.mapstruct.Mapping;
 @Mapper(config = CommonMapperConfig.class)
 public interface UserMapper {
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "orgUnitId", source = "orgUnit.id")
     UserRes toUserRes(User user);
 
+    @Mapping(target = "orgUnitId", source = "orgUnit.id")
     UserMiniInternalDto toMiniInternal(User user);
 }

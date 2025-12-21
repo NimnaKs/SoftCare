@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.roles.service;
 
+import java.time.Instant;
 import java.util.List;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -20,14 +21,14 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public List<RoleRes> getRoles() {
-        return roleRepository.findAll().stream()
+        return roleRepository.findAllByDeletedAtIsNull().stream()
                 .map(this::toRes)
                 .toList();
     }
 
     @Override
     public RoleRes getRole(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
         return toRes(role);
     }
@@ -43,7 +44,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public RoleRes update(Long id, RoleUpdateReq request) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
         role.setName(request.name());
         role.setDescription(request.description());
@@ -53,9 +54,9 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public void delete(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
-        roleRepository.delete(role);
+        role.setDeletedAt(Instant.now());
     }
 
     private RoleRes toRes(Role role) {
