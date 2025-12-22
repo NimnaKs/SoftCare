@@ -43,6 +43,7 @@ public class WaterProjectServiceImpl implements WaterProjectService {
         project.setStatus(request.status());
         project.setDepartmentOrgName(request.departmentOrgName());
         project.setRegisteredAt(request.registeredAt());
+        project = waterProjectRepository.save(project);
         return toResponse(project);
     }
 

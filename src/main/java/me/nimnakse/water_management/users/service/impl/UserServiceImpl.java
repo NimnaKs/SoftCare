@@ -80,13 +80,15 @@ public class UserServiceImpl implements UserService {
 
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         user.setNic(request.nic());
-        user.setUsername(request.nic());
+        user.setUsername(request.username());
         user.setName(request.name());
         user.setMobileNumber(request.mobileNumber());
         user.setSecondaryContactNumber(request.secondaryContactNumber());
         user.setAddress(request.address());
         user.setProfilePhotoUrl(request.profilePhotoUrl());
         user.setOrgUnit(orgUnit);
+
+        user = userRepository.save(user);
 
         List<Role> roles = loadAndValidateRoles(request.roleIds(), request.appScope());
         userRoleRepository.deleteByIdUserId(user.getId());
@@ -116,6 +118,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
         user.setStatus(UserStatus.DEACTIVATED);
+        userRepository.save(user);
     }
 
     @Transactional
@@ -124,6 +127,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
         user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
     }
 
     @Transactional
@@ -132,6 +136,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        userRepository.save(user);
     }
 
     private List<Role> loadAndValidateRoles(List<Long> roleIds, RoleAppScope appScope) {
