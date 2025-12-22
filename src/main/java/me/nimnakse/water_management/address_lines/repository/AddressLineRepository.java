@@ -36,6 +36,12 @@ public interface AddressLineRepository extends JpaRepository<AddressLine, Long> 
 
     List<AddressLine> findByNameContainingIgnoreCase(String name);
 
+    List<AddressLine> findByOrgUnitId(Long orgUnitId);
+
+    List<AddressLine> findByOrgUnitIdAndNameContainingIgnoreCase(Long orgUnitId, String name);
+
+    Optional<AddressLine> findByIdAndOrgUnitId(Long id, Long orgUnitId);
+
     boolean existsByParentLine1IdOrParentLine2IdOrParentLine3Id(Long parentLine1Id,
                                                                 Long parentLine2Id,
                                                                 Long parentLine3Id);

@@ -16,6 +16,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AddressLineServiceImpl implements AddressLineService {
     private final AddressLineRepository addressLineRepository;
     private final OrgUnitRepository orgUnitRepository;
+    private final OrganizationAccessService organizationAccessService;
 
     public AddressLineServiceImpl(AddressLineRepository addressLineRepository,
-                                  OrgUnitRepository orgUnitRepository) {
+                                  OrgUnitRepository orgUnitRepository,
+                                  OrganizationAccessService organizationAccessService) {
         this.addressLineRepository = addressLineRepository;
         this.orgUnitRepository = orgUnitRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional
@@ -62,7 +66,11 @@ public class AddressLineServiceImpl implements AddressLineService {
         if (query == null || query.isBlank()) {
             throw new BadRequestException("Search query is required");
         }
-        return addressLineRepository.findByNameContainingIgnoreCase(query).stream()
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        List<AddressLine> lines = orgUnitId == null
+                ? addressLineRepository.findByNameContainingIgnoreCase(query)
+                : addressLineRepository.findByOrgUnitIdAndNameContainingIgnoreCase(orgUnitId, query);
+        return lines.stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -70,22 +78,19 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Transactional(readOnly = true)
     @Override
     public AddressLineRes getById(Long id) {
-        AddressLine line = addressLineRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        AddressLine line = findLine(id, orgUnitId);
         return toResponse(line);
     }
 
     @Transactional(readOnly = true)
     @Override
     public AddressLineHierarchyRes getHierarchy(Long id) {
-        AddressLine line = addressLineRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
-        AddressLine line1 = line.getParentLine1Id() == null ? null : addressLineRepository.findById(line.getParentLine1Id())
-                .orElseThrow(() -> new NotFoundException("Parent line 1 not found", ErrorCode.NOT_FOUND));
-        AddressLine line2 = line.getParentLine2Id() == null ? null : addressLineRepository.findById(line.getParentLine2Id())
-                .orElseThrow(() -> new NotFoundException("Parent line 2 not found", ErrorCode.NOT_FOUND));
-        AddressLine line3 = line.getParentLine3Id() == null ? null : addressLineRepository.findById(line.getParentLine3Id())
-                .orElseThrow(() -> new NotFoundException("Parent line 3 not found", ErrorCode.NOT_FOUND));
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        AddressLine line = findLine(id, orgUnitId);
+        AddressLine line1 = findLineOrNull(line.getParentLine1Id(), orgUnitId, "Parent line 1 not found");
+        AddressLine line2 = findLineOrNull(line.getParentLine2Id(), orgUnitId, "Parent line 2 not found");
+        AddressLine line3 = findLineOrNull(line.getParentLine3Id(), orgUnitId, "Parent line 3 not found");
         return new AddressLineHierarchyRes(toResponse(line), toResponseOrNull(line1),
                 toResponseOrNull(line2), toResponseOrNull(line3));
     }
@@ -93,7 +98,10 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Transactional(readOnly = true)
     @Override
     public List<AddressLineHierarchyRes> getHierarchies() {
-        List<AddressLine> lines = addressLineRepository.findAll();
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        List<AddressLine> lines = orgUnitId == null
+                ? addressLineRepository.findAll()
+                : addressLineRepository.findByOrgUnitId(orgUnitId);
         Map<Long, AddressLine> linesById = lines.stream()
                 .collect(Collectors.toMap(AddressLine::getId, Function.identity()));
         return lines.stream()
@@ -216,6 +224,27 @@ public class AddressLineServiceImpl implements AddressLineService {
         if (parent.getLevel() != expectedLevel) {
             throw new BadRequestException("Parent line level mismatch");
         }
+    }
+
+    private AddressLine findLine(Long id, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return addressLineRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+        }
+        return addressLineRepository.findByIdAndOrgUnitId(id, orgUnitId)
+                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+    }
+
+    private AddressLine findLineOrNull(Long id, Long orgUnitId, String notFoundMessage) {
+        if (id == null) {
+            return null;
+        }
+        if (orgUnitId == null) {
+            return addressLineRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
+        }
+        return addressLineRepository.findByIdAndOrgUnitId(id, orgUnitId)
+                .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
     }
 
     private void validateOrgUnit(Long orgUnitId) {

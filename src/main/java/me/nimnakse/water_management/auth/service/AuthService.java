@@ -3,6 +3,9 @@ package me.nimnakse.water_management.auth.service;
 import io.jsonwebtoken.Claims;
 import me.nimnakse.water_management.auth.dto.AuthRes;
 import me.nimnakse.water_management.common.exception.BadRequestException;
+import me.nimnakse.water_management.organization.entity.OrgUnit;
+import me.nimnakse.water_management.organization.repository.OrganizationRepository;
+import me.nimnakse.water_management.roles.entity.RoleAppScope;
 import me.nimnakse.water_management.security.CustomUserDetailsService;
 import me.nimnakse.water_management.security.JwtService;
 import me.nimnakse.water_management.security.UserPrincipal;
@@ -18,15 +21,18 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
     private final JwtService jwtService;
+    private final OrganizationRepository organizationRepository;
     private final long accessTokenValidityMs;
 
     public AuthService(AuthenticationManager authenticationManager,
                        CustomUserDetailsService userDetailsService,
                        JwtService jwtService,
+                       OrganizationRepository organizationRepository,
                        @Value("${security.jwt.access-token-validity-ms}") long accessTokenValidityMs) {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.jwtService = jwtService;
+        this.organizationRepository = organizationRepository;
         this.accessTokenValidityMs = accessTokenValidityMs;
     }
 
@@ -35,7 +41,8 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(username, password)
         );
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        String accessToken = jwtService.generateAccessToken(principal);
+        Long organizationId = resolveOrganizationId(principal);
+        String accessToken = jwtService.generateAccessToken(principal, organizationId);
         String refreshToken = jwtService.generateRefreshToken(principal);
         return new AuthRes(accessToken, refreshToken, "Bearer", accessTokenValidityMs / 1000);
     }
@@ -47,8 +54,22 @@ public class AuthService {
         }
         UserDetails userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
         UserPrincipal principal = (UserPrincipal) userDetails;
-        String accessToken = jwtService.generateAccessToken(principal);
+        Long organizationId = resolveOrganizationId(principal);
+        String accessToken = jwtService.generateAccessToken(principal, organizationId);
         String newRefreshToken = jwtService.generateRefreshToken(principal);
         return new AuthRes(accessToken, newRefreshToken, "Bearer", accessTokenValidityMs / 1000);
+    }
+
+    private Long resolveOrganizationId(UserPrincipal principal) {
+        if (!principal.getAppScopes().contains(RoleAppScope.BRANCH_APP)) {
+            return null;
+        }
+        OrgUnit orgUnit = principal.getUser().getOrgUnit();
+        if (orgUnit == null) {
+            throw new BadRequestException("Branch user must be assigned to an org unit");
+        }
+        return organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(orgUnit.getId())
+                .map(org -> org.getId())
+                .orElseThrow(() -> new BadRequestException("Organization not found for branch org unit"));
     }
 }

@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.members.service.impl;
 
 import java.util.List;
+import java.util.Optional;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -15,6 +16,7 @@ import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.members.service.MemberService;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberServiceImpl implements MemberService {
     private final MemberRepository memberRepository;
     private final OrgUnitRepository orgUnitRepository;
+    private final OrganizationAccessService organizationAccessService;
 
     public MemberServiceImpl(MemberRepository memberRepository,
-                             OrgUnitRepository orgUnitRepository) {
+                             OrgUnitRepository orgUnitRepository,
+                             OrganizationAccessService organizationAccessService) {
         this.memberRepository = memberRepository;
         this.orgUnitRepository = orgUnitRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional
@@ -67,14 +72,16 @@ public class MemberServiceImpl implements MemberService {
     public MemberRes getById(Long id) {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(member.getOrgUnitId());
         return toResponse(member);
     }
 
     @Transactional(readOnly = true)
     @Override
     public List<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
-            return memberRepository.findByMembershipCode(membershipCode)
+            return findByMembershipCode(membershipCode, orgUnitId)
                     .map(this::toResponse)
                     .stream()
                     .toList();
@@ -82,15 +89,15 @@ public class MemberServiceImpl implements MemberService {
         if (nicNumber != null && !nicNumber.isBlank()) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
                     .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
-            return memberRepository.findByNicNew(result.newNic())
+            return findByNicNew(result.newNic(), orgUnitId)
                     .map(this::toResponse)
                     .map(List::of)
-                    .orElseGet(() -> memberRepository.findByNicOldStartingWith(result.numericKey()).stream()
+                    .orElseGet(() -> findByNicOldStartingWith(result.numericKey(), orgUnitId).stream()
                             .map(this::toResponse)
                             .toList());
         }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
-            return memberRepository.findByMobileNumber(mobileNumber).stream()
+            return findByMobileNumber(mobileNumber, orgUnitId).stream()
                     .map(this::toResponse)
                     .toList();
         }
@@ -177,6 +184,41 @@ public class MemberServiceImpl implements MemberService {
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
             throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByMembershipCode(membershipCode);
+        }
+        return memberRepository.findByMembershipCodeAndOrgUnitId(membershipCode, orgUnitId);
+    }
+
+    private Optional<Member> findByNicNew(String nicNew, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByNicNew(nicNew);
+        }
+        return memberRepository.findByNicNewAndOrgUnitId(nicNew, orgUnitId);
+    }
+
+    private List<Member> findByNicOldStartingWith(String nicOld, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByNicOldStartingWith(nicOld);
+        }
+        return memberRepository.findByNicOldStartingWithAndOrgUnitId(nicOld, orgUnitId);
+    }
+
+    private List<Member> findByMobileNumber(String mobileNumber, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByMobileNumber(mobileNumber);
+        }
+        return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+    }
+
+    private void enforceOrganizationScope(Long memberOrgUnitId) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        if (orgUnitId != null && !orgUnitId.equals(memberOrgUnitId)) {
+            throw new NotFoundException("Member not found", ErrorCode.NOT_FOUND);
         }
     }
 
