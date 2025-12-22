@@ -55,6 +55,12 @@ public class AddressLineController {
         return ResponseEntity.ok(ApiResponse.success(addressLineService.getHierarchy(id)));
     }
 
+    @GetMapping("/hierarchies")
+    @Operation(summary = "List address hierarchies", description = "Returns hierarchies for all address lines.")
+    public ResponseEntity<ApiResponse<List<AddressLineHierarchyRes>>> getHierarchies() {
+        return ResponseEntity.ok(ApiResponse.success(addressLineService.getHierarchies()));
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Update address line", description = "Updates an address line entry.")
     public ResponseEntity<ApiResponse<AddressLineRes>> update(@PathVariable Long id,
