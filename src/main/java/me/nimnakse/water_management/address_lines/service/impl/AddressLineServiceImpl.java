@@ -1,6 +1,10 @@
 package me.nimnakse.water_management.address_lines.service.impl;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import me.nimnakse.water_management.address_lines.dto.request.AddressLineCreateReq;
 import me.nimnakse.water_management.address_lines.dto.request.AddressLineUpdateReq;
 import me.nimnakse.water_management.address_lines.dto.response.AddressLineHierarchyRes;
@@ -84,6 +88,24 @@ public class AddressLineServiceImpl implements AddressLineService {
                 .orElseThrow(() -> new NotFoundException("Parent line 3 not found", ErrorCode.NOT_FOUND));
         return new AddressLineHierarchyRes(toResponse(line), toResponseOrNull(line1),
                 toResponseOrNull(line2), toResponseOrNull(line3));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<AddressLineHierarchyRes> getHierarchies() {
+        List<AddressLine> lines = addressLineRepository.findAll();
+        Map<Long, AddressLine> linesById = lines.stream()
+                .collect(Collectors.toMap(AddressLine::getId, Function.identity()));
+        return lines.stream()
+                .sorted(Comparator.comparing(AddressLine::getId))
+                .map(line -> {
+                    AddressLine line1 = line.getParentLine1Id() == null ? null : linesById.get(line.getParentLine1Id());
+                    AddressLine line2 = line.getParentLine2Id() == null ? null : linesById.get(line.getParentLine2Id());
+                    AddressLine line3 = line.getParentLine3Id() == null ? null : linesById.get(line.getParentLine3Id());
+                    return new AddressLineHierarchyRes(toResponse(line), toResponseOrNull(line1),
+                            toResponseOrNull(line2), toResponseOrNull(line3));
+                })
+                .toList();
     }
 
     @Transactional
