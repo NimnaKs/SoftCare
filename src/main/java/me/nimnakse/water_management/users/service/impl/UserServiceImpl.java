@@ -11,6 +11,7 @@ import me.nimnakse.water_management.roles.repository.RoleRepository;
 import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
+import me.nimnakse.water_management.users.dto.request.UserPasswordUpdateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
 import me.nimnakse.water_management.users.dto.response.UserRes;
 import me.nimnakse.water_management.users.entity.User;
@@ -115,6 +116,22 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
         user.setStatus(UserStatus.DEACTIVATED);
+    }
+
+    @Transactional
+    @Override
+    public void activate(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+        user.setStatus(UserStatus.ACTIVE);
+    }
+
+    @Transactional
+    @Override
+    public void updatePassword(Long id, UserPasswordUpdateReq request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
     }
 
     private List<Role> loadAndValidateRoles(List<Long> roleIds, RoleAppScope appScope) {
