@@ -1,0 +1,9 @@
+package me.nimnakse.water_management.tariffs.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+
+public record TariffUpdateReq(
+        @NotBlank String name,
+        String description
+) {
+}
