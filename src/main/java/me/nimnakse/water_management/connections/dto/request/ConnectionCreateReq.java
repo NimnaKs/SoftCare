@@ -2,7 +2,9 @@ package me.nimnakse.water_management.connections.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
+import me.nimnakse.water_management.common.util.ValidationPatterns;
 
 public record ConnectionCreateReq(
         @NotNull Long memberId,
@@ -20,8 +22,15 @@ public record ConnectionCreateReq(
         Long valveId,
         Long societyId,
         Long clusterId,
-        @NotBlank String mobileNumber,
+        @NotBlank
+        @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,
+                message = "Mobile number must be a 10-digit number starting with 07")
+        String mobileNumber,
+        @Pattern(regexp = ValidationPatterns.OPTIONAL_SRI_LANKA_PHONE_REGEX,
+                message = "Secondary contact number must be a 10-digit Sri Lankan phone number")
         String secondaryNumber,
+        @Pattern(regexp = ValidationPatterns.OPTIONAL_SRI_LANKA_PHONE_REGEX,
+                message = "Fixed line number must be a 10-digit Sri Lankan phone number")
         String fixedLineNumber,
         @NotNull Long tariffId,
         @NotNull BigDecimal connectionFee,

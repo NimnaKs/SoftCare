@@ -106,8 +106,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
             throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
         }
-        if (secondary != null && !secondary.isBlank() && !ValidationUtils.isTenDigitNumber(secondary)) {
-            throw new BadRequestException("Secondary contact number must be a 10-digit number");
+        if (secondary != null && !secondary.isBlank() && !ValidationUtils.isValidSriLankaPhone(secondary)) {
+            throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number");
         }
     }
 
