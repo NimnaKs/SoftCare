@@ -11,4 +11,18 @@ public interface ConnectionRepository extends JpaRepository<Connection, Long> {
     List<Connection> findByMemberId(Long memberId);
 
     List<Connection> findByMobileNumber(String mobileNumber);
+
+    boolean existsByBillingZoneId(Long billingZoneId);
+
+    boolean existsByPremisesId(Long premisesId);
+
+    boolean existsByTariffId(Long tariffId);
+
+    boolean existsByGnDivisionId(Long gnDivisionId);
+
+    boolean existsByValveId(Long valveId);
+
+    boolean existsBySocietyId(Long societyId);
+
+    boolean existsByClusterId(Long clusterId);
 }

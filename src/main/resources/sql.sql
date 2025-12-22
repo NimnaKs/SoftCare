@@ -117,7 +117,10 @@ CREATE TABLE billing_zones (
                                org_unit_id BIGINT UNSIGNED NOT NULL,
                                zone_name   VARCHAR(255) NOT NULL,
                                description VARCHAR(500) NULL,
+                               zone_code   VARCHAR(10) NOT NULL,
+                               sequence_number INT NOT NULL,
                                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               UNIQUE KEY uq_bz_org_unit_code (org_unit_id, zone_code),
                                INDEX idx_bz_org_unit (org_unit_id),
                                CONSTRAINT fk_bz_org_unit
                                    FOREIGN KEY (org_unit_id) REFERENCES org_units(id)
@@ -373,10 +376,8 @@ CREATE TABLE connections (
                              secondary_number     VARCHAR(20) NULL,
                              fixed_line_number    VARCHAR(20) NULL,
 
-    -- Tariff & Invoice
+    -- Tariff
                              tariff_id            BIGINT UNSIGNED NOT NULL,
-                             connection_fee       DECIMAL(10,2) NOT NULL,
-                             invoice_id           BIGINT UNSIGNED NULL,
 
                              created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                              updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -384,7 +385,7 @@ CREATE TABLE connections (
 
                              INDEX idx_conn_member (member_id),
                              INDEX idx_conn_zone (billing_zone_id),
-                             INDEX idx_conn_premises (premises_id),
+                             UNIQUE KEY uq_conn_premises (premises_id),
 
     -- Foreign Keys
                              CONSTRAINT fk_conn_member FOREIGN KEY (member_id) REFERENCES members(id),
@@ -1838,7 +1839,6 @@ CREATE TABLE sms_outbox (
                             INDEX idx_sms_outbox_ref (reference_table, reference_id),
                             CONSTRAINT fk_sms_outbox_org FOREIGN KEY (org_unit_id) REFERENCES org_units(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 
 

@@ -13,6 +13,13 @@ import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.billing_zones.repository.BillingZoneRepository;
+import me.nimnakse.water_management.clusters.repository.ClusterRepository;
+import me.nimnakse.water_management.gn_divisions.repository.GnDivisionRepository;
+import me.nimnakse.water_management.premises.repository.PremisesRepository;
+import me.nimnakse.water_management.societies.repository.SocietyRepository;
+import me.nimnakse.water_management.tariffs.repository.TariffRepository;
+import me.nimnakse.water_management.valves.repository.ValveRepository;
 import me.nimnakse.water_management.connections.service.ConnectionService;
 import me.nimnakse.water_management.members.dto.response.MemberSummaryRes;
 import me.nimnakse.water_management.members.entity.Member;
@@ -25,11 +32,32 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConnectionServiceImpl implements ConnectionService {
     private final ConnectionRepository connectionRepository;
     private final MemberRepository memberRepository;
+    private final PremisesRepository premisesRepository;
+    private final BillingZoneRepository billingZoneRepository;
+    private final TariffRepository tariffRepository;
+    private final GnDivisionRepository gnDivisionRepository;
+    private final ValveRepository valveRepository;
+    private final SocietyRepository societyRepository;
+    private final ClusterRepository clusterRepository;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
-                                 MemberRepository memberRepository) {
+                                 MemberRepository memberRepository,
+                                 PremisesRepository premisesRepository,
+                                 BillingZoneRepository billingZoneRepository,
+                                 TariffRepository tariffRepository,
+                                 GnDivisionRepository gnDivisionRepository,
+                                 ValveRepository valveRepository,
+                                 SocietyRepository societyRepository,
+                                 ClusterRepository clusterRepository) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
+        this.premisesRepository = premisesRepository;
+        this.billingZoneRepository = billingZoneRepository;
+        this.tariffRepository = tariffRepository;
+        this.gnDivisionRepository = gnDivisionRepository;
+        this.valveRepository = valveRepository;
+        this.societyRepository = societyRepository;
+        this.clusterRepository = clusterRepository;
     }
 
     @Transactional
@@ -37,6 +65,16 @@ public class ConnectionServiceImpl implements ConnectionService {
     public ConnectionRes create(ConnectionCreateReq request) {
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+        validatePremises(request.premisesId());
+        validateBillingZone(request.billingZoneId());
+        validateTariff(request.tariffId());
+        validateOptionalReference(request.gnDivisionId(), "GN division", gnDivisionRepository::existsById);
+        validateOptionalReference(request.valveId(), "Valve", valveRepository::existsById);
+        validateOptionalReference(request.societyId(), "Society", societyRepository::existsById);
+        validateOptionalReference(request.clusterId(), "Cluster", clusterRepository::existsById);
+        if (connectionRepository.existsByPremisesId(request.premisesId())) {
+            throw new BadRequestException("Premises already has an active connection");
+        }
         validateContactNumbers(request.mobileNumber(), request.secondaryNumber(), request.fixedLineNumber());
         Connection connection = new Connection();
         connection.setMemberId(member.getId());
@@ -59,8 +97,6 @@ public class ConnectionServiceImpl implements ConnectionService {
         connection.setSecondaryNumber(request.secondaryNumber());
         connection.setFixedLineNumber(request.fixedLineNumber());
         connection.setTariffId(request.tariffId());
-        connection.setConnectionFee(request.connectionFee());
-        connection.setInvoiceId(request.invoiceId());
         return toResponse(connectionRepository.save(connection));
     }
 
@@ -155,8 +191,6 @@ public class ConnectionServiceImpl implements ConnectionService {
                 connection.getSecondaryNumber(),
                 connection.getFixedLineNumber(),
                 connection.getTariffId(),
-                connection.getConnectionFee(),
-                connection.getInvoiceId(),
                 connection.getCreatedAt(),
                 connection.getUpdatedAt()
         );
@@ -175,5 +209,29 @@ public class ConnectionServiceImpl implements ConnectionService {
                 member.getNicNew(),
                 member.getMobileNumber()
         );
+    }
+
+    private void validatePremises(Long premisesId) {
+        if (premisesId == null || !premisesRepository.existsById(premisesId)) {
+            throw new NotFoundException("Premises not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private void validateBillingZone(Long billingZoneId) {
+        if (billingZoneId == null || !billingZoneRepository.existsById(billingZoneId)) {
+            throw new NotFoundException("Billing zone not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private void validateTariff(Long tariffId) {
+        if (tariffId == null || !tariffRepository.existsById(tariffId)) {
+            throw new NotFoundException("Tariff not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private void validateOptionalReference(Long id, String name, java.util.function.Predicate<Long> existsById) {
+        if (id != null && !existsById.test(id)) {
+            throw new NotFoundException(name + " not found", ErrorCode.NOT_FOUND);
+        }
     }
 }

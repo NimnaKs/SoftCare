@@ -3,7 +3,6 @@ package me.nimnakse.water_management.connections.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.math.BigDecimal;
 import me.nimnakse.water_management.common.util.ValidationPatterns;
 
 public record ConnectionCreateReq(
@@ -32,8 +31,6 @@ public record ConnectionCreateReq(
         @Pattern(regexp = ValidationPatterns.OPTIONAL_SRI_LANKA_PHONE_REGEX,
                 message = "Fixed line number must be a 10-digit Sri Lankan phone number")
         String fixedLineNumber,
-        @NotNull Long tariffId,
-        @NotNull BigDecimal connectionFee,
-        @NotNull Long invoiceId
+        @NotNull Long tariffId
 ) {
 }

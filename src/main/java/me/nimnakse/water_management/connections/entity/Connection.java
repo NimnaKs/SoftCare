@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import me.nimnakse.water_management.common.entity.BaseEntity;
 
 @Entity
@@ -71,12 +70,6 @@ public class Connection extends BaseEntity {
 
     @Column(name = "tariff_id", nullable = false)
     private Long tariffId;
-
-    @Column(name = "connection_fee", nullable = false)
-    private BigDecimal connectionFee;
-
-    @Column(name = "invoice_id")
-    private Long invoiceId;
 
     public Long getMemberId() {
         return memberId;
@@ -236,21 +229,5 @@ public class Connection extends BaseEntity {
 
     public void setTariffId(Long tariffId) {
         this.tariffId = tariffId;
-    }
-
-    public BigDecimal getConnectionFee() {
-        return connectionFee;
-    }
-
-    public void setConnectionFee(BigDecimal connectionFee) {
-        this.connectionFee = connectionFee;
-    }
-
-    public Long getInvoiceId() {
-        return invoiceId;
-    }
-
-    public void setInvoiceId(Long invoiceId) {
-        this.invoiceId = invoiceId;
     }
 }
