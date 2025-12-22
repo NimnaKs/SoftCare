@@ -29,7 +29,7 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Override
     public AddressLineRes create(AddressLineCreateReq request) {
         validateRequest(request);
-        if (addressLineRepository.existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3Id(
+        if (addressLineRepository.existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
                 request.level(),
                 request.name(),
                 request.parentLine1Id(),

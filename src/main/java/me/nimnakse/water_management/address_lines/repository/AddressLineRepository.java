@@ -2,6 +2,9 @@ package me.nimnakse.water_management.address_lines.repository;
 
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import me.nimnakse.water_management.address_lines.entity.AddressLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 
