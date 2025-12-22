@@ -2,6 +2,7 @@ package me.nimnakse.water_management.address_lines.service.impl;
 
 import java.util.List;
 import me.nimnakse.water_management.address_lines.dto.request.AddressLineCreateReq;
+import me.nimnakse.water_management.address_lines.dto.request.AddressLineUpdateReq;
 import me.nimnakse.water_management.address_lines.dto.response.AddressLineHierarchyRes;
 import me.nimnakse.water_management.address_lines.dto.response.AddressLineRes;
 import me.nimnakse.water_management.address_lines.entity.AddressLine;
@@ -28,7 +29,8 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Transactional
     @Override
     public AddressLineRes create(AddressLineCreateReq request) {
-        validateRequest(request);
+        validateRequest(request.orgUnitId(), request.level(), request.parentLine1Id(),
+                request.parentLine2Id(), request.parentLine3Id(), request.postalCode(), null);
         if (addressLineRepository.existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
                 request.level(),
                 request.name(),
@@ -63,6 +65,14 @@ public class AddressLineServiceImpl implements AddressLineService {
 
     @Transactional(readOnly = true)
     @Override
+    public AddressLineRes getById(Long id) {
+        AddressLine line = addressLineRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+        return toResponse(line);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public AddressLineHierarchyRes getHierarchy(Long id) {
         AddressLine line = addressLineRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
@@ -76,49 +86,99 @@ public class AddressLineServiceImpl implements AddressLineService {
                 toResponseOrNull(line2), toResponseOrNull(line3));
     }
 
-    private void validateRequest(AddressLineCreateReq request) {
-        validateOrgUnit(request.orgUnitId());
-        int level = request.level();
-        if (level < 1 || level > 4) {
+    @Transactional
+    @Override
+    public AddressLineRes update(Long id, AddressLineUpdateReq request) {
+        AddressLine line = addressLineRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+        validateRequest(request.orgUnitId(), request.level(), request.parentLine1Id(),
+                request.parentLine2Id(), request.parentLine3Id(), request.postalCode(), id);
+        if (addressLineRepository
+                .existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdAndIdNot(
+                        request.level(),
+                        request.name(),
+                        request.parentLine1Id(),
+                        request.parentLine2Id(),
+                        request.parentLine3Id(),
+                        request.orgUnitId(),
+                        id)) {
+            throw new BadRequestException("Address line already exists in the same hierarchy");
+        }
+        boolean shouldRegenerateInternalCode = shouldRegenerateInternalCode(line, request);
+        line.setOrgUnitId(request.orgUnitId());
+        line.setLevel(request.level());
+        line.setName(request.name().trim());
+        line.setParentLine1Id(request.parentLine1Id());
+        line.setParentLine2Id(request.parentLine2Id());
+        line.setParentLine3Id(request.parentLine3Id());
+        line.setPostalCode(request.postalCode());
+        if (shouldRegenerateInternalCode) {
+            line.setInternalCode(generateInternalCode(line));
+        }
+        return toResponse(addressLineRepository.save(line));
+    }
+
+    @Transactional
+    @Override
+    public void delete(Long id) {
+        AddressLine line = addressLineRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+        if (addressLineRepository.existsByParentLine1IdOrParentLine2IdOrParentLine3Id(id, id, id)) {
+            throw new BadRequestException("Address line has child entries and cannot be deleted");
+        }
+        addressLineRepository.delete(line);
+    }
+
+    private void validateRequest(Long orgUnitId, Integer level, Long parentLine1Id,
+                                 Long parentLine2Id, Long parentLine3Id,
+                                 String postalCode, Long currentId) {
+        validateOrgUnit(orgUnitId);
+        int levelValue = level;
+        if (levelValue < 1 || levelValue > 4) {
             throw new BadRequestException("Address line level must be between 1 and 4");
         }
-        if (level == 1) {
-            if (request.parentLine1Id() != null || request.parentLine2Id() != null || request.parentLine3Id() != null) {
+        if (currentId != null) {
+            if (currentId.equals(parentLine1Id) || currentId.equals(parentLine2Id) || currentId.equals(parentLine3Id)) {
+                throw new BadRequestException("Address line cannot reference itself as a parent");
+            }
+        }
+        if (levelValue == 1) {
+            if (parentLine1Id != null || parentLine2Id != null || parentLine3Id != null) {
                 throw new BadRequestException("Line 1 cannot have parent references");
             }
-            if (request.postalCode() == null || request.postalCode().isBlank()) {
+            if (postalCode == null || postalCode.isBlank()) {
                 throw new BadRequestException("Postal code is required for line 1");
             }
-            if (!request.postalCode().matches("\\d+")) {
+            if (!postalCode.matches("\\d+")) {
                 throw new BadRequestException("Postal code must be numeric");
             }
         }
-        if (level == 2) {
-            requireParent(request.parentLine1Id(), "Line 1");
-            if (request.parentLine2Id() != null || request.parentLine3Id() != null) {
+        if (levelValue == 2) {
+            requireParent(parentLine1Id, "Line 1");
+            if (parentLine2Id != null || parentLine3Id != null) {
                 throw new BadRequestException("Line 2 can only link to line 1");
             }
         }
-        if (level == 3) {
-            requireParent(request.parentLine1Id(), "Line 1");
-            requireParent(request.parentLine2Id(), "Line 2");
-            if (request.parentLine3Id() != null) {
+        if (levelValue == 3) {
+            requireParent(parentLine1Id, "Line 1");
+            requireParent(parentLine2Id, "Line 2");
+            if (parentLine3Id != null) {
                 throw new BadRequestException("Line 3 can only link to line 1 and 2");
             }
         }
-        if (level == 4) {
-            requireParent(request.parentLine1Id(), "Line 1");
-            requireParent(request.parentLine2Id(), "Line 2");
-            requireParent(request.parentLine3Id(), "Line 3");
+        if (levelValue == 4) {
+            requireParent(parentLine1Id, "Line 1");
+            requireParent(parentLine2Id, "Line 2");
+            requireParent(parentLine3Id, "Line 3");
         }
-        if (request.parentLine1Id() != null) {
-            validateParentLevel(request.parentLine1Id(), 1);
+        if (parentLine1Id != null) {
+            validateParentLevel(parentLine1Id, 1);
         }
-        if (request.parentLine2Id() != null) {
-            validateParentLevel(request.parentLine2Id(), 2);
+        if (parentLine2Id != null) {
+            validateParentLevel(parentLine2Id, 2);
         }
-        if (request.parentLine3Id() != null) {
-            validateParentLevel(request.parentLine3Id(), 3);
+        if (parentLine3Id != null) {
+            validateParentLevel(parentLine3Id, 3);
         }
     }
 
@@ -180,6 +240,28 @@ public class AddressLineServiceImpl implements AddressLineService {
         return addressLineRepository.findById(line.getParentLine3Id())
                 .orElseThrow(() -> new NotFoundException("Parent line 3 not found", ErrorCode.NOT_FOUND))
                 .getInternalCode();
+    }
+
+    private boolean shouldRegenerateInternalCode(AddressLine line, AddressLineUpdateReq request) {
+        if (!line.getLevel().equals(request.level())) {
+            return true;
+        }
+        if (!line.getOrgUnitId().equals(request.orgUnitId())) {
+            return true;
+        }
+        if (!equalsNullable(line.getParentLine1Id(), request.parentLine1Id())
+                || !equalsNullable(line.getParentLine2Id(), request.parentLine2Id())
+                || !equalsNullable(line.getParentLine3Id(), request.parentLine3Id())) {
+            return true;
+        }
+        if (request.level() == 1) {
+            return !equalsNullable(line.getPostalCode(), request.postalCode());
+        }
+        return false;
+    }
+
+    private boolean equalsNullable(Object left, Object right) {
+        return left == null ? right == null : left.equals(right);
     }
 
     private AddressLineRes toResponse(AddressLine line) {
