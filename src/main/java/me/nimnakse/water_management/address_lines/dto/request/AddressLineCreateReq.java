@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record AddressLineCreateReq(
+        @NotNull Long orgUnitId,
         @NotNull Integer level,
         @NotBlank String name,
         Long parentLine1Id,
