@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
+import me.nimnakse.water_management.users.dto.request.UserPasswordUpdateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
 import me.nimnakse.water_management.users.dto.response.UserRes;
 import me.nimnakse.water_management.users.service.UserService;
@@ -46,6 +47,21 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         userService.deactivate(id);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
+    }
+
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activate user", description = "Activates a user account.")
+    public ResponseEntity<ApiResponse<Void>> activate(@PathVariable Long id) {
+        userService.activate(id);
+        return ResponseEntity.ok(ApiResponse.success("User activated", null));
+    }
+
+    @PatchMapping("/{id}/password")
+    @Operation(summary = "Update user password", description = "Updates the password for a user account.")
+    public ResponseEntity<ApiResponse<Void>> updatePassword(@PathVariable Long id,
+                                                            @Valid @RequestBody UserPasswordUpdateReq request) {
+        userService.updatePassword(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Password updated", null));
     }
 
     @GetMapping("/{id}")

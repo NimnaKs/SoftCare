@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.users.service;
 
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
+import me.nimnakse.water_management.users.dto.request.UserPasswordUpdateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
 import me.nimnakse.water_management.users.dto.response.UserRes;
 
@@ -12,4 +13,8 @@ public interface UserService {
     UserRes getById(Long id);
 
     void deactivate(Long id);
+
+    void activate(Long id);
+
+    void updatePassword(Long id, UserPasswordUpdateReq request);
 }
