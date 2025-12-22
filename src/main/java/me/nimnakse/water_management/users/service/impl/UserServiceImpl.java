@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
     public UserRes create(UserCreateReq request) {
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         User user = new User();
-        user.setUsername(request.nic());
+        user.setUsername(request.username());
         user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
         user.setNic(request.nic());
         user.setName(request.name());

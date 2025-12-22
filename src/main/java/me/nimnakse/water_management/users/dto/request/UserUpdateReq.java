@@ -9,6 +9,7 @@ import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.roles.entity.RoleAppScope;
 
 public record UserUpdateReq(
+        @NotBlank String username,
         @NotBlank String nic,
         @NotBlank String name,
         @NotBlank
