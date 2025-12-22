@@ -3,12 +3,15 @@ package me.nimnakse.water_management.connections.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
 import me.nimnakse.water_management.connections.service.ConnectionService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/connections")
 @Tag(name = "Connections", description = "Water connection operations")
+@Validated
 public class ConnectionController {
     private final ConnectionService connectionService;
 
@@ -37,7 +41,10 @@ public class ConnectionController {
     public ResponseEntity<ApiResponse<ConnectionSearchRes>> search(@RequestParam(required = false) String membershipCode,
                                                                    @RequestParam(required = false) String accountNumber,
                                                                    @RequestParam(required = false) String nicNumber,
-                                                                   @RequestParam(required = false) String phoneNumber) {
+                                                                   @RequestParam(required = false)
+                                                                   @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,
+                                                                           message = "Phone number must be a 10-digit number starting with 07")
+                                                                   String phoneNumber) {
         return ResponseEntity.ok(ApiResponse.success(
                 connectionService.search(membershipCode, accountNumber, nicNumber, phoneNumber)));
     }

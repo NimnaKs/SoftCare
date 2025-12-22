@@ -3,13 +3,16 @@ package me.nimnakse.water_management.members.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.members.dto.request.MemberCreateReq;
 import me.nimnakse.water_management.members.dto.request.MemberUpdateReq;
 import me.nimnakse.water_management.members.dto.response.MemberRes;
 import me.nimnakse.water_management.members.service.MemberService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/members")
 @Tag(name = "Members", description = "Member management operations")
+@Validated
 public class MemberController {
     private final MemberService memberService;
 
@@ -52,7 +56,10 @@ public class MemberController {
     @Operation(summary = "Search members", description = "Searches members by membership code, NIC, or mobile number.")
     public ResponseEntity<ApiResponse<List<MemberRes>>> search(@RequestParam(required = false) String membershipCode,
                                                                @RequestParam(required = false) String nicNumber,
-                                                               @RequestParam(required = false) String mobileNumber) {
+                                                               @RequestParam(required = false)
+                                                               @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,
+                                                                       message = "Mobile number must be a 10-digit number starting with 07")
+                                                               String mobileNumber) {
         return ResponseEntity.ok(ApiResponse.success(memberService.search(membershipCode, nicNumber, mobileNumber)));
     }
 }
