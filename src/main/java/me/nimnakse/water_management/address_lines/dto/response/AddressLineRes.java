@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record AddressLineRes(
         Long id,
+        Long orgUnitId,
         Integer level,
         String name,
         Long parentLine1Id,

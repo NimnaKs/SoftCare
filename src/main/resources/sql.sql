@@ -313,6 +313,7 @@ CREATE TABLE tariffs (
 
 CREATE TABLE address_lines (
                                id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                               org_unit_id     BIGINT UNSIGNED NOT NULL,
                                level           TINYINT NOT NULL, -- 1 to 4
                                name            VARCHAR(255) NOT NULL,
                                parent_line1_id BIGINT UNSIGNED NULL,
@@ -328,9 +329,10 @@ CREATE TABLE address_lines (
 
     -- Prevent duplicate names under the SAME parent combo
                                UNIQUE KEY uq_address_line_hierarchy (
-                                                                     level, name, parent_line1_id, parent_line2_id, parent_line3_id
+                                                                     org_unit_id, level, name, parent_line1_id, parent_line2_id, parent_line3_id
                                    ),
 
+                               INDEX idx_addr_org_unit (org_unit_id),
                                INDEX idx_addr_line1 (parent_line1_id),
                                INDEX idx_addr_line2 (parent_line2_id),
                                INDEX idx_addr_line3 (parent_line3_id)
@@ -1836,7 +1838,6 @@ CREATE TABLE sms_outbox (
                             INDEX idx_sms_outbox_ref (reference_table, reference_id),
                             CONSTRAINT fk_sms_outbox_org FOREIGN KEY (org_unit_id) REFERENCES org_units(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 
 

@@ -10,15 +10,19 @@ import me.nimnakse.water_management.address_lines.service.AddressLineService;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AddressLineServiceImpl implements AddressLineService {
     private final AddressLineRepository addressLineRepository;
+    private final OrgUnitRepository orgUnitRepository;
 
-    public AddressLineServiceImpl(AddressLineRepository addressLineRepository) {
+    public AddressLineServiceImpl(AddressLineRepository addressLineRepository,
+                                  OrgUnitRepository orgUnitRepository) {
         this.addressLineRepository = addressLineRepository;
+        this.orgUnitRepository = orgUnitRepository;
     }
 
     @Transactional
@@ -30,10 +34,12 @@ public class AddressLineServiceImpl implements AddressLineService {
                 request.name(),
                 request.parentLine1Id(),
                 request.parentLine2Id(),
-                request.parentLine3Id())) {
+                request.parentLine3Id(),
+                request.orgUnitId())) {
             throw new BadRequestException("Address line already exists in the same hierarchy");
         }
         AddressLine line = new AddressLine();
+        line.setOrgUnitId(request.orgUnitId());
         line.setLevel(request.level());
         line.setName(request.name().trim());
         line.setParentLine1Id(request.parentLine1Id());
@@ -71,6 +77,7 @@ public class AddressLineServiceImpl implements AddressLineService {
     }
 
     private void validateRequest(AddressLineCreateReq request) {
+        validateOrgUnit(request.orgUnitId());
         int level = request.level();
         if (level < 1 || level > 4) {
             throw new BadRequestException("Address line level must be between 1 and 4");
@@ -129,16 +136,23 @@ public class AddressLineServiceImpl implements AddressLineService {
         }
     }
 
+    private void validateOrgUnit(Long orgUnitId) {
+        if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
+            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
     private String generateInternalCode(AddressLine line) {
         if (line.getLevel() == 1) {
             return line.getPostalCode();
         }
         String prefix = loadParentInternalCode(line);
-        int nextIndex = addressLineRepository.findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdOrderByInternalCodeDesc(
+        int nextIndex = addressLineRepository.findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdOrderByInternalCodeDesc(
                         line.getLevel(),
                         line.getParentLine1Id(),
                         line.getParentLine2Id(),
-                        line.getParentLine3Id())
+                        line.getParentLine3Id(),
+                        line.getOrgUnitId())
                 .map(AddressLine::getInternalCode)
                 .map(code -> code.substring(code.lastIndexOf('.') + 1))
                 .map(suffix -> {
@@ -171,6 +185,7 @@ public class AddressLineServiceImpl implements AddressLineService {
     private AddressLineRes toResponse(AddressLine line) {
         return new AddressLineRes(
                 line.getId(),
+                line.getOrgUnitId(),
                 line.getLevel(),
                 line.getName(),
                 line.getParentLine1Id(),

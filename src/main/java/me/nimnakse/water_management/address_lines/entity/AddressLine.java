@@ -8,6 +8,9 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "address_lines")
 public class AddressLine extends BaseEntity {
+    @Column(name = "org_unit_id", nullable = false)
+    private Long orgUnitId;
+
     @Column(nullable = false)
     private Integer level;
 
@@ -31,6 +34,14 @@ public class AddressLine extends BaseEntity {
 
     public Integer getLevel() {
         return level;
+    }
+
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
     }
 
     public void setLevel(Integer level) {
