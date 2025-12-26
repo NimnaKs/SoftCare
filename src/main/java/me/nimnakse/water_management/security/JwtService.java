@@ -25,7 +25,7 @@ public class JwtService {
         this.refreshTokenValidityMs = refreshTokenValidityMs;
     }
 
-    public String generateAccessToken(UserPrincipal principal) {
+    public String generateAccessToken(UserPrincipal principal, Long organizationId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenValidityMs);
         List<String> roles = principal.getRoles().stream()
@@ -34,13 +34,16 @@ public class JwtService {
         List<String> scopes = principal.getAppScopes().stream()
                 .map(Enum::name)
                 .toList();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .setSubject(principal.getUsername())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .claim("roles", roles)
-                .claim("scopes", scopes)
-                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .claim("scopes", scopes);
+        if (organizationId != null) {
+            builder.claim("organizationId", organizationId);
+        }
+        return builder.signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 

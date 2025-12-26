@@ -18,7 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -105,7 +104,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            Long organizationId = extractOrganizationId(claims);
+            authentication.setDetails(new JwtAuthenticationDetails(request, organizationId));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             log.info("Authentication SUCCESS for user={} scopes={}", username, dbScopes);
@@ -142,5 +142,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         log.debug("Scopes claim has unexpected type: {}", scopesObj.getClass().getName());
         return Set.of();
+    }
+
+    private Long extractOrganizationId(Claims claims) {
+        Object value = claims.get("organizationId");
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text) {
+            String trimmed = text.trim();
+            if (trimmed.isEmpty()) {
+                return null;
+            }
+            try {
+                return Long.parseLong(trimmed);
+            } catch (NumberFormatException ex) {
+                log.debug("Organization ID claim is not a valid number: {}", trimmed);
+                return null;
+            }
+        }
+        log.debug("Organization ID claim has unexpected type: {}", value.getClass().getName());
+        return null;
     }
 }

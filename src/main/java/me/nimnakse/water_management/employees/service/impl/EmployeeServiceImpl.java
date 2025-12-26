@@ -12,6 +12,7 @@ import me.nimnakse.water_management.employees.entity.EmployeeStatus;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.employees.service.EmployeeService;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +20,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final OrgUnitRepository orgUnitRepository;
+    private final OrganizationAccessService organizationAccessService;
 
     public EmployeeServiceImpl(EmployeeRepository employeeRepository,
-                               OrgUnitRepository orgUnitRepository) {
+                               OrgUnitRepository orgUnitRepository,
+                               OrganizationAccessService organizationAccessService) {
         this.employeeRepository = employeeRepository;
         this.orgUnitRepository = orgUnitRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional
@@ -59,6 +63,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public EmployeeRes getById(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(employee.getOrgUnitId());
         return toResponse(employee);
     }
 
@@ -99,6 +104,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
             throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private void enforceOrganizationScope(Long employeeOrgUnitId) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        if (orgUnitId != null && !orgUnitId.equals(employeeOrgUnitId)) {
+            throw new NotFoundException("Employee not found", ErrorCode.NOT_FOUND);
         }
     }
 

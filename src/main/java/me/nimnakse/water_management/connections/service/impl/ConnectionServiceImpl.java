@@ -25,6 +25,7 @@ import me.nimnakse.water_management.members.dto.response.MemberSummaryRes;
 import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final ValveRepository valveRepository;
     private final SocietyRepository societyRepository;
     private final ClusterRepository clusterRepository;
+    private final OrganizationAccessService organizationAccessService;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
                                  MemberRepository memberRepository,
@@ -48,7 +50,8 @@ public class ConnectionServiceImpl implements ConnectionService {
                                  GnDivisionRepository gnDivisionRepository,
                                  ValveRepository valveRepository,
                                  SocietyRepository societyRepository,
-                                 ClusterRepository clusterRepository) {
+                                 ClusterRepository clusterRepository,
+                                 OrganizationAccessService organizationAccessService) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.premisesRepository = premisesRepository;
@@ -58,6 +61,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         this.valveRepository = valveRepository;
         this.societyRepository = societyRepository;
         this.clusterRepository = clusterRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional
@@ -103,24 +107,26 @@ public class ConnectionServiceImpl implements ConnectionService {
     @Transactional(readOnly = true)
     @Override
     public ConnectionSearchRes search(String membershipCode, String accountNumber, String nicNumber, String phoneNumber) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         Member member = null;
         if (accountNumber != null && !accountNumber.isBlank()) {
             Connection connection = connectionRepository.findByAccountNumber(accountNumber)
                     .orElseThrow(() -> new NotFoundException("Connection not found", ErrorCode.NOT_FOUND));
             member = memberRepository.findById(connection.getMemberId())
                     .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+            enforceOrganizationScope(member.getOrgUnitId(), orgUnitId);
         } else if (membershipCode != null && !membershipCode.isBlank()) {
-            member = memberRepository.findByMembershipCode(membershipCode)
+            member = findByMembershipCode(membershipCode, orgUnitId)
                     .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
         } else if (nicNumber != null && !nicNumber.isBlank()) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
                     .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
-            member = memberRepository.findByNicNew(result.newNic())
-                    .orElseGet(() -> memberRepository.findByNicOldStartingWith(result.numericKey()).stream()
+            member = findByNicNew(result.newNic(), orgUnitId)
+                    .orElseGet(() -> findByNicOldStartingWith(result.numericKey(), orgUnitId).stream()
                             .findFirst()
                             .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND)));
         } else if (phoneNumber != null && !phoneNumber.isBlank()) {
-            member = memberRepository.findByMobileNumber(phoneNumber).stream()
+            member = findByMobileNumber(phoneNumber, orgUnitId).stream()
                     .findFirst()
                     .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
         } else {
@@ -232,6 +238,40 @@ public class ConnectionServiceImpl implements ConnectionService {
     private void validateOptionalReference(Long id, String name, java.util.function.Predicate<Long> existsById) {
         if (id != null && !existsById.test(id)) {
             throw new NotFoundException(name + " not found", ErrorCode.NOT_FOUND);
+        }
+    }
+
+    private java.util.Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByMembershipCode(membershipCode);
+        }
+        return memberRepository.findByMembershipCodeAndOrgUnitId(membershipCode, orgUnitId);
+    }
+
+    private java.util.Optional<Member> findByNicNew(String nicNew, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByNicNew(nicNew);
+        }
+        return memberRepository.findByNicNewAndOrgUnitId(nicNew, orgUnitId);
+    }
+
+    private List<Member> findByNicOldStartingWith(String nicOld, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByNicOldStartingWith(nicOld);
+        }
+        return memberRepository.findByNicOldStartingWithAndOrgUnitId(nicOld, orgUnitId);
+    }
+
+    private List<Member> findByMobileNumber(String mobileNumber, Long orgUnitId) {
+        if (orgUnitId == null) {
+            return memberRepository.findByMobileNumber(mobileNumber);
+        }
+        return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+    }
+
+    private void enforceOrganizationScope(Long memberOrgUnitId, Long orgUnitId) {
+        if (orgUnitId != null && !orgUnitId.equals(memberOrgUnitId)) {
+            throw new NotFoundException("Member not found", ErrorCode.NOT_FOUND);
         }
     }
 }
