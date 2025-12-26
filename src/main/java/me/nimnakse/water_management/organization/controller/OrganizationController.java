@@ -18,18 +18,12 @@ import me.nimnakse.water_management.organization.service.AuthorizedOfficerServic
 import me.nimnakse.water_management.organization.service.OrgNotificationContactService;
 import me.nimnakse.water_management.organization.service.OrganizationService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/organizations")
 @Tag(name = "Organizations", description = "Organization and contact management operations")
+@CrossOrigin
 public class OrganizationController {
     private final OrganizationService organizationService;
     private final AuthorizedOfficerService authorizedOfficerService;
