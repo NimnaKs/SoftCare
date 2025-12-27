@@ -44,7 +44,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/revenue-main-categories/**",
-                                "/revenue-accounts/**"
+                                "/revenue-accounts/**",
+                                "/fixed-asset-master-categories/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 "/roles/**",
@@ -57,7 +58,8 @@ public class SecurityConfig {
                                 "/address-lines/**",
                                 "/connections/**",
                                 "/revenue-main-categories/**",
-                                "/revenue-accounts/**"
+                                "/revenue-accounts/**",
+                                "/fixed-asset-master-categories/**"
                                 ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .requestMatchers(
                                 "/members/**",
