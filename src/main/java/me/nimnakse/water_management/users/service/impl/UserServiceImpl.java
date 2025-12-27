@@ -139,6 +139,40 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<UserRes> list(Long orgUnitId, UserStatus status) {
+
+        List<User> users;
+
+        if (orgUnitId != null && status != null) {
+            users = userRepository.findAllByOrgUnit_IdAndStatus(orgUnitId, status);
+        } else if (orgUnitId != null) {
+            users = userRepository.findAllByOrgUnit_Id(orgUnitId);
+        } else if (status != null) {
+            users = userRepository.findAllByStatus(status);
+        } else {
+            users = userRepository.findAll();
+        }
+
+        // attach roles for each user
+        return users.stream().map(u -> {
+            List<RoleRes> roles = userRoleRepository.findByIdUserId(u.getId()).stream()
+                    .map(UserRole::getRole)
+                    .map(r -> new RoleRes(r.getId(), r.getName(), r.getDescription(), r.getAppScope()))
+                    .toList();
+
+            UserRes base = userMapper.toUserRes(u);
+
+            return new UserRes(
+                    base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
+                    base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
+                    base.status(), base.orgUnitId(), roles
+            );
+        }).toList();
+    }
+
+
     private List<Role> loadAndValidateRoles(List<Long> roleIds, RoleAppScope appScope) {
         List<Role> roles = roleRepository.findByIdInAndDeletedAtIsNull(roleIds);
         if (roles.size() != roleIds.size()) {

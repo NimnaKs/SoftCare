@@ -8,9 +8,12 @@ import me.nimnakse.water_management.users.dto.request.UserCreateReq;
 import me.nimnakse.water_management.users.dto.request.UserPasswordUpdateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
 import me.nimnakse.water_management.users.dto.response.UserRes;
+import me.nimnakse.water_management.users.entity.UserStatus;
 import me.nimnakse.water_management.users.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -62,5 +65,14 @@ public class UserController {
     @Operation(summary = "Get user", description = "Fetches a user by identifier.")
     public ResponseEntity<ApiResponse<UserRes>> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(userService.getById(id)));
+    }
+
+    @GetMapping
+    @Operation(summary = "List users", description = "Returns all users (optionally filtered by org unit, status).")
+    public ResponseEntity<ApiResponse<List<UserRes>>> listUsers(
+            @RequestParam(required = false) Long orgUnitId,
+            @RequestParam(required = false) UserStatus status
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(userService.list(orgUnitId, status)));
     }
 }
