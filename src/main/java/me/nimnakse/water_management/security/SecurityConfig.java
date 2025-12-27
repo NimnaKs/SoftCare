@@ -45,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
+                                "/fixed-asset-master-categories/**"
                                 "/inventory-master-categories/**"
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**"
@@ -61,6 +62,7 @@ public class SecurityConfig {
                                 "/connections/**",
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
+                                "/fixed-asset-master-categories/**"
                                 "/inventory-master-categories/**"
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**"
