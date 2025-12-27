@@ -45,8 +45,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
-                                "/fixed-asset-master-categories/**"
-                                "/inventory-master-categories/**"
+                                "/fixed-asset-master-categories/**",
+                                "/inventory-master-categories/**",
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
@@ -62,8 +62,8 @@ public class SecurityConfig {
                                 "/connections/**",
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
-                                "/fixed-asset-master-categories/**"
-                                "/inventory-master-categories/**"
+                                "/fixed-asset-master-categories/**",
+                                "/inventory-master-categories/**",
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**"
                                 ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
