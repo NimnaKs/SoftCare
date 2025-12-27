@@ -42,6 +42,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/revenue-main-categories/**",
+                                "/revenue-accounts/**"
+                        ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 "/roles/**",
                                 "/users/**",
@@ -51,7 +55,9 @@ public class SecurityConfig {
                                 "/members/**",
                                 "/employees/**",
                                 "/address-lines/**",
-                                "/connections/**"
+                                "/connections/**",
+                                "/revenue-main-categories/**",
+                                "/revenue-accounts/**"
                                 ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .requestMatchers(
                                 "/members/**",

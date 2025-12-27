@@ -1891,3 +1891,48 @@ CREATE TABLE sms_outbox (
 
 
 
+
+CREATE TABLE revenue_main_categories (
+                                         id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                         customer_type   ENUM('CUSTOMER', 'NON_CUSTOMER') NOT NULL,
+                                         code            INT UNSIGNED NOT NULL,
+                                         name            VARCHAR(255) NOT NULL,
+                                         description     VARCHAR(500) NULL,
+                                         is_system       TINYINT(1) NOT NULL DEFAULT 1,
+                                         is_active       TINYINT(1) NOT NULL DEFAULT 1,
+                                         created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                         updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                            ON UPDATE CURRENT_TIMESTAMP,
+                                         UNIQUE KEY uq_rev_main_code (code),
+                                         UNIQUE KEY uq_rev_main_name (name),
+                                         INDEX idx_rev_main_customer_type (customer_type)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE revenue_accounts (
+                                  id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                  main_category_id   BIGINT UNSIGNED NOT NULL,
+                                  account_number     VARCHAR(50) NOT NULL,
+                                  name               VARCHAR(255) NOT NULL,
+                                  description        VARCHAR(500) NULL,
+                                  reference_prefix   VARCHAR(20) NULL,
+                                  is_default         TINYINT(1) NOT NULL DEFAULT 0,
+                                  function_key       VARCHAR(100) NULL,
+                                  is_system          TINYINT(1) NOT NULL DEFAULT 0,
+                                  is_active          TINYINT(1) NOT NULL DEFAULT 1,
+                                  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                  updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+
+                                  UNIQUE KEY uq_rev_acc_number (account_number),
+                                  UNIQUE KEY uq_rev_acc_main_name (main_category_id, name),
+                                  INDEX idx_rev_main (main_category_id),
+                                  INDEX idx_rev_default (main_category_id, is_default),
+                                  INDEX idx_rev_function_key (function_key),
+
+                                  CONSTRAINT fk_rev_accounts_main
+                                      FOREIGN KEY (main_category_id) REFERENCES revenue_main_categories(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
