@@ -481,8 +481,6 @@ CREATE TABLE revenue_accounts (
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
 
-
-
 CREATE TABLE expense_main_categories (
                                          id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                          expense_type    ENUM('OPERATING', 'NON_OPERATING') NOT NULL,
