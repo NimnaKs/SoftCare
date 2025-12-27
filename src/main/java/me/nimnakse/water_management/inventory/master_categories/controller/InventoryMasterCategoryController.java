@@ -8,6 +8,7 @@ import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryCreateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryUpdateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.response.InventoryMasterCategoryRes;
+import me.nimnakse.water_management.inventory.master_categories.dto.response.InventoryMasterCategoryTreeRes;
 import me.nimnakse.water_management.inventory.master_categories.service.InventoryMasterCategoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -56,6 +57,12 @@ public class InventoryMasterCategoryController {
     @Operation(summary = "List inventory master categories")
     public ResponseEntity<ApiResponse<List<InventoryMasterCategoryRes>>> list() {
         return ResponseEntity.ok(ApiResponse.success(service.list()));
+    }
+
+    @GetMapping("/tree")
+    @Operation(summary = "Get inventory master categories as a tree")
+    public ResponseEntity<ApiResponse<List<InventoryMasterCategoryTreeRes>>> getTree() {
+        return ResponseEntity.ok(ApiResponse.success(service.getTree()));
     }
 
     @DeleteMapping("/{id}")
