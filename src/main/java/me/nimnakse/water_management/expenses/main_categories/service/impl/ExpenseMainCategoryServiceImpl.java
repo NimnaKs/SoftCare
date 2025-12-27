@@ -71,6 +71,9 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     public void delete(Long id) {
         ExpenseMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
+        if (Boolean.TRUE.equals(category.getIsSystem())) {
+            throw new BadRequestException("System expense main categories cannot be deleted");
+        }
         if (accountRepository.existsByMainCategoryId(id)) {
             throw new BadRequestException("Expense accounts exist for this main category");
         }

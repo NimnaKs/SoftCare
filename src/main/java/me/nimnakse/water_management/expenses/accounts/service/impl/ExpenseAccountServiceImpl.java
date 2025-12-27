@@ -81,6 +81,9 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     public void delete(Long id) {
         ExpenseAccount account = accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND));
+        if (Boolean.TRUE.equals(account.getIsSystem())) {
+            throw new BadRequestException("System expense accounts cannot be deleted");
+        }
         accountRepository.delete(account);
     }
 

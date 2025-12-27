@@ -99,6 +99,9 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     public void delete(Long id) {
         InventoryMasterCategory category = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+        if (Boolean.TRUE.equals(category.getIsSystem())) {
+            throw new BadRequestException("System inventory master categories cannot be deleted");
+        }
         if (repository.existsByParentId(id)) {
             throw new BadRequestException("Cannot delete category with child categories");
         }

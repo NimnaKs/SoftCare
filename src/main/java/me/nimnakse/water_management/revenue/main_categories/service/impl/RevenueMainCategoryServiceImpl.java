@@ -71,6 +71,9 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     public void delete(Long id) {
         RevenueMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Revenue main category not found", ErrorCode.NOT_FOUND));
+        if (Boolean.TRUE.equals(category.getIsSystem())) {
+            throw new BadRequestException("Default revenue main categories cannot be deleted");
+        }
         if (accountRepository.existsByMainCategoryId(id)) {
             throw new BadRequestException("Revenue accounts exist for this main category");
         }
