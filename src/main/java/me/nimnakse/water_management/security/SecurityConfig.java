@@ -46,6 +46,9 @@ public class SecurityConfig {
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**"
+                                "/inventory-master-categories/**"
+                                "/expense-main-categories/**",
+                                "/expense-accounts/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 "/roles/**",
@@ -60,6 +63,9 @@ public class SecurityConfig {
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**"
+                                "/inventory-master-categories/**"
+                                "/expense-main-categories/**",
+                                "/expense-accounts/**"
                                 ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .requestMatchers(
                                 "/members/**",
