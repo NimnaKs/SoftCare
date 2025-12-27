@@ -83,6 +83,9 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     public void delete(Long id) {
         RevenueAccount account = accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Revenue account not found", ErrorCode.NOT_FOUND));
+        if (Boolean.TRUE.equals(account.getIsSystem())) {
+            throw new BadRequestException("Default revenue accounts cannot be deleted");
+        }
         accountRepository.delete(account);
     }
 
