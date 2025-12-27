@@ -1,6 +1,9 @@
 package me.nimnakse.water_management.inventory.master_categories.service.impl;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -8,6 +11,7 @@ import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryCreateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryUpdateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.response.InventoryMasterCategoryRes;
+import me.nimnakse.water_management.inventory.master_categories.dto.response.InventoryMasterCategoryTreeRes;
 import me.nimnakse.water_management.inventory.master_categories.entity.InventoryMasterCategory;
 import me.nimnakse.water_management.inventory.master_categories.repository.InventoryMasterCategoryRepository;
 import me.nimnakse.water_management.inventory.master_categories.service.InventoryMasterCategoryService;
@@ -26,6 +30,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     @Transactional
     @Override
     public InventoryMasterCategoryRes create(InventoryMasterCategoryCreateReq request) {
+        validateLevelRange(request.level());
         InventoryMasterCategory parent = loadParent(request.parentId());
         validateLevelAgainstParent(request.level(), parent);
         String normalizedName = normalizeName(request.name());
@@ -55,6 +60,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         }
 
         InventoryMasterCategory newParent = loadParent(request.parentId());
+        validateLevelRange(request.level());
         validateLevelAgainstParent(request.level(), newParent);
 
         String normalizedName = normalizeName(request.name());
@@ -94,6 +100,42 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<InventoryMasterCategoryTreeRes> getTree() {
+        List<InventoryMasterCategory> categories = repository.findAll(Sort.by(Sort.Direction.ASC, "level", "name"));
+        Map<Long, InventoryMasterCategoryTreeRes> nodes = new LinkedHashMap<>();
+        for (InventoryMasterCategory category : categories) {
+            String name = category.getName();
+            String specification01 = category.getLevel() == 2 ? category.getSpecification01() : null;
+            String specification02 = category.getLevel() == 2 ? category.getSpecification02() : null;
+            String unit = category.getLevel() == 2 ? category.getUnit() : null;
+            nodes.put(category.getId(), new InventoryMasterCategoryTreeRes(
+                    category.getId(),
+                    category.getParentId(),
+                    category.getLevel(),
+                    name,
+                    specification01,
+                    specification02,
+                    unit,
+                    category.getIsSystem(),
+                    category.getIsActive(),
+                    new ArrayList<>()
+            ));
+        }
+
+        List<InventoryMasterCategoryTreeRes> roots = new ArrayList<>();
+        for (InventoryMasterCategory category : categories) {
+            InventoryMasterCategoryTreeRes node = nodes.get(category.getId());
+            if (category.getParentId() != null && nodes.containsKey(category.getParentId())) {
+                nodes.get(category.getParentId()).children().add(node);
+            } else {
+                roots.add(node);
+            }
+        }
+        return roots;
+    }
+
     @Transactional
     @Override
     public void delete(Long id) {
@@ -119,6 +161,12 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         }
         if (exists) {
             throw new BadRequestException("Inventory master category already exists for the given level and parent");
+        }
+    }
+
+    private void validateLevelRange(Integer level) {
+        if (level == null || level < 1 || level > 3) {
+            throw new BadRequestException("Inventory master category level must be between 1 and 3");
         }
     }
 
