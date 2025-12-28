@@ -4,6 +4,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import java.time.Instant;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.organization.dto.request.OrganizationCreateReq;
 import me.nimnakse.water_management.organization.dto.request.OrganizationUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrganizationRes;
@@ -13,6 +14,9 @@ import me.nimnakse.water_management.organization.entity.Organization;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.organization.repository.OrganizationRepository;
 import me.nimnakse.water_management.organization.service.OrganizationService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,6 +98,13 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrganizationRes> getAllPaginated(int page, int size) {
+        Page<Organization> organizationPage = organizationRepository.findAllByDeletedAtIsNull(pageRequest(page, size));
+        return toPageResponse(organizationPage);
+    }
+
     @Transactional
     @Override
     public void delete(Long id) {
@@ -136,6 +147,17 @@ public class OrganizationServiceImpl implements OrganizationService {
                 organization.getAddressTa(), organization.getPostalCode(), organization.getRegistrationNumber(),
                 organization.getEmail(), organization.getMobileNumber(), organization.getTelephoneNumber(),
                 organization.getLogoUrl());
+    }
+
+    private PageResponse<OrganizationRes> toPageResponse(Page<Organization> page) {
+        var items = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
     private String nextOrganizationCode() {
