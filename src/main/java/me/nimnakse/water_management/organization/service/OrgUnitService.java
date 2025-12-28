@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.organization.service;
 
 import java.util.List;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitCreateReq;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitRes;
@@ -14,4 +15,14 @@ public interface OrgUnitService {
     OrgUnitRes getById(Long id);
 
     OrgUnitRes update(Long id, OrgUnitUpdateReq request);
+
+    PageResponse<OrgUnitRes> getLevelOneUnits(int page, int size);
+
+    PageResponse<OrgUnitRes> getLevelTwoUnits(Long levelOneId, int page, int size);
+
+    PageResponse<OrgUnitRes> getLevelThreeUnits(Long levelTwoId, int page, int size);
+
+    PageResponse<OrgUnitRes> getLevelFourUnits(Long levelThreeId, int page, int size);
+
+    PageResponse<OrgUnitRes> getLevelFiveUnits(Long levelFourId, int page, int size);
 }

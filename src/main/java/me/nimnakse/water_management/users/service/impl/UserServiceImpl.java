@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.users.service.impl;
 
 import java.util.List;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -21,6 +22,9 @@ import me.nimnakse.water_management.users.repository.UserRepository;
 import me.nimnakse.water_management.users.repository.UserRoleRepository;
 import me.nimnakse.water_management.users.service.UserMapper;
 import me.nimnakse.water_management.users.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -157,19 +161,33 @@ public class UserServiceImpl implements UserService {
 
         // attach roles for each user
         return users.stream().map(u -> {
-            List<RoleRes> roles = userRoleRepository.findByIdUserId(u.getId()).stream()
-                    .map(UserRole::getRole)
-                    .map(r -> new RoleRes(r.getId(), r.getName(), r.getDescription(), r.getAppScope()))
-                    .toList();
-
-            UserRes base = userMapper.toUserRes(u);
-
-            return new UserRes(
-                    base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
-                    base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
-                    base.status(), base.orgUnitId(), roles
-            );
+            return toUserResWithRoles(u);
         }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<UserRes> listPaged(Long orgUnitId, UserStatus status, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
+
+        Page<User> usersPage;
+
+        if (orgUnitId != null && status != null) {
+            usersPage = userRepository.findByOrgUnit_IdAndStatus(orgUnitId, status, pageRequest);
+        } else if (orgUnitId != null) {
+            usersPage = userRepository.findByOrgUnit_Id(orgUnitId, pageRequest);
+        } else if (status != null) {
+            usersPage = userRepository.findByStatus(status, pageRequest);
+        } else {
+            usersPage = userRepository.findAll(pageRequest);
+        }
+
+        List<UserRes> items = usersPage.getContent().stream()
+                .map(this::toUserResWithRoles)
+                .toList();
+
+        return new PageResponse<>(items, usersPage.getTotalElements(), usersPage.getTotalPages(),
+                usersPage.getNumber(), usersPage.getSize());
     }
 
 
@@ -208,5 +226,20 @@ public class UserServiceImpl implements UserService {
         return new UserRes(baseRes.id(), baseRes.username(), baseRes.nic(), baseRes.name(), baseRes.mobileNumber(),
                 baseRes.secondaryContactNumber(), baseRes.address(), baseRes.profilePhotoUrl(), baseRes.status(),
                 baseRes.orgUnitId(), roleRes);
+    }
+
+    private UserRes toUserResWithRoles(User user) {
+        List<RoleRes> roles = userRoleRepository.findByIdUserId(user.getId()).stream()
+                .map(UserRole::getRole)
+                .map(r -> new RoleRes(r.getId(), r.getName(), r.getDescription(), r.getAppScope()))
+                .toList();
+
+        UserRes base = userMapper.toUserRes(user);
+
+        return new UserRes(
+                base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
+                base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
+                base.status(), base.orgUnitId(), roles
+        );
     }
 }

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitCreateReq;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitRes;
@@ -47,5 +48,49 @@ public class OrgUnitController {
     public ResponseEntity<ApiResponse<OrgUnitRes>> update(@PathVariable Long id,
                                                          @Valid @RequestBody OrgUnitUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.update(id, request)));
+    }
+
+    @GetMapping("/level-1")
+    @Operation(summary = "List level 1 org units", description = "Returns paginated national level org units ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getLevelOneOrgUnits(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelOneUnits(page, size)));
+    }
+
+    @GetMapping("/level-1/{levelOneId}/level-2")
+    @Operation(summary = "List level 2 org units", description = "Returns paginated province level org units for a national parent ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getLevelTwoOrgUnits(
+            @PathVariable Long levelOneId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelTwoUnits(levelOneId, page, size)));
+    }
+
+    @GetMapping("/level-2/{levelTwoId}/level-3")
+    @Operation(summary = "List level 3 org units", description = "Returns paginated district level org units for a province parent ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getLevelThreeOrgUnits(
+            @PathVariable Long levelTwoId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelThreeUnits(levelTwoId, page, size)));
+    }
+
+    @GetMapping("/level-3/{levelThreeId}/level-4")
+    @Operation(summary = "List level 4 org units", description = "Returns paginated division level org units for a district parent ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getLevelFourOrgUnits(
+            @PathVariable Long levelThreeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelFourUnits(levelThreeId, page, size)));
+    }
+
+    @GetMapping("/level-4/{levelFourId}/level-5")
+    @Operation(summary = "List level 5 org units", description = "Returns paginated branch level org units for a division parent ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getLevelFiveOrgUnits(
+            @PathVariable Long levelFourId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelFiveUnits(levelFourId, page, size)));
     }
 }

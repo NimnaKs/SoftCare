@@ -8,6 +8,7 @@ import java.util.Map;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitCreateReq;
 import me.nimnakse.water_management.organization.dto.request.OrgUnitUpdateReq;
 import me.nimnakse.water_management.organization.dto.response.OrgUnitRes;
@@ -17,6 +18,9 @@ import me.nimnakse.water_management.organization.entity.OrgUnitLevel;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.organization.repository.WaterProjectRepository;
 import me.nimnakse.water_management.organization.service.OrgUnitService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -111,6 +115,44 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         return toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrgUnitRes> getLevelOneUnits(int page, int size) {
+        return buildPageResponse(orgUnitRepository.findByLevel(OrgUnitLevel.NATIONAL, pageRequest(page, size)));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrgUnitRes> getLevelTwoUnits(Long levelOneId, int page, int size) {
+        OrgUnit parent = assertParentLevel(levelOneId, OrgUnitLevel.NATIONAL);
+        return buildPageResponse(orgUnitRepository.findByLevelAndParentId(OrgUnitLevel.PROVINCE, parent.getId(),
+                pageRequest(page, size)));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrgUnitRes> getLevelThreeUnits(Long levelTwoId, int page, int size) {
+        OrgUnit parent = assertParentLevel(levelTwoId, OrgUnitLevel.PROVINCE);
+        return buildPageResponse(orgUnitRepository.findByLevelAndParentId(OrgUnitLevel.DISTRICT, parent.getId(),
+                pageRequest(page, size)));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrgUnitRes> getLevelFourUnits(Long levelThreeId, int page, int size) {
+        OrgUnit parent = assertParentLevel(levelThreeId, OrgUnitLevel.DISTRICT);
+        return buildPageResponse(orgUnitRepository.findByLevelAndParentId(OrgUnitLevel.DIVISION, parent.getId(),
+                pageRequest(page, size)));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<OrgUnitRes> getLevelFiveUnits(Long levelFourId, int page, int size) {
+        OrgUnit parent = assertParentLevel(levelFourId, OrgUnitLevel.DIVISION);
+        return buildPageResponse(orgUnitRepository.findByLevelAndParentId(OrgUnitLevel.BRANCH, parent.getId(),
+                pageRequest(page, size)));
+    }
+
     private OrgUnitRes toResponse(OrgUnit orgUnit) {
         return new OrgUnitRes(orgUnit.getId(), orgUnit.getName(), orgUnit.getLevel(),
                 orgUnit.getParentId(), orgUnit.getWaterProjectId());
@@ -133,5 +175,25 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         if (parentLevel != childLevel - 1) {
             throw new BadRequestException("Parent org unit level does not match hierarchy");
         }
+    }
+
+    private OrgUnit assertParentLevel(Long parentId, OrgUnitLevel expectedLevel) {
+        OrgUnit parent = orgUnitRepository.findById(parentId)
+                .orElseThrow(() -> new NotFoundException("Parent org unit not found", ErrorCode.NOT_FOUND));
+        if (parent.getLevel() != expectedLevel) {
+            throw new BadRequestException("Parent org unit level does not match hierarchy");
+        }
+        return parent;
+    }
+
+    private PageResponse<OrgUnitRes> buildPageResponse(Page<OrgUnit> page) {
+        List<OrgUnitRes> items = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 }
