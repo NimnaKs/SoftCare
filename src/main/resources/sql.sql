@@ -80,6 +80,32 @@ CREATE TABLE organizations (
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
 
+CREATE TABLE agencies (
+                          id                     BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                          organization_id        BIGINT UNSIGNED NOT NULL,
+                          business_name          VARCHAR(255) NOT NULL,
+                          mobile_number          VARCHAR(20) NOT NULL,
+                          nic_number             VARCHAR(30) NOT NULL,
+                          business_address       VARCHAR(500) NOT NULL,
+                          brc_number             VARCHAR(100) NULL,
+                          owner_name             VARCHAR(255) NOT NULL,
+                          owner_nic_number       VARCHAR(30) NOT NULL,
+                          secondary_contact_no   VARCHAR(20) NULL,
+                          service_charge_percent DECIMAL(6,2) NOT NULL DEFAULT 15.00,
+                          subscription_fee       DECIMAL(14,2) NOT NULL DEFAULT 5.00,
+                          total_charges          DECIMAL(14,2) NOT NULL DEFAULT 20.00,
+                          billing_mode           ENUM('PREPAID', 'POSTPAID') NOT NULL DEFAULT 'PREPAID',
+                          is_active              TINYINT(1) NOT NULL DEFAULT 1,
+                          created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updated_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          UNIQUE KEY uq_agency_mobile (mobile_number),
+                          UNIQUE KEY uq_agency_nic (nic_number),
+                          INDEX idx_agency_org (organization_id),
+                          CONSTRAINT fk_agency_organization FOREIGN KEY (organization_id) REFERENCES organizations(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE authorized_officers (
                                      id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                      organization_id     BIGINT UNSIGNED NOT NULL,
