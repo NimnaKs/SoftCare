@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryCreateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.request.InventoryMasterCategoryUpdateReq;
 import me.nimnakse.water_management.inventory.master_categories.dto.response.InventoryMasterCategoryRes;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -57,6 +59,32 @@ public class InventoryMasterCategoryController {
     @Operation(summary = "List inventory master categories")
     public ResponseEntity<ApiResponse<List<InventoryMasterCategoryRes>>> list() {
         return ResponseEntity.ok(ApiResponse.success(service.list()));
+    }
+
+    @GetMapping("/level-1")
+    @Operation(summary = "List level 1 inventory master categories with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<InventoryMasterCategoryRes>>> getLevelOneCategories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelOneCategories(page, size)));
+    }
+
+    @GetMapping("/level-1/{levelOneId}/level-2")
+    @Operation(summary = "List level 2 inventory master categories for a level 1 parent with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<InventoryMasterCategoryRes>>> getLevelTwoCategories(
+            @PathVariable Long levelOneId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelTwoCategories(levelOneId, page, size)));
+    }
+
+    @GetMapping("/level-2/{levelTwoId}/level-3")
+    @Operation(summary = "List level 3 inventory master categories for a level 2 parent with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<InventoryMasterCategoryRes>>> getLevelThreeCategories(
+            @PathVariable Long levelTwoId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelThreeCategories(levelTwoId, page, size)));
     }
 
     @GetMapping("/tree")

@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -15,6 +16,9 @@ import me.nimnakse.water_management.inventory.master_categories.dto.response.Inv
 import me.nimnakse.water_management.inventory.master_categories.entity.InventoryMasterCategory;
 import me.nimnakse.water_management.inventory.master_categories.repository.InventoryMasterCategoryRepository;
 import me.nimnakse.water_management.inventory.master_categories.service.InventoryMasterCategoryService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -136,6 +140,34 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         return roots;
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<InventoryMasterCategoryRes> getLevelOneCategories(int page, int size) {
+        Pageable pageable = buildPageable(page, size);
+        Page<InventoryMasterCategory> categories = repository.findByLevelAndParentIdIsNull(1, pageable);
+        return toPageResponse(categories);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<InventoryMasterCategoryRes> getLevelTwoCategories(Long levelOneCategoryId, int page, int size) {
+        InventoryMasterCategory parent = loadCategory(levelOneCategoryId);
+        validateLevel(parent, 1, "Level 1 category not found");
+        Pageable pageable = buildPageable(page, size);
+        Page<InventoryMasterCategory> categories = repository.findByLevelAndParentId(2, parent.getId(), pageable);
+        return toPageResponse(categories);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<InventoryMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page, int size) {
+        InventoryMasterCategory parent = loadCategory(levelTwoCategoryId);
+        validateLevel(parent, 2, "Level 2 category not found");
+        Pageable pageable = buildPageable(page, size);
+        Page<InventoryMasterCategory> categories = repository.findByLevelAndParentId(3, parent.getId(), pageable);
+        return toPageResponse(categories);
+    }
+
     @Transactional
     @Override
     public void delete(Long id) {
@@ -250,5 +282,32 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Pageable buildPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 10 : size;
+        return PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "name"));
+    }
+
+    private InventoryMasterCategory loadCategory(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+    }
+
+    private void validateLevel(InventoryMasterCategory category, int expectedLevel, String notFoundMessage) {
+        if (category.getLevel() != expectedLevel) {
+            throw new BadRequestException(notFoundMessage);
+        }
+    }
+
+    private PageResponse<InventoryMasterCategoryRes> toPageResponse(Page<InventoryMasterCategory> page) {
+        return new PageResponse<>(
+                page.getContent().stream().map(this::toResponse).toList(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getNumber(),
+                page.getSize()
+        );
     }
 }
