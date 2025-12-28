@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.users.dto.request.UserCreateReq;
 import me.nimnakse.water_management.users.dto.request.UserPasswordUpdateReq;
 import me.nimnakse.water_management.users.dto.request.UserUpdateReq;
@@ -74,5 +75,16 @@ public class UserController {
             @RequestParam(required = false) UserStatus status
     ) {
         return ResponseEntity.ok(ApiResponse.success(userService.list(orgUnitId, status)));
+    }
+
+    @GetMapping("/page")
+    @Operation(summary = "List users (paginated)", description = "Returns paginated users ordered by last update (desc). Optional filters: org unit and status.")
+    public ResponseEntity<ApiResponse<PageResponse<UserRes>>> listUsersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long orgUnitId,
+            @RequestParam(required = false) UserStatus status
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(userService.listPaged(orgUnitId, status, page, size)));
     }
 }
