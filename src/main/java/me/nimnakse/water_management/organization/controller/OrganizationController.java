@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerCreateReq;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerUpdateReq;
 import me.nimnakse.water_management.organization.dto.request.OrgNotificationContactCreateReq;
@@ -60,6 +61,14 @@ public class OrganizationController {
     @Operation(summary = "List organizations", description = "Returns all organizations.")
     public ResponseEntity<ApiResponse<List<OrganizationRes>>> getAll() {
         return ResponseEntity.ok(ApiResponse.success(organizationService.getAll()));
+    }
+
+    @GetMapping("/paginated")
+    @Operation(summary = "List organizations (paginated)", description = "Returns paginated organizations ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrganizationRes>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(organizationService.getAllPaginated(page, size)));
     }
 
     @DeleteMapping("/{id}")
