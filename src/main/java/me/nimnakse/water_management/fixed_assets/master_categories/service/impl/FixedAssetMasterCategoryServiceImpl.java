@@ -1,16 +1,25 @@
 package me.nimnakse.water_management.fixed_assets.master_categories.service.impl;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.request.FixedAssetMasterCategoryCreateReq;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.request.FixedAssetMasterCategoryUpdateReq;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.response.FixedAssetMasterCategoryRes;
+import me.nimnakse.water_management.fixed_assets.master_categories.dto.response.FixedAssetMasterCategoryTreeRes;
 import me.nimnakse.water_management.fixed_assets.master_categories.entity.FixedAssetMasterCategory;
 import me.nimnakse.water_management.fixed_assets.master_categories.repository.FixedAssetMasterCategoryRepository;
 import me.nimnakse.water_management.fixed_assets.master_categories.service.FixedAssetMasterCategoryService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,14 +81,80 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
     @Transactional(readOnly = true)
     @Override
     public List<FixedAssetMasterCategoryRes> list(Long parentId) {
-        List<FixedAssetMasterCategory> categories = parentId == null
-                ? repository.findAll()
-                : repository.findByParentId(parentId);
-        return categories.stream()
-                .sorted(Comparator.comparing(FixedAssetMasterCategory::getLevel)
-                        .thenComparing(FixedAssetMasterCategory::getName, String.CASE_INSENSITIVE_ORDER))
-                .map(this::toResponse)
-                .toList();
+        List<FixedAssetMasterCategory> categories;
+        if (parentId == null) {
+            categories = repository.findAll(Sort.by(Sort.Direction.ASC, "level", "name"));
+        } else {
+            categories = repository.findByParentId(parentId).stream()
+                    .sorted(Comparator.comparing(FixedAssetMasterCategory::getLevel)
+                            .thenComparing(FixedAssetMasterCategory::getName, String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+        }
+
+        return categories.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<FixedAssetMasterCategoryTreeRes> getTree() {
+        List<FixedAssetMasterCategory> categories = repository.findAll(Sort.by(Sort.Direction.ASC, "level", "name"));
+        Map<Long, FixedAssetMasterCategoryTreeRes> nodes = new LinkedHashMap<>();
+        for (FixedAssetMasterCategory category : categories) {
+            String specification01 = category.getLevel() == 2 ? category.getSpecification01() : null;
+            String specification02 = category.getLevel() == 2 ? category.getSpecification02() : null;
+            String unit = category.getLevel() == 2 ? category.getUnit() : null;
+            nodes.put(category.getId(), new FixedAssetMasterCategoryTreeRes(
+                    category.getId(),
+                    category.getParentId(),
+                    category.getLevel(),
+                    category.getName(),
+                    specification01,
+                    specification02,
+                    unit,
+                    category.getIsSystem(),
+                    category.getIsActive(),
+                    new ArrayList<>()
+            ));
+        }
+
+        List<FixedAssetMasterCategoryTreeRes> roots = new ArrayList<>();
+        for (FixedAssetMasterCategory category : categories) {
+            FixedAssetMasterCategoryTreeRes node = nodes.get(category.getId());
+            if (category.getParentId() != null && nodes.containsKey(category.getParentId())) {
+                nodes.get(category.getParentId()).children().add(node);
+            } else {
+                roots.add(node);
+            }
+        }
+        return roots;
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<FixedAssetMasterCategoryRes> getLevelOneCategories(int page, int size) {
+        Pageable pageable = buildPageable(page, size);
+        Page<FixedAssetMasterCategory> categories = repository.findByLevelAndParentIdIsNull(1, pageable);
+        return toPageResponse(categories);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<FixedAssetMasterCategoryRes> getLevelTwoCategories(Long levelOneCategoryId, int page, int size) {
+        FixedAssetMasterCategory parent = loadCategory(levelOneCategoryId);
+        validateLevel(parent, 1, "Level 1 fixed asset category not found");
+        Pageable pageable = buildPageable(page, size);
+        Page<FixedAssetMasterCategory> categories = repository.findByLevelAndParentId(2, parent.getId(), pageable);
+        return toPageResponse(categories);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<FixedAssetMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page, int size) {
+        FixedAssetMasterCategory parent = loadCategory(levelTwoCategoryId);
+        validateLevel(parent, 2, "Level 2 fixed asset category not found");
+        Pageable pageable = buildPageable(page, size);
+        Page<FixedAssetMasterCategory> categories = repository.findByLevelAndParentId(3, parent.getId(), pageable);
+        return toPageResponse(categories);
     }
 
     @Transactional
@@ -154,6 +229,33 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
         if (isActive != null) {
             category.setIsActive(isActive);
         }
+    }
+
+    private Pageable buildPageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 10 : size;
+        return PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "name"));
+    }
+
+    private FixedAssetMasterCategory loadCategory(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found", ErrorCode.NOT_FOUND));
+    }
+
+    private void validateLevel(FixedAssetMasterCategory category, int expectedLevel, String notFoundMessage) {
+        if (category.getLevel() != expectedLevel) {
+            throw new BadRequestException(notFoundMessage);
+        }
+    }
+
+    private PageResponse<FixedAssetMasterCategoryRes> toPageResponse(Page<FixedAssetMasterCategory> page) {
+        return new PageResponse<>(
+                page.getContent().stream().map(this::toResponse).toList(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getNumber(),
+                page.getSize()
+        );
     }
 
     private String trimToNull(String value) {
