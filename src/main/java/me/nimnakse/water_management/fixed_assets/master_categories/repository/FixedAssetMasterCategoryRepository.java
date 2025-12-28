@@ -1,8 +1,10 @@
 package me.nimnakse.water_management.fixed_assets.master_categories.repository;
 
-import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 import me.nimnakse.water_management.fixed_assets.master_categories.entity.FixedAssetMasterCategory;
+import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FixedAssetMasterCategoryRepository extends JpaRepository<FixedAssetMasterCategory, Long> {
     boolean existsByLevelAndNameIgnoreCaseAndParentId(Integer level, String name, Long parentId);
@@ -16,4 +18,8 @@ public interface FixedAssetMasterCategoryRepository extends JpaRepository<FixedA
     boolean existsByParentId(Long parentId);
 
     List<FixedAssetMasterCategory> findByParentId(Long parentId);
+
+    Page<FixedAssetMasterCategory> findByLevelAndParentIdIsNull(Integer level, Pageable pageable);
+
+    Page<FixedAssetMasterCategory> findByLevelAndParentId(Integer level, Long parentId, Pageable pageable);
 }

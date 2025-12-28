@@ -5,9 +5,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.request.FixedAssetMasterCategoryCreateReq;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.request.FixedAssetMasterCategoryUpdateReq;
 import me.nimnakse.water_management.fixed_assets.master_categories.dto.response.FixedAssetMasterCategoryRes;
+import me.nimnakse.water_management.fixed_assets.master_categories.dto.response.FixedAssetMasterCategoryTreeRes;
 import me.nimnakse.water_management.fixed_assets.master_categories.service.FixedAssetMasterCategoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -44,6 +46,38 @@ public class FixedAssetMasterCategoryController {
     public ResponseEntity<ApiResponse<List<FixedAssetMasterCategoryRes>>> list(
             @RequestParam(required = false) Long parentId) {
         return ResponseEntity.ok(ApiResponse.success(service.list(parentId)));
+    }
+
+    @GetMapping("/tree")
+    @Operation(summary = "Get fixed asset categories as a tree")
+    public ResponseEntity<ApiResponse<List<FixedAssetMasterCategoryTreeRes>>> getTree() {
+        return ResponseEntity.ok(ApiResponse.success(service.getTree()));
+    }
+
+    @GetMapping("/level-1")
+    @Operation(summary = "List level 1 fixed asset categories with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<FixedAssetMasterCategoryRes>>> getLevelOneCategories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelOneCategories(page, size)));
+    }
+
+    @GetMapping("/level-1/{levelOneId}/level-2")
+    @Operation(summary = "List level 2 fixed asset categories for a level 1 parent with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<FixedAssetMasterCategoryRes>>> getLevelTwoCategories(
+            @PathVariable Long levelOneId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelTwoCategories(levelOneId, page, size)));
+    }
+
+    @GetMapping("/level-2/{levelTwoId}/level-3")
+    @Operation(summary = "List level 3 fixed asset categories for a level 2 parent with pagination")
+    public ResponseEntity<ApiResponse<PageResponse<FixedAssetMasterCategoryRes>>> getLevelThreeCategories(
+            @PathVariable Long levelTwoId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getLevelThreeCategories(levelTwoId, page, size)));
     }
 
     @GetMapping("/{id}")
