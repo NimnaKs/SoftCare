@@ -47,7 +47,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         Organization organization = new Organization();
         organization.setOrgUnitId(request.orgUnitId());
-        organization.setOrganizationCode(nextOrganizationCode());
+        organization.setOrganizationCode(orgUnit.getOrganizationCode());
         applyOrganizationFields(organization, request.nameEn(), request.nameSi(), request.nameTa(),
                 request.addressEn(), request.addressSi(), request.addressTa(), request.postalCode(),
                 request.registrationNumber(), request.email(), request.mobileNumber(),

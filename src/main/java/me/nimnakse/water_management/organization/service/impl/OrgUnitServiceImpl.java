@@ -5,6 +5,8 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -23,11 +25,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class OrgUnitServiceImpl implements OrgUnitService {
     private static final int MIN_LEVEL_INDEX = 0;
     private static final Map<OrgUnitLevel, Integer> LEVEL_ORDER = new EnumMap<>(OrgUnitLevel.class);
+    private static final Pattern ORG_CODE_PATTERN = Pattern.compile("^\\d{6}$");
+    private static final int BRANCH_CODE_START = 400117;
+    private static final int RESERVED_START = 400101;
+    private static final int RESERVED_END = 400116;
+
 
     static {
         LEVEL_ORDER.put(OrgUnitLevel.NATIONAL, 0);
@@ -59,6 +67,20 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         orgUnit.setLevel(request.level());
         orgUnit.setParentId(request.parentId());
         orgUnit.setWaterProjectId(request.waterProjectId());
+
+        if (request.level() == OrgUnitLevel.BRANCH) {
+
+            if (StringUtils.hasText(request.organizationCode())) {
+                // manual → validation only
+                validateOrganizationCode(request.organizationCode().trim());
+                orgUnit.setOrganizationCode(request.organizationCode().trim());
+            } else {
+                // auto → always >= 400117
+                orgUnit.setOrganizationCode(generateOrganizationCode());
+            }
+
+        }
+
 
         OrgUnit saved = orgUnitRepository.save(orgUnit);
         return toResponse(saved);
@@ -111,6 +133,22 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         orgUnit.setParentId(request.parentId());
         orgUnit.setWaterProjectId(request.waterProjectId());
 
+        if (orgUnit.getLevel() == OrgUnitLevel.BRANCH &&
+                StringUtils.hasText(request.organizationCode())) {
+
+            int code = Integer.parseInt(request.organizationCode());
+
+            if (code >= RESERVED_START && code <= RESERVED_END) {
+                // allowed – manual correction
+                validateOrganizationCode(request.organizationCode());
+                orgUnit.setOrganizationCode(request.organizationCode());
+            } else {
+                validateOrganizationCode(request.organizationCode());
+                orgUnit.setOrganizationCode(request.organizationCode());
+            }
+        }
+
+
         OrgUnit saved = orgUnitRepository.save(orgUnit);
         return toResponse(saved);
     }
@@ -155,7 +193,9 @@ public class OrgUnitServiceImpl implements OrgUnitService {
 
     private OrgUnitRes toResponse(OrgUnit orgUnit) {
         return new OrgUnitRes(orgUnit.getId(), orgUnit.getName(), orgUnit.getLevel(),
-                orgUnit.getParentId(), orgUnit.getWaterProjectId());
+                orgUnit.getParentId(), orgUnit.getWaterProjectId(),
+                (orgUnit.getOrganizationCode() != null)?orgUnit.getOrganizationCode():null
+        );
     }
 
     private void validateParent(OrgUnitLevel level, Long parentId) {
@@ -196,4 +236,42 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     private PageRequest pageRequest(int page, int size) {
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
+
+    private void validateOrganizationCode(String code) {
+
+        if (!ORG_CODE_PATTERN.matcher(code).matches()) {
+            throw new IllegalArgumentException("Organization code must be exactly 6 digits");
+        }
+
+        int numeric = Integer.parseInt(code);
+
+        // allow reserved range ONLY for manual input
+        if (numeric < RESERVED_START) {
+            throw new IllegalArgumentException(
+                    "Organization code must be >= " + RESERVED_START
+            );
+        }
+
+        if (orgUnitRepository.existsByOrganizationCode(code)) {
+            throw new IllegalArgumentException("Organization code already exists");
+        }
+    }
+
+    private String generateOrganizationCode() {
+
+        String maxCodeStr =
+                orgUnitRepository.findMaxOrganizationCodeByLevel(OrgUnitLevel.BRANCH);
+
+        int next = BRANCH_CODE_START;
+
+        if (maxCodeStr != null && !maxCodeStr.isBlank()) {
+            int max = Integer.parseInt(maxCodeStr);
+
+            // ensure we never fall into reserved range
+            next = Math.max(max + 1, BRANCH_CODE_START);
+        }
+
+        return String.valueOf(next); // ex: 400117, 400118
+    }
+
 }

@@ -8,6 +8,7 @@ public record OrgUnitUpdateReq(
         @NotBlank String name,
         @NotNull OrgUnitLevel level,
         Long parentId,
-        Long waterProjectId
+        Long waterProjectId,
+        String organizationCode
 ) {
 }

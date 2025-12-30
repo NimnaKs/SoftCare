@@ -1,6 +1,8 @@
 package me.nimnakse.water_management.organization.repository;
 
 import java.util.List;
+import java.util.Optional;
+
 import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.entity.OrgUnitLevel;
 import org.springframework.data.domain.Page;
@@ -13,4 +15,10 @@ public interface OrgUnitRepository extends JpaRepository<OrgUnit, Long> {
     Page<OrgUnit> findByLevel(OrgUnitLevel level, Pageable pageable);
 
     Page<OrgUnit> findByLevelAndParentId(OrgUnitLevel level, Long parentId, Pageable pageable);
+
+    boolean existsByOrganizationCode(String organizationCode);
+
+    Optional<OrgUnit> findTopByLevelOrderByOrganizationCodeDesc(OrgUnitLevel level);
+
+    String findMaxOrganizationCodeByLevel(OrgUnitLevel orgUnitLevel);
 }

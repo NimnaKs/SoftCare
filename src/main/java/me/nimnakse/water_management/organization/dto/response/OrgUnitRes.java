@@ -7,6 +7,7 @@ public record OrgUnitRes(
         String name,
         OrgUnitLevel level,
         Long parentId,
-        Long waterProjectId
+        Long waterProjectId,
+        String organizationCode
 ) {
 }

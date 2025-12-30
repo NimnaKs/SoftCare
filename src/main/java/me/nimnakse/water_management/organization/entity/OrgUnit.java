@@ -26,4 +26,7 @@ public class OrgUnit extends BaseEntity {
 
     @Column(name = "water_project_id")
     private Long waterProjectId;
+
+    @Column(name = "organization_code", length = 50, unique = true)
+    private String organizationCode;
 }
