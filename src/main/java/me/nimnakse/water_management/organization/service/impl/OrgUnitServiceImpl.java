@@ -95,7 +95,8 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         Map<Long, OrgUnitTreeRes> nodes = new LinkedHashMap<>();
         for (OrgUnit unit : units) {
             nodes.put(unit.getId(), new OrgUnitTreeRes(unit.getId(), unit.getName(), unit.getLevel(),
-                    unit.getParentId(), unit.getWaterProjectId(), new ArrayList<>()));
+                    unit.getParentId(), unit.getWaterProjectId(), unit.getOrganizationCode() ,
+                    new ArrayList<>()));
         }
 
         List<OrgUnitTreeRes> roots = new ArrayList<>();

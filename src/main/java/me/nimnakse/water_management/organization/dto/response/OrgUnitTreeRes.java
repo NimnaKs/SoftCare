@@ -9,6 +9,7 @@ public record OrgUnitTreeRes(
         OrgUnitLevel level,
         Long parentId,
         Long waterProjectId,
+        String organizationCode,
         List<OrgUnitTreeRes> children
 ) {
 }
