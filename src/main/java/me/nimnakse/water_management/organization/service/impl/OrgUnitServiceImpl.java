@@ -156,6 +156,12 @@ public class OrgUnitServiceImpl implements OrgUnitService {
 
     @Transactional(readOnly = true)
     @Override
+    public PageResponse<OrgUnitRes> getAll(int page, int size) {
+        return buildPageResponse(orgUnitRepository.findAll(pageRequest(page, size)));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public PageResponse<OrgUnitRes> getLevelOneUnits(int page, int size) {
         return buildPageResponse(orgUnitRepository.findByLevel(OrgUnitLevel.NATIONAL, pageRequest(page, size)));
     }

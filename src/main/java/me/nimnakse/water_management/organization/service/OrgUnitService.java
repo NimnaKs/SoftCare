@@ -16,6 +16,8 @@ public interface OrgUnitService {
 
     OrgUnitRes update(Long id, OrgUnitUpdateReq request);
 
+    PageResponse<OrgUnitRes> getAll(int page, int size);
+
     PageResponse<OrgUnitRes> getLevelOneUnits(int page, int size);
 
     PageResponse<OrgUnitRes> getLevelTwoUnits(Long levelOneId, int page, int size);
