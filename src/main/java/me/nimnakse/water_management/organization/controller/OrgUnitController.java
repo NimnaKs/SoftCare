@@ -31,6 +31,14 @@ public class OrgUnitController {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.create(request)));
     }
 
+    @GetMapping
+    @Operation(summary = "List org units", description = "Returns paginated org units ordered by last update (desc).")
+    public ResponseEntity<ApiResponse<PageResponse<OrgUnitRes>>> getOrgUnits(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(orgUnitService.getAll(page, size)));
+    }
+
     @GetMapping("/tree")
     @Operation(summary = "Get org unit tree", description = "Returns an org unit tree, optionally filtered by project.")
     public ResponseEntity<ApiResponse<List<OrgUnitTreeRes>>> getTree(@RequestParam(required = false) Long waterProjectId) {
