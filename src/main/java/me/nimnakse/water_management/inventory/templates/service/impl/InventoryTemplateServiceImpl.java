@@ -1,11 +1,7 @@
 package me.nimnakse.water_management.inventory.templates.service.impl;
 
 import java.security.SecureRandom;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.common.exception.BadRequestException;
