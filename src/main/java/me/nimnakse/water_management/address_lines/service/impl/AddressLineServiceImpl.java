@@ -163,6 +163,7 @@ public class AddressLineServiceImpl implements AddressLineService {
                                  Long parentLine2Id, Long parentLine3Id,
                                  String postalCode, Long currentId) {
         validateOrgUnit(orgUnitId);
+        organizationAccessService.enforceOrgUnitAccess(orgUnitId);
         int levelValue = level;
         if (levelValue < 1 || levelValue > 4) {
             throw new BadRequestException("Address line level must be between 1 and 4");
