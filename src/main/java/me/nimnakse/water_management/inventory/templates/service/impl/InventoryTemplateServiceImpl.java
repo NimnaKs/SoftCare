@@ -217,6 +217,8 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 levelOne != null ? levelOne.getName() : null,
                 template.getLevelTwoCategoryId(),
                 levelTwo != null ? levelTwo.getName() : null,
+                levelTwo != null ? levelTwo.getSpecification01() : null,
+                levelTwo != null ? levelTwo.getSpecification02() : null,
                 template.getLevelThreeCategoryId(),
                 levelThree != null ? levelThree.getName() : null,
                 template.getCreatedAt(),
