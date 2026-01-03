@@ -1,12 +1,12 @@
 package me.nimnakse.water_management.inventory.templates.service.impl;
 
 import java.security.SecureRandom;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -185,24 +185,37 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<InventoryTemplateRes> getByOrgUnit(Long orgUnitId) {
+    public PageResponse<InventoryTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size) {
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
 
-        List<InventoryTemplateImport> imports = importRepository.findByOrgUnitId(orgUnit.getId());
+        Pageable pageable = buildPageable(page, size);
+        Page<InventoryTemplateImport> imports = importRepository.findByOrgUnitId(orgUnit.getId(), pageable);
         if (imports.isEmpty()) {
-            return List.of();
+            return new PageResponse<>(List.of(), 0, 0, imports.getNumber(), imports.getSize());
         }
 
-        List<Long> templateIds = imports.stream()
+        List<Long> templateIds = imports.getContent().stream()
                 .map(InventoryTemplateImport::getTemplateId)
                 .toList();
         List<InventoryTemplate> templates = templateRepository.findByIdIn(templateIds);
+        Map<Long, InventoryTemplate> templateMap = templates.stream()
+                .collect(Collectors.toMap(InventoryTemplate::getId, Function.identity()));
         Map<Long, InventoryMasterCategory> categories = loadCategoriesMap(templates);
 
-        return templates.stream()
+        List<InventoryTemplateRes> content = templateIds.stream()
+                .map(templateMap::get)
+                .filter(Objects::nonNull)
                 .map(template -> toResponse(template, categories))
                 .toList();
+
+        return new PageResponse<>(
+                content,
+                imports.getTotalElements(),
+                imports.getTotalPages(),
+                imports.getNumber(),
+                imports.getSize()
+        );
     }
 
     private InventoryTemplateRes toResponse(InventoryTemplate template, Map<Long, InventoryMasterCategory> categories) {

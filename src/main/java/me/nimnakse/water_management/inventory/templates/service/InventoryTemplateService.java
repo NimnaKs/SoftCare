@@ -22,5 +22,5 @@ public interface InventoryTemplateService {
 
     List<InventoryTemplateRes> importTemplates(InventoryTemplateImportReq request);
 
-    List<InventoryTemplateRes> getByOrgUnit(Long orgUnitId);
+    PageResponse<InventoryTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size);
 }

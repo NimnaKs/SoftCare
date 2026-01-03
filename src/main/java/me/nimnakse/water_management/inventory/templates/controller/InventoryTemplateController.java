@@ -3,7 +3,6 @@ package me.nimnakse.water_management.inventory.templates.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.inventory.templates.dto.request.InventoryTemplateCreateReq;
@@ -79,7 +78,10 @@ public class InventoryTemplateController {
 
     @GetMapping("/org-units/{orgUnitId}")
     @Operation(summary = "List templates available for an organization unit")
-    public ResponseEntity<ApiResponse<List<InventoryTemplateRes>>> getByOrgUnit(@PathVariable Long orgUnitId) {
-        return ResponseEntity.ok(ApiResponse.success(service.getByOrgUnit(orgUnitId)));
+    public ResponseEntity<ApiResponse<PageResponse<InventoryTemplateRes>>> getByOrgUnit(
+            @PathVariable Long orgUnitId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getByOrgUnit(orgUnitId, page, size)));
     }
 }
