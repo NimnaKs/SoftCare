@@ -59,8 +59,9 @@ public class FixedAssetTemplateController {
     @Operation(summary = "Get paginated fixed asset templates")
     public ResponseEntity<ApiResponse<PageResponse<FixedAssetTemplateRes>>> getPage(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success(service.getPage(page, size)));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(service.getPage(page, size, orgUnitId)));
     }
 
     @DeleteMapping("/{id}")

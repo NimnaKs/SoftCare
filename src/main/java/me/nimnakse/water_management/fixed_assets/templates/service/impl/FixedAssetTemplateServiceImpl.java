@@ -125,9 +125,16 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<FixedAssetTemplateRes> getPage(int page, int size) {
+    public PageResponse<FixedAssetTemplateRes> getPage(int page, int size, Long orgUnitId) {
         Pageable pageable = buildPageable(page, size);
-        Page<FixedAssetTemplate> templates = templateRepository.findAll(pageable);
+        Page<FixedAssetTemplate> templates;
+        if (orgUnitId != null) {
+            orgUnitRepository.findById(orgUnitId)
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+            templates = templateRepository.findAvailableForOrgUnit(orgUnitId, pageable);
+        } else {
+            templates = templateRepository.findAll(pageable);
+        }
         Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templates.getContent());
         List<FixedAssetTemplateRes> content = templates.getContent().stream()
                 .map(template -> toResponse(template, categories))
@@ -186,25 +193,7 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     @Transactional(readOnly = true)
     @Override
     public PageResponse<FixedAssetTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size) {
-        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
-
-        Pageable pageable = buildPageable(page, size);
-        Page<FixedAssetTemplate> templatesPage = templateRepository.findAvailableForOrgUnit(
-                orgUnit.getId(), pageable);
-
-        Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templatesPage.getContent());
-        List<FixedAssetTemplateRes> content = templatesPage.getContent().stream()
-                .map(template -> toResponse(template, categories))
-                .toList();
-
-        return new PageResponse<>(
-                content,
-                templatesPage.getTotalElements(),
-                templatesPage.getTotalPages(),
-                templatesPage.getNumber(),
-                templatesPage.getSize()
-        );
+        return getPage(page, size, orgUnitId);
     }
 
     private FixedAssetTemplateRes toResponse(FixedAssetTemplate template, Map<Long, FixedAssetMasterCategory> categories) {
