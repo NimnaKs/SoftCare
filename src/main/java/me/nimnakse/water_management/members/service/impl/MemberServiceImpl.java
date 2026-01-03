@@ -45,6 +45,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberRes create(MemberCreateReq request) {
         OrgUnit orgUnit = validateOrgUnit(request.orgUnitId());
+        organizationAccessService.enforceOrgUnitAccess(orgUnit.getId());
         String membershipCode = generateMembershipCode(orgUnit);
         Member member = new Member();
         member.setMembershipCode(membershipCode);
@@ -62,6 +63,7 @@ public class MemberServiceImpl implements MemberService {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
+        organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         applyValues(member, request.orgUnitId(), request.membershipType(),
                 request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
@@ -263,10 +265,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private void enforceOrganizationScope(Long memberOrgUnitId) {
-        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
-        if (orgUnitId != null && !orgUnitId.equals(memberOrgUnitId)) {
-            throw new NotFoundException("Member not found", ErrorCode.NOT_FOUND);
-        }
+        organizationAccessService.enforceOrgUnitAccess(memberOrgUnitId);
     }
 
     private MemberRes toResponse(Member member) {

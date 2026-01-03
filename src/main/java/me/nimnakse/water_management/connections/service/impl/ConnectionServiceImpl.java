@@ -69,6 +69,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     public ConnectionRes create(ConnectionCreateReq request) {
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+        organizationAccessService.enforceOrgUnitAccess(member.getOrgUnitId());
         validatePremises(request.premisesId());
         validateBillingZone(request.billingZoneId());
         validateTariff(request.tariffId());
@@ -114,7 +115,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                     .orElseThrow(() -> new NotFoundException("Connection not found", ErrorCode.NOT_FOUND));
             member = memberRepository.findById(connection.getMemberId())
                     .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
-            enforceOrganizationScope(member.getOrgUnitId(), orgUnitId);
+            enforceOrganizationScope(member.getOrgUnitId());
         } else if (membershipCode != null && !membershipCode.isBlank()) {
             member = findByMembershipCode(membershipCode, orgUnitId)
                     .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
@@ -269,9 +270,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
     }
 
-    private void enforceOrganizationScope(Long memberOrgUnitId, Long orgUnitId) {
-        if (orgUnitId != null && !orgUnitId.equals(memberOrgUnitId)) {
-            throw new NotFoundException("Member not found", ErrorCode.NOT_FOUND);
-        }
+    private void enforceOrganizationScope(Long memberOrgUnitId) {
+        organizationAccessService.enforceOrgUnitAccess(memberOrgUnitId);
     }
 }

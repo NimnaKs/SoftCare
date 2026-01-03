@@ -38,6 +38,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeRes create(EmployeeCreateReq request) {
         validateOrgUnit(request.orgUnitId());
+        organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         if (employeeRepository.existsByNic(request.nic())) {
             throw new BadRequestException("Employee NIC already exists");
         }
@@ -54,6 +55,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
+        organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         if (!employee.getNic().equals(request.nic()) && employeeRepository.existsByNic(request.nic())) {
             throw new BadRequestException("Employee NIC already exists");
         }
@@ -123,10 +125,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     private void enforceOrganizationScope(Long employeeOrgUnitId) {
-        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
-        if (orgUnitId != null && !orgUnitId.equals(employeeOrgUnitId)) {
-            throw new NotFoundException("Employee not found", ErrorCode.NOT_FOUND);
-        }
+        organizationAccessService.enforceOrgUnitAccess(employeeOrgUnitId);
     }
 
     private void validateMobileNumbers(String mobileNumber, String secondary) {
