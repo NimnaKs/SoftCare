@@ -37,4 +37,18 @@ public interface InventoryTemplateRepository extends JpaRepository<InventoryTemp
                             + "WHERE t.deletedAt IS NULL AND i.id IS NULL"
     )
     Page<InventoryTemplate> findAvailableForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
+
+    @Query(
+            value =
+                    "SELECT t FROM InventoryTemplate t "
+                            + "JOIN InventoryTemplateImport i ON i.templateId = t.id "
+                            + "AND i.orgUnitId = :orgUnitId AND i.deletedAt IS NULL "
+                            + "WHERE t.deletedAt IS NULL",
+            countQuery =
+                    "SELECT COUNT(t) FROM InventoryTemplate t "
+                            + "JOIN InventoryTemplateImport i ON i.templateId = t.id "
+                            + "AND i.orgUnitId = :orgUnitId AND i.deletedAt IS NULL "
+                            + "WHERE t.deletedAt IS NULL"
+    )
+    Page<InventoryTemplate> findImportedForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
 }

@@ -37,4 +37,18 @@ public interface FixedAssetTemplateRepository extends JpaRepository<FixedAssetTe
                             + "WHERE t.deletedAt IS NULL AND i.id IS NULL"
     )
     Page<FixedAssetTemplate> findAvailableForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
+
+    @Query(
+            value =
+                    "SELECT t FROM FixedAssetTemplate t "
+                            + "JOIN FixedAssetTemplateImport i ON i.templateId = t.id "
+                            + "AND i.orgUnitId = :orgUnitId AND i.deletedAt IS NULL "
+                            + "WHERE t.deletedAt IS NULL",
+            countQuery =
+                    "SELECT COUNT(t) FROM FixedAssetTemplate t "
+                            + "JOIN FixedAssetTemplateImport i ON i.templateId = t.id "
+                            + "AND i.orgUnitId = :orgUnitId AND i.deletedAt IS NULL "
+                            + "WHERE t.deletedAt IS NULL"
+    )
+    Page<FixedAssetTemplate> findImportedForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
 }

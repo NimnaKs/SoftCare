@@ -185,7 +185,7 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
-        Page<InventoryTemplate> templatesPage = templateRepository.findAvailableForOrgUnit(
+        Page<InventoryTemplate> templatesPage = templateRepository.findImportedForOrgUnit(
                 orgUnit.getId(), pageable);
 
         Map<Long, InventoryMasterCategory> categories = loadCategoriesMap(templatesPage.getContent());
