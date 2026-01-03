@@ -6,6 +6,8 @@ import me.nimnakse.water_management.inventory.templates.entity.InventoryTemplate
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface InventoryTemplateRepository extends JpaRepository<InventoryTemplate, Long> {
     boolean existsByTemplateCodeIgnoreCase(String templateCode);
@@ -21,4 +23,15 @@ public interface InventoryTemplateRepository extends JpaRepository<InventoryTemp
     List<InventoryTemplate> findByIdIn(Collection<Long> ids);
 
     Page<InventoryTemplate> findByIdNotIn(Collection<Long> ids, Pageable pageable);
+
+    @Query(
+            value =
+                    "SELECT t FROM InventoryTemplate t "
+                            + "WHERE t.deletedAt IS NULL "
+                            + "AND NOT EXISTS ("
+                            + "SELECT 1 FROM InventoryTemplateImport i "
+                            + "WHERE i.templateId = t.id AND i.orgUnitId = :orgUnitId "
+                            + "AND i.deletedAt IS NULL)"
+    )
+    Page<InventoryTemplate> findAvailableForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
 }
