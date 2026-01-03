@@ -190,13 +190,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
-        List<Long> importedTemplateIds = importRepository.findByOrgUnitId(orgUnit.getId()).stream()
-                .map(FixedAssetTemplateImport::getTemplateId)
-                .toList();
-
-        Page<FixedAssetTemplate> templatesPage = importedTemplateIds.isEmpty()
-                ? templateRepository.findAll(pageable)
-                : templateRepository.findByIdNotIn(importedTemplateIds, pageable);
+        Page<FixedAssetTemplate> templatesPage = templateRepository.findAvailableForOrgUnit(
+                orgUnit.getId(), pageable);
 
         Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templatesPage.getContent());
         List<FixedAssetTemplateRes> content = templatesPage.getContent().stream()

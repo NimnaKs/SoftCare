@@ -6,6 +6,8 @@ import me.nimnakse.water_management.fixed_assets.templates.entity.FixedAssetTemp
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface FixedAssetTemplateRepository extends JpaRepository<FixedAssetTemplate, Long> {
     boolean existsByTemplateCodeIgnoreCase(String templateCode);
@@ -21,4 +23,15 @@ public interface FixedAssetTemplateRepository extends JpaRepository<FixedAssetTe
     List<FixedAssetTemplate> findByIdIn(Collection<Long> ids);
 
     Page<FixedAssetTemplate> findByIdNotIn(Collection<Long> ids, Pageable pageable);
+
+    @Query(
+            value =
+                    "SELECT t FROM FixedAssetTemplate t "
+                            + "WHERE t.deletedAt IS NULL "
+                            + "AND NOT EXISTS ("
+                            + "SELECT 1 FROM FixedAssetTemplateImport i "
+                            + "WHERE i.templateId = t.id AND i.orgUnitId = :orgUnitId "
+                            + "AND i.deletedAt IS NULL)"
+    )
+    Page<FixedAssetTemplate> findAvailableForOrgUnit(@Param("orgUnitId") Long orgUnitId, Pageable pageable);
 }
