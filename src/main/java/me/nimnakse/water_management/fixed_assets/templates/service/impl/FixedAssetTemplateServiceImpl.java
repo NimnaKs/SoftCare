@@ -190,31 +190,25 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
-        Page<FixedAssetTemplateImport> imports = importRepository.findByOrgUnitId(orgUnit.getId(), pageable);
-        if (imports.isEmpty()) {
-            return new PageResponse<>(List.of(), 0, 0, imports.getNumber(), imports.getSize());
-        }
-
-        List<Long> templateIds = imports.getContent().stream()
+        List<Long> importedTemplateIds = importRepository.findByOrgUnitId(orgUnit.getId()).stream()
                 .map(FixedAssetTemplateImport::getTemplateId)
                 .toList();
-        List<FixedAssetTemplate> templates = templateRepository.findByIdIn(templateIds);
-        Map<Long, FixedAssetTemplate> templateMap = templates.stream()
-                .collect(Collectors.toMap(FixedAssetTemplate::getId, Function.identity()));
-        Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templates);
 
-        List<FixedAssetTemplateRes> content = templateIds.stream()
-                .map(templateMap::get)
-                .filter(Objects::nonNull)
+        Page<FixedAssetTemplate> templatesPage = importedTemplateIds.isEmpty()
+                ? templateRepository.findAll(pageable)
+                : templateRepository.findByIdNotIn(importedTemplateIds, pageable);
+
+        Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templatesPage.getContent());
+        List<FixedAssetTemplateRes> content = templatesPage.getContent().stream()
                 .map(template -> toResponse(template, categories))
                 .toList();
 
         return new PageResponse<>(
                 content,
-                imports.getTotalElements(),
-                imports.getTotalPages(),
-                imports.getNumber(),
-                imports.getSize()
+                templatesPage.getTotalElements(),
+                templatesPage.getTotalPages(),
+                templatesPage.getNumber(),
+                templatesPage.getSize()
         );
     }
 

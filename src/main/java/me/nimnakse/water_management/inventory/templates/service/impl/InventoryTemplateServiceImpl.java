@@ -2,7 +2,6 @@ package me.nimnakse.water_management.inventory.templates.service.impl;
 
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -186,31 +185,25 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
-        Page<InventoryTemplateImport> imports = importRepository.findByOrgUnitId(orgUnit.getId(), pageable);
-        if (imports.isEmpty()) {
-            return new PageResponse<>(List.of(), 0, 0, imports.getNumber(), imports.getSize());
-        }
-
-        List<Long> templateIds = imports.getContent().stream()
+        List<Long> importedTemplateIds = importRepository.findByOrgUnitId(orgUnit.getId()).stream()
                 .map(InventoryTemplateImport::getTemplateId)
                 .toList();
-        List<InventoryTemplate> templates = templateRepository.findByIdIn(templateIds);
-        Map<Long, InventoryTemplate> templateMap = templates.stream()
-                .collect(Collectors.toMap(InventoryTemplate::getId, Function.identity()));
-        Map<Long, InventoryMasterCategory> categories = loadCategoriesMap(templates);
 
-        List<InventoryTemplateRes> content = templateIds.stream()
-                .map(templateMap::get)
-                .filter(Objects::nonNull)
+        Page<InventoryTemplate> templatesPage = importedTemplateIds.isEmpty()
+                ? templateRepository.findAll(pageable)
+                : templateRepository.findByIdNotIn(importedTemplateIds, pageable);
+
+        Map<Long, InventoryMasterCategory> categories = loadCategoriesMap(templatesPage.getContent());
+        List<InventoryTemplateRes> content = templatesPage.getContent().stream()
                 .map(template -> toResponse(template, categories))
                 .toList();
 
         return new PageResponse<>(
                 content,
-                imports.getTotalElements(),
-                imports.getTotalPages(),
-                imports.getNumber(),
-                imports.getSize()
+                templatesPage.getTotalElements(),
+                templatesPage.getTotalPages(),
+                templatesPage.getNumber(),
+                templatesPage.getSize()
         );
     }
 
