@@ -58,10 +58,6 @@ public class SecurityConfig {
                                 "/water-projects/**",
                                 "/org-units/**",
                                 "/organizations/**",
-                                "/members/**",
-                                "/employees/**",
-                                "/address-lines/**",
-                                "/connections/**",
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**",
@@ -70,13 +66,13 @@ public class SecurityConfig {
                                 "/expense-accounts/**",
                                 "/liability-main-categories/**",
                                 "/liability-accounts/**"
-                                ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
+                        ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
                         .requestMatchers(
                                 "/members/**",
                                 "/employees/**",
                                 "/address-lines/**",
                                 "/connections/**"
-                        ).hasAuthority("APP_SCOPE_BRANCH_APP")
+                                ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
