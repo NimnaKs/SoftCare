@@ -16,6 +16,7 @@ import me.nimnakse.water_management.inventory.master_categories.dto.response.Inv
 import me.nimnakse.water_management.inventory.master_categories.entity.InventoryMasterCategory;
 import me.nimnakse.water_management.inventory.master_categories.repository.InventoryMasterCategoryRepository;
 import me.nimnakse.water_management.inventory.master_categories.service.InventoryMasterCategoryService;
+import me.nimnakse.water_management.inventory.templates.service.InventoryTemplateService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InventoryMasterCategoryServiceImpl implements InventoryMasterCategoryService {
     private final InventoryMasterCategoryRepository repository;
+    private final InventoryTemplateService inventoryTemplateService;
 
-    public InventoryMasterCategoryServiceImpl(InventoryMasterCategoryRepository repository) {
+    public InventoryMasterCategoryServiceImpl(InventoryMasterCategoryRepository repository,
+                                              InventoryTemplateService inventoryTemplateService) {
         this.repository = repository;
+        this.inventoryTemplateService = inventoryTemplateService;
     }
 
     @Transactional
@@ -36,7 +40,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     public InventoryMasterCategoryRes create(InventoryMasterCategoryCreateReq request) {
         validateLevelRange(request.level());
         InventoryMasterCategory parent = loadParent(request.parentId());
-        validateLevelAgainstParent(request.level(), parent);
+        validateParentHierarchy(request.level(), parent);
         String normalizedName = normalizeName(request.name());
         validateUniqueness(request.level(), normalizedName, request.parentId(), null);
 
@@ -44,6 +48,8 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         applyRequest(category, parent, request.level(), normalizedName, request.specification01(),
                 request.specification02(), request.unit(), request.isLeaf(), request.isSystem(), request.isActive());
         InventoryMasterCategory saved = repository.save(category);
+
+        createInventoryTemplateIfNeeded(saved, parent);
 
         if (parent != null && Boolean.TRUE.equals(parent.getIsLeaf())) {
             parent.setIsLeaf(Boolean.FALSE);
@@ -65,7 +71,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
 
         InventoryMasterCategory newParent = loadParent(request.parentId());
         validateLevelRange(request.level());
-        validateLevelAgainstParent(request.level(), newParent);
+        validateParentHierarchy(request.level(), newParent);
 
         String normalizedName = normalizeName(request.name());
         validateUniqueness(request.level(), normalizedName, request.parentId(), id);
@@ -79,6 +85,8 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         applyRequest(category, newParent, request.level(), normalizedName, request.specification01(),
                 request.specification02(), request.unit(), request.isLeaf(), request.isSystem(), request.isActive());
         InventoryMasterCategory saved = repository.save(category);
+
+        createInventoryTemplateIfNeeded(saved, newParent);
 
         updateParentLeafStatus(newParent);
         if (!Objects.equals(previousParentId, request.parentId())) {
@@ -200,6 +208,37 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         if (level == null || level < 1 || level > 3) {
             throw new BadRequestException("Inventory master category level must be between 1 and 3");
         }
+    }
+
+    private void validateParentHierarchy(Integer level, InventoryMasterCategory parent) {
+        if (level == 1 && parent != null) {
+            throw new BadRequestException("Level 1 category cannot have a parent");
+        }
+        if (level == 2 && (parent == null || parent.getLevel() != 1)) {
+            throw new BadRequestException("Level 2 category must have a level 1 parent");
+        }
+        if (level == 3 && (parent == null || parent.getLevel() != 2)) {
+            throw new BadRequestException("Level 3 category must have a level 2 parent");
+        }
+        validateLevelAgainstParent(level, parent);
+    }
+
+    private void createInventoryTemplateIfNeeded(InventoryMasterCategory levelThreeCategory,
+                                                 InventoryMasterCategory levelTwoCategory) {
+        if (levelThreeCategory.getLevel() != 3 || levelTwoCategory == null) {
+            return;
+        }
+        if (levelTwoCategory.getParentId() == null) {
+            throw new BadRequestException("Level 2 category must have a level 1 parent");
+        }
+
+        InventoryMasterCategory levelOneCategory = loadCategory(levelTwoCategory.getParentId());
+        validateLevel(levelOneCategory, 1, "Level 1 category not found");
+
+        inventoryTemplateService.createIfMissing(
+                levelOneCategory.getId(),
+                levelTwoCategory.getId(),
+                levelThreeCategory.getId());
     }
 
     private InventoryMasterCategory loadParent(Long parentId) {
