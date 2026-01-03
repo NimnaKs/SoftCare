@@ -72,7 +72,7 @@ public class SecurityConfig {
                                 "/employees/**",
                                 "/address-lines/**",
                                 "/connections/**"
-                                ).hasAnyAuthority("APP_SCOPE_BRANCH_APP")
+                                ).hasAuthority("APP_SCOPE_BRANCH_APP")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
