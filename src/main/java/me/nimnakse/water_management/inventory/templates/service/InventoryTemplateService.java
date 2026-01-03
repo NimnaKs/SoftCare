@@ -14,7 +14,7 @@ public interface InventoryTemplateService {
 
     InventoryTemplateRes getById(Long id);
 
-    PageResponse<InventoryTemplateRes> getPage(int page, int size);
+    PageResponse<InventoryTemplateRes> getPage(int page, int size, Long orgUnitId);
 
     void createIfMissing(Long levelOneCategoryId, Long levelTwoCategoryId, Long levelThreeCategoryId);
 

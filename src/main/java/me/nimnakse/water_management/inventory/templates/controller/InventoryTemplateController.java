@@ -60,8 +60,9 @@ public class InventoryTemplateController {
     @Operation(summary = "Get paginated inventory templates")
     public ResponseEntity<ApiResponse<PageResponse<InventoryTemplateRes>>> getPage(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success(service.getPage(page, size)));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(service.getPage(page, size, orgUnitId)));
     }
 
     @DeleteMapping("/{id}")
