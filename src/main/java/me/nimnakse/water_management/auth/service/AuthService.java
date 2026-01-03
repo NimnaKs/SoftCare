@@ -64,12 +64,12 @@ public class AuthService {
         if (!principal.getAppScopes().contains(RoleAppScope.BRANCH_APP)) {
             return null;
         }
+
         OrgUnit orgUnit = principal.getUser().getOrgUnit();
         if (orgUnit == null) {
             throw new BadRequestException("Branch user must be assigned to an org unit");
         }
-        return organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(orgUnit.getId())
-                .map(org -> org.getId())
-                .orElseThrow(() -> new BadRequestException("Organization not found for branch org unit"));
+
+        return orgUnit.getId();
     }
 }
