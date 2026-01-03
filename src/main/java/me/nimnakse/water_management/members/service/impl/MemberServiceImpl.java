@@ -98,7 +98,12 @@ public class MemberServiceImpl implements MemberService {
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber, int page, int size) {
+    public PageResponse<MemberRes> search(String membershipCode,
+                                          String nicNumber,
+                                          String registrationNumber,
+                                          String mobileNumber,
+                                          int page,
+                                          int size) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
             Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId, pageRequest(page, size));
@@ -107,11 +112,15 @@ public class MemberServiceImpl implements MemberService {
         if (nicNumber != null && !nicNumber.isBlank()) {
             return toPageResponse(findByNic(nicNumber, orgUnitId), page, size);
         }
+        if (registrationNumber != null && !registrationNumber.isBlank()) {
+            Page<Member> memberPage = findByRegistrationNumberStartingWith(registrationNumber, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
+        }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
             Page<Member> memberPage = findByMobileNumberStartingWith(mobileNumber, orgUnitId, pageRequest(page, size));
             return toPageResponse(memberPage);
         }
-        throw new BadRequestException("Provide membership code, NIC, or mobile number for search");
+        throw new BadRequestException("Provide membership code, NIC, registration number, or mobile number for search");
     }
 
     private void applyValues(Member member,
@@ -286,6 +295,13 @@ public class MemberServiceImpl implements MemberService {
             return memberRepository.findByMobileNumberStartingWith(mobileNumber, pageRequest);
         }
         return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId, pageRequest);
+    }
+
+    private Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Long orgUnitId, PageRequest pageRequest) {
+        if (orgUnitId == null) {
+            return memberRepository.findByRegistrationNumberStartingWith(registrationNumber, pageRequest);
+        }
+        return memberRepository.findByRegistrationNumberStartingWithAndOrgUnitId(registrationNumber, orgUnitId, pageRequest);
     }
 
     private List<Member> uniqueById(List<Member> members) {

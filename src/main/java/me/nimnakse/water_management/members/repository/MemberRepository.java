@@ -51,5 +51,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Page<Member> findByMobileNumberStartingWithAndOrgUnitId(String mobileNumber, Long orgUnitId, Pageable pageable);
 
+    Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Pageable pageable);
+
+    Page<Member> findByRegistrationNumberStartingWithAndOrgUnitId(String registrationNumber, Long orgUnitId, Pageable pageable);
+
     Page<Member> findByOrgUnitId(Long orgUnitId, Pageable pageable);
 }
