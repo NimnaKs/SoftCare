@@ -58,6 +58,10 @@ public class SecurityConfig {
                                 "/inventory-templates/import"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/inventory-templates/**"
+                        ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
+                        .requestMatchers(
                                 "/roles/**",
                                 "/users/**",
                                 "/water-projects/**",
