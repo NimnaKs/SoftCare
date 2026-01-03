@@ -14,7 +14,7 @@ public interface FixedAssetTemplateService {
 
     FixedAssetTemplateRes getById(Long id);
 
-    PageResponse<FixedAssetTemplateRes> getPage(int page, int size);
+    PageResponse<FixedAssetTemplateRes> getPage(int page, int size, Long orgUnitId);
 
     void createIfMissing(Long levelOneCategoryId, Long levelTwoCategoryId, Long levelThreeCategoryId);
 
