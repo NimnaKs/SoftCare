@@ -46,6 +46,7 @@ public class SecurityConfig {
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**",
+                                "/fixed-asset-templates/**",
                                 "/inventory-master-categories/**",
                                 "/inventory-templates/**",
                                 "/expense-main-categories/**",
@@ -55,10 +56,12 @@ public class SecurityConfig {
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/inventory-templates/import"
+                                "/inventory-templates/import",
+                                "/fixed-asset-templates/import"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/fixed-asset-templates/**",
                                 "/inventory-templates/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
@@ -70,6 +73,7 @@ public class SecurityConfig {
                                 "/revenue-main-categories/**",
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**",
+                                "/fixed-asset-templates/**",
                                 "/inventory-master-categories/**",
                                 "/inventory-templates/**",
                                 "/expense-main-categories/**",

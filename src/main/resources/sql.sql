@@ -633,6 +633,48 @@ CREATE TABLE branch_fixed_assets (
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
 
+CREATE TABLE fixed_asset_templates (
+                                       id                    BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                       template_code         VARCHAR(50) NOT NULL,
+                                       level_one_category_id BIGINT UNSIGNED NOT NULL,
+                                       level_two_category_id BIGINT UNSIGNED NOT NULL,
+                                       level_three_category_id BIGINT UNSIGNED NOT NULL,
+                                       created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                           ON UPDATE CURRENT_TIMESTAMP,
+                                       UNIQUE KEY uq_fa_template_code (template_code),
+                                       UNIQUE KEY uq_fa_template_combo (level_one_category_id, level_two_category_id, level_three_category_id),
+                                       INDEX idx_fa_template_level_one (level_one_category_id),
+                                       INDEX idx_fa_template_level_two (level_two_category_id),
+                                       INDEX idx_fa_template_level_three (level_three_category_id),
+                                       CONSTRAINT fk_fa_template_level_one
+                                           FOREIGN KEY (level_one_category_id) REFERENCES fixed_asset_master_categories(id),
+                                       CONSTRAINT fk_fa_template_level_two
+                                           FOREIGN KEY (level_two_category_id) REFERENCES fixed_asset_master_categories(id),
+                                       CONSTRAINT fk_fa_template_level_three
+                                           FOREIGN KEY (level_three_category_id) REFERENCES fixed_asset_master_categories(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE fixed_asset_template_imports (
+                                              id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                              org_unit_id BIGINT UNSIGNED NOT NULL,
+                                              template_id BIGINT UNSIGNED NOT NULL,
+                                              created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                              updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                                  ON UPDATE CURRENT_TIMESTAMP,
+                                              UNIQUE KEY uq_fa_template_import (org_unit_id, template_id),
+                                              INDEX idx_fa_template_import_org (org_unit_id),
+                                              INDEX idx_fa_template_import_template (template_id),
+                                              CONSTRAINT fk_fa_template_import_org
+                                                  FOREIGN KEY (org_unit_id) REFERENCES org_units(id),
+                                              CONSTRAINT fk_fa_template_import_template
+                                                  FOREIGN KEY (template_id) REFERENCES fixed_asset_templates(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE liability_main_categories (
                                            id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                            liability_type  ENUM('CURRENT', 'NON_CURRENT') NOT NULL,

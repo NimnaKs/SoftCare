@@ -16,6 +16,7 @@ import me.nimnakse.water_management.fixed_assets.master_categories.dto.response.
 import me.nimnakse.water_management.fixed_assets.master_categories.entity.FixedAssetMasterCategory;
 import me.nimnakse.water_management.fixed_assets.master_categories.repository.FixedAssetMasterCategoryRepository;
 import me.nimnakse.water_management.fixed_assets.master_categories.service.FixedAssetMasterCategoryService;
+import me.nimnakse.water_management.fixed_assets.templates.service.FixedAssetTemplateService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCategoryService {
     private final FixedAssetMasterCategoryRepository repository;
+    private final FixedAssetTemplateService fixedAssetTemplateService;
 
-    public FixedAssetMasterCategoryServiceImpl(FixedAssetMasterCategoryRepository repository) {
+    public FixedAssetMasterCategoryServiceImpl(FixedAssetMasterCategoryRepository repository,
+                                               FixedAssetTemplateService fixedAssetTemplateService) {
         this.repository = repository;
+        this.fixedAssetTemplateService = fixedAssetTemplateService;
     }
 
     @Transactional
@@ -47,7 +51,9 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                 request.isLeaf(),
                 request.isSystem(),
                 request.isActive());
-        return toResponse(repository.save(category));
+        FixedAssetMasterCategory saved = repository.save(category);
+        createFixedAssetTemplateIfNeeded(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -67,7 +73,9 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                 request.isLeaf(),
                 request.isSystem(),
                 request.isActive());
-        return toResponse(repository.save(category));
+        FixedAssetMasterCategory saved = repository.save(category);
+        createFixedAssetTemplateIfNeeded(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -186,6 +194,26 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
         if (level != null && parent.getLevel() != null && level <= parent.getLevel()) {
             throw new BadRequestException("Child level must be greater than parent level");
         }
+    }
+
+    private void createFixedAssetTemplateIfNeeded(FixedAssetMasterCategory category) {
+        if (category.getLevel() == null || category.getLevel() != 3 || category.getParentId() == null) {
+            return;
+        }
+
+        FixedAssetMasterCategory levelTwo = repository.findById(category.getParentId())
+                .orElseThrow(() -> new NotFoundException("Parent category not found", ErrorCode.NOT_FOUND));
+        if (levelTwo.getParentId() == null) {
+            throw new BadRequestException("Level 2 fixed asset category must have a level 1 parent");
+        }
+
+        FixedAssetMasterCategory levelOne = repository.findById(levelTwo.getParentId())
+                .orElseThrow(() -> new NotFoundException("Level 1 fixed asset category not found", ErrorCode.NOT_FOUND));
+
+        validateLevel(levelOne, 1, "Level 1 fixed asset category not found");
+        validateLevel(levelTwo, 2, "Level 2 fixed asset category not found");
+
+        fixedAssetTemplateService.createIfMissing(levelOne.getId(), levelTwo.getId(), category.getId());
     }
 
     private void validateUniqueness(Integer level, String name, Long parentId, Long id) {
