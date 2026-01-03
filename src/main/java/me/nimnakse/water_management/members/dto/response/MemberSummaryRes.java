@@ -7,6 +7,7 @@ public record MemberSummaryRes(
         String membershipCode,
         MemberType membershipType,
         String displayName,
+        String registrationNumber,
         String nicOld,
         String nicNew,
         String mobileNumber

@@ -212,6 +212,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 member.getMembershipCode(),
                 member.getMembershipType(),
                 displayName,
+                member.getRegistrationNumber(),
                 member.getNicOld(),
                 member.getNicNew(),
                 member.getMobileNumber()

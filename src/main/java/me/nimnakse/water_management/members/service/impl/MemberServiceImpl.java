@@ -50,7 +50,8 @@ public class MemberServiceImpl implements MemberService {
         Member member = new Member();
         member.setMembershipCode(membershipCode);
         applyValues(member, request.orgUnitId(), request.membershipType(),
-                request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
+                request.salutation(), request.fullName(), request.corporateName(),
+                request.registrationNumber(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), null);
         Member saved = memberRepository.save(member);
@@ -65,7 +66,8 @@ public class MemberServiceImpl implements MemberService {
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         applyValues(member, request.orgUnitId(), request.membershipType(),
-                request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
+                request.salutation(), request.fullName(), request.corporateName(),
+                request.registrationNumber(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), member.getId());
         return toResponse(member);
@@ -124,6 +126,7 @@ public class MemberServiceImpl implements MemberService {
                              String salutation,
                              String fullName,
                              String corporateName,
+                             String registrationNumber,
                              String nicNumber,
                              String mobileNumber,
                              String dpNicFrontUrl,
@@ -131,7 +134,7 @@ public class MemberServiceImpl implements MemberService {
                              String signatureUrl,
                              String brcDocumentUrl,
                              Long existingMemberId) {
-        validateMembershipDetails(membershipType, salutation, fullName, corporateName);
+        validateMembershipDetails(membershipType, salutation, fullName, corporateName, nicNumber, registrationNumber);
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
             throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
         }
@@ -147,22 +150,26 @@ public class MemberServiceImpl implements MemberService {
         member.setSignatureUrl(signatureUrl);
         member.setBrcDocumentUrl(brcDocumentUrl);
 
-        if (nicNumber != null && !nicNumber.isBlank()) {
+        if (membershipType == MemberType.PERSONAL) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
                     .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
             ensureUniqueNic(result, existingMemberId);
             member.setNicOld(result.oldNic());
             member.setNicNew(result.newNic());
+            member.setRegistrationNumber(null);
         } else {
             member.setNicOld(null);
             member.setNicNew(null);
+            member.setRegistrationNumber(registrationNumber);
         }
     }
 
     private void validateMembershipDetails(MemberType membershipType,
                                            String salutation,
                                            String fullName,
-                                           String corporateName) {
+                                           String corporateName,
+                                           String nicNumber,
+                                           String registrationNumber) {
         if (membershipType == MemberType.PERSONAL) {
             if (salutation == null || salutation.isBlank()) {
                 throw new BadRequestException("Salutation is required for personal members");
@@ -170,9 +177,15 @@ public class MemberServiceImpl implements MemberService {
             if (fullName == null || fullName.isBlank()) {
                 throw new BadRequestException("Full name is required for personal members");
             }
+            if (nicNumber == null || nicNumber.isBlank()) {
+                throw new BadRequestException("NIC number is required for personal members");
+            }
         } else if (membershipType == MemberType.CORPORATE) {
             if (corporateName == null || corporateName.isBlank()) {
                 throw new BadRequestException("Corporate name is required for corporate members");
+            }
+            if (registrationNumber == null || registrationNumber.isBlank()) {
+                throw new BadRequestException("Registration number is required for corporate members");
             }
         } else {
             throw new BadRequestException("Membership type is required");
@@ -280,6 +293,7 @@ public class MemberServiceImpl implements MemberService {
                 member.getSalutation(),
                 member.getFullName(),
                 member.getCorporateName(),
+                member.getRegistrationNumber(),
                 displayName,
                 member.getNicOld(),
                 member.getNicNew(),

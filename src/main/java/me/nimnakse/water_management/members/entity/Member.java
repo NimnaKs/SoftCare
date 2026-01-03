@@ -35,6 +35,9 @@ public class Member extends BaseEntity {
     @Column(name = "nic_new")
     private String nicNew;
 
+    @Column(name = "registration_number")
+    private String registrationNumber;
+
     @Column(name = "mobile_number", nullable = false)
     private String mobileNumber;
 
@@ -148,6 +151,14 @@ public class Member extends BaseEntity {
 
     public String getBrcDocumentUrl() {
         return brcDocumentUrl;
+    }
+
+    public String getRegistrationNumber() {
+        return registrationNumber;
+    }
+
+    public void setRegistrationNumber(String registrationNumber) {
+        this.registrationNumber = registrationNumber;
     }
 
     public void setBrcDocumentUrl(String brcDocumentUrl) {
