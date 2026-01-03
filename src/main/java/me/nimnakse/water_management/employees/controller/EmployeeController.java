@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.employees.dto.request.EmployeeCreateReq;
 import me.nimnakse.water_management.employees.dto.request.EmployeeUpdateReq;
 import me.nimnakse.water_management.employees.dto.response.EmployeeRes;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,6 +41,14 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<EmployeeRes>> update(@PathVariable Long id,
                                                            @Valid @RequestBody EmployeeUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(employeeService.update(id, request)));
+    }
+
+    @GetMapping
+    @Operation(summary = "List employees", description = "Returns employees in a paginated list ordered by last update.")
+    public ResponseEntity<ApiResponse<PageResponse<EmployeeRes>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(employeeService.getPage(page, size)));
     }
 
     @PatchMapping("/{id}/deactivate")

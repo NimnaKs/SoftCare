@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.members.dto.request.MemberCreateReq;
 import me.nimnakse.water_management.members.dto.request.MemberUpdateReq;
@@ -44,6 +45,14 @@ public class MemberController {
     public ResponseEntity<ApiResponse<MemberRes>> update(@PathVariable Long id,
                                                          @Valid @RequestBody MemberUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(memberService.update(id, request)));
+    }
+
+    @GetMapping
+    @Operation(summary = "List members", description = "Returns members in a paginated list ordered by last update.")
+    public ResponseEntity<ApiResponse<PageResponse<MemberRes>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(memberService.getPage(page, size)));
     }
 
     @GetMapping("/{id}")

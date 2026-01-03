@@ -4,6 +4,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.common.util.ValidationUtils;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.employees.dto.request.EmployeeCreateReq;
 import me.nimnakse.water_management.employees.dto.request.EmployeeUpdateReq;
 import me.nimnakse.water_management.employees.dto.response.EmployeeRes;
@@ -13,6 +14,9 @@ import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.employees.service.EmployeeService;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +69,17 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
         enforceOrganizationScope(employee.getOrgUnitId());
         return toResponse(employee);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<EmployeeRes> getPage(int page, int size) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        PageRequest pageRequest = pageRequest(page, size);
+        Page<Employee> employees = orgUnitId == null
+                ? employeeRepository.findAll(pageRequest)
+                : employeeRepository.findByOrgUnitId(orgUnitId, pageRequest);
+        return toPageResponse(employees);
     }
 
     @Transactional
@@ -121,6 +136,17 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (secondary != null && !secondary.isBlank() && !ValidationUtils.isValidSriLankaPhone(secondary)) {
             throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number");
         }
+    }
+
+    private PageResponse<EmployeeRes> toPageResponse(Page<Employee> page) {
+        var items = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
     private EmployeeRes toResponse(Employee employee) {

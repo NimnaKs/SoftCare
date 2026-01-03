@@ -5,6 +5,7 @@ import java.util.Optional;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.util.MemberNameFormatter;
 import me.nimnakse.water_management.common.util.NicUtils;
 import me.nimnakse.water_management.common.util.ValidationUtils;
@@ -15,10 +16,16 @@ import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.members.service.MemberService;
+import me.nimnakse.water_management.organization.entity.OrgUnit;
+import me.nimnakse.water_management.organization.entity.OrgUnitLevel;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class MemberServiceImpl implements MemberService {
@@ -37,12 +44,11 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     @Override
     public MemberRes create(MemberCreateReq request) {
-        validateOrgUnit(request.orgUnitId());
-        if (memberRepository.existsByMembershipCode(request.membershipCode())) {
-            throw new BadRequestException("Membership code already exists");
-        }
+        OrgUnit orgUnit = validateOrgUnit(request.orgUnitId());
+        String membershipCode = generateMembershipCode(orgUnit);
         Member member = new Member();
-        applyValues(member, request.membershipCode(), request.orgUnitId(), request.membershipType(),
+        member.setMembershipCode(membershipCode);
+        applyValues(member, request.orgUnitId(), request.membershipType(),
                 request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), null);
@@ -56,11 +62,7 @@ public class MemberServiceImpl implements MemberService {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
-        if (!member.getMembershipCode().equals(request.membershipCode())
-                && memberRepository.existsByMembershipCode(request.membershipCode())) {
-            throw new BadRequestException("Membership code already exists");
-        }
-        applyValues(member, request.membershipCode(), request.orgUnitId(), request.membershipType(),
+        applyValues(member, request.orgUnitId(), request.membershipType(),
                 request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), member.getId());
@@ -74,6 +76,16 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
         enforceOrganizationScope(member.getOrgUnitId());
         return toResponse(member);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<MemberRes> getPage(int page, int size) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        Page<Member> memberPage = orgUnitId == null
+                ? memberRepository.findAll(pageRequest(page, size))
+                : memberRepository.findByOrgUnitId(orgUnitId, pageRequest(page, size));
+        return toPageResponse(memberPage);
     }
 
     @Transactional(readOnly = true)
@@ -105,7 +117,6 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private void applyValues(Member member,
-                             String membershipCode,
                              Long orgUnitId,
                              MemberType membershipType,
                              String salutation,
@@ -123,7 +134,6 @@ public class MemberServiceImpl implements MemberService {
             throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
         }
 
-        member.setMembershipCode(membershipCode);
         member.setOrgUnitId(orgUnitId);
         member.setMembershipType(membershipType);
         member.setSalutation(salutation);
@@ -181,10 +191,47 @@ public class MemberServiceImpl implements MemberService {
                 });
     }
 
-    private void validateOrgUnit(Long orgUnitId) {
-        if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+    private OrgUnit validateOrgUnit(Long orgUnitId) {
+        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+        if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
+            throw new BadRequestException("Members must be attached to a branch org unit");
         }
+        if (!StringUtils.hasText(orgUnit.getOrganizationCode())) {
+            throw new BadRequestException("Branch org unit must have an organization code");
+        }
+        return orgUnit;
+    }
+
+    private String generateMembershipCode(OrgUnit orgUnit) {
+        String prefix = orgUnit.getOrganizationCode();
+        String maxCode = memberRepository.findMaxMembershipCodeByOrgUnitId(orgUnit.getId());
+        int nextSequence = 1;
+        if (maxCode != null && maxCode.startsWith(prefix)) {
+            String suffix = maxCode.substring(prefix.length());
+            if (suffix.startsWith("-")) {
+                suffix = suffix.substring(1);
+            }
+            if (!suffix.isBlank()) {
+                try {
+                    nextSequence = Integer.parseInt(suffix) + 1;
+                } catch (NumberFormatException ignored) {
+                    nextSequence = 1;
+                }
+            }
+        }
+        return String.format("%s-%04d", prefix, nextSequence);
+    }
+
+    private PageResponse<MemberRes> toPageResponse(Page<Member> page) {
+        List<MemberRes> items = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
     private Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
