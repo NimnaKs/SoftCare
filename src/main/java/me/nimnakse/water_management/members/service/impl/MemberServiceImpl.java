@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.members.service.impl;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,22 +98,18 @@ public class MemberServiceImpl implements MemberService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber) {
+    public PageResponse<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber, int page, int size) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
-            return findByMembershipCodeStartingWith(membershipCode, orgUnitId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         if (nicNumber != null && !nicNumber.isBlank()) {
-            return findByNic(nicNumber, orgUnitId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            return toPageResponse(findByNic(nicNumber, orgUnitId), page, size);
         }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
-            return findByMobileNumberStartingWith(mobileNumber, orgUnitId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            Page<Member> memberPage = findByMobileNumberStartingWith(mobileNumber, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         throw new BadRequestException("Provide membership code, NIC, or mobile number for search");
     }
@@ -243,14 +240,17 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private PageRequest pageRequest(int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
-    private List<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId) {
+    private Page<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMembershipCodeStartingWith(membershipCode);
+            return memberRepository.findByMembershipCodeStartingWith(membershipCode, pageRequest);
         }
-        return memberRepository.findByMembershipCodeStartingWithAndOrgUnitId(membershipCode, orgUnitId);
+        return memberRepository.findByMembershipCodeStartingWithAndOrgUnitId(membershipCode, orgUnitId, pageRequest);
     }
 
     private List<Member> findByNic(String nicNumber, Long orgUnitId) {
@@ -281,11 +281,11 @@ public class MemberServiceImpl implements MemberService {
         return memberRepository.findByNicOldStartingWithAndOrgUnitId(nicOld, orgUnitId);
     }
 
-    private List<Member> findByMobileNumberStartingWith(String mobileNumber, Long orgUnitId) {
+    private Page<Member> findByMobileNumberStartingWith(String mobileNumber, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMobileNumberStartingWith(mobileNumber);
+            return memberRepository.findByMobileNumberStartingWith(mobileNumber, pageRequest);
         }
-        return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId);
+        return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId, pageRequest);
     }
 
     private List<Member> uniqueById(List<Member> members) {
@@ -294,6 +294,20 @@ public class MemberServiceImpl implements MemberService {
             unique.put(member.getId(), member);
         }
         return new ArrayList<>(unique.values());
+    }
+
+    private PageResponse<MemberRes> toPageResponse(List<Member> members, int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
+        members.sort(Comparator.comparing(Member::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+        int fromIndex = Math.min(page * size, members.size());
+        int toIndex = Math.min(fromIndex + size, members.size());
+        List<MemberRes> items = members.subList(fromIndex, toIndex).stream()
+                .map(this::toResponse)
+                .toList();
+        int totalPages = (int) Math.ceil((double) members.size() / size);
+        return new PageResponse<>(items, members.size(), totalPages, page, size);
     }
 
     private void enforceOrganizationScope(Long memberOrgUnitId) {

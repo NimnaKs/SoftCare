@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.util.ValidationPatterns;
@@ -57,12 +56,14 @@ public class MemberController {
 
     @GetMapping("/search")
     @Operation(summary = "Search members", description = "Searches members by membership code, NIC, or mobile number.")
-    public ResponseEntity<ApiResponse<List<MemberRes>>> search(@RequestParam(required = false) String membershipCode,
-                                                               @RequestParam(required = false) String nicNumber,
-                                                               @RequestParam(required = false)
-                                                               @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,
-                                                                       message = "Mobile number must be a 10-digit number starting with 07")
-                                                               String mobileNumber) {
-        return ResponseEntity.ok(ApiResponse.success(memberService.search(membershipCode, nicNumber, mobileNumber)));
+    public ResponseEntity<ApiResponse<PageResponse<MemberRes>>> search(@RequestParam(required = false) String membershipCode,
+                                                                       @RequestParam(required = false) String nicNumber,
+                                                                       @RequestParam(required = false)
+                                                                       @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,
+                                                                               message = "Mobile number must be a 10-digit number starting with 07")
+                                                                       String mobileNumber,
+                                                                       @RequestParam(defaultValue = "0") int page,
+                                                                       @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(memberService.search(membershipCode, nicNumber, mobileNumber, page, size)));
     }
 }

@@ -18,6 +18,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findByMembershipCodeStartingWithAndOrgUnitId(String membershipCode, Long orgUnitId);
 
+    Page<Member> findByMembershipCodeStartingWith(String membershipCode, Pageable pageable);
+
+    Page<Member> findByMembershipCodeStartingWithAndOrgUnitId(String membershipCode, Long orgUnitId, Pageable pageable);
+
     @Query("select max(m.membershipCode) from Member m where m.orgUnitId = :orgUnitId")
     String findMaxMembershipCodeByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
@@ -42,6 +46,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     List<Member> findByMobileNumberStartingWith(String mobileNumber);
 
     List<Member> findByMobileNumberStartingWithAndOrgUnitId(String mobileNumber, Long orgUnitId);
+
+    Page<Member> findByMobileNumberStartingWith(String mobileNumber, Pageable pageable);
+
+    Page<Member> findByMobileNumberStartingWithAndOrgUnitId(String mobileNumber, Long orgUnitId, Pageable pageable);
 
     Page<Member> findByOrgUnitId(Long orgUnitId, Pageable pageable);
 }
