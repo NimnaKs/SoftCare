@@ -9,23 +9,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class OrganizationAccessService {
-    private final OrganizationRepository organizationRepository;
     private final OrgUnitRepository orgUnitRepository;
 
-    public OrganizationAccessService(OrganizationRepository organizationRepository,
-                                     OrgUnitRepository orgUnitRepository) {
-        this.organizationRepository = organizationRepository;
+    public OrganizationAccessService(OrgUnitRepository orgUnitRepository) {
         this.orgUnitRepository = orgUnitRepository;
     }
 
     public Long resolveOrgUnitId() {
-        Long organizationId = SecurityUtils.getOrganizationId();
-        if (organizationId == null) {
-            return null;
-        }
-        return organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
-                .map(org -> org.getOrgUnitId())
-                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+        return SecurityUtils.getOrganizationId();
     }
 
     public void enforceOrgUnitAccess(Long targetOrgUnitId) {
