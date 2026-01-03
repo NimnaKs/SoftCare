@@ -193,7 +193,22 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     @Transactional(readOnly = true)
     @Override
     public PageResponse<FixedAssetTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size) {
-        return getPage(page, size, orgUnitId);
+        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+
+        Pageable pageable = buildPageable(page, size);
+        Page<FixedAssetTemplate> templates = templateRepository.findImportedForOrgUnit(orgUnit.getId(), pageable);
+        Map<Long, FixedAssetMasterCategory> categories = loadCategoriesMap(templates.getContent());
+        List<FixedAssetTemplateRes> content = templates.getContent().stream()
+                .map(template -> toResponse(template, categories))
+                .toList();
+        return new PageResponse<>(
+                content,
+                templates.getTotalElements(),
+                templates.getTotalPages(),
+                templates.getNumber(),
+                templates.getSize()
+        );
     }
 
     private FixedAssetTemplateRes toResponse(FixedAssetTemplate template, Map<Long, FixedAssetMasterCategory> categories) {
