@@ -9,6 +9,8 @@ public record InventoryTemplateRes(
         String levelOneCategoryName,
         Long levelTwoCategoryId,
         String levelTwoCategoryName,
+        String levelTwoCategorySpecification01,
+        String levelTwoCategorySpecification02,
         Long levelThreeCategoryId,
         String levelThreeCategoryName,
         Instant createdAt,
