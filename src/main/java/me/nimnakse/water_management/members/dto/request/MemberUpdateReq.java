@@ -7,7 +7,6 @@ import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.members.entity.MemberType;
 
 public record MemberUpdateReq(
-        @NotBlank String membershipCode,
         @NotNull Long orgUnitId,
         @NotNull MemberType membershipType,
         String salutation,
