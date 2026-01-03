@@ -15,5 +15,5 @@ public interface MemberService {
 
     PageResponse<MemberRes> getPage(int page, int size);
 
-    List<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber);
+    PageResponse<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber, int page, int size);
 }

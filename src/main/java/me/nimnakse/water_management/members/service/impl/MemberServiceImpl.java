@@ -1,6 +1,10 @@
 package me.nimnakse.water_management.members.service.impl;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -94,28 +98,18 @@ public class MemberServiceImpl implements MemberService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber) {
+    public PageResponse<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber, int page, int size) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
-            return findByMembershipCode(membershipCode, orgUnitId)
-                    .map(this::toResponse)
-                    .stream()
-                    .toList();
+            Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         if (nicNumber != null && !nicNumber.isBlank()) {
-            NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
-                    .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
-            return findByNicNew(result.newNic(), orgUnitId)
-                    .map(this::toResponse)
-                    .map(List::of)
-                    .orElseGet(() -> findByNicOldStartingWith(result.numericKey(), orgUnitId).stream()
-                            .map(this::toResponse)
-                            .toList());
+            return toPageResponse(findByNic(nicNumber, orgUnitId), page, size);
         }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
-            return findByMobileNumber(mobileNumber, orgUnitId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            Page<Member> memberPage = findByMobileNumberStartingWith(mobileNumber, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         throw new BadRequestException("Provide membership code, NIC, or mobile number for search");
     }
@@ -246,21 +240,38 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private PageRequest pageRequest(int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
-    private Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
+    private Page<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMembershipCode(membershipCode);
+            return memberRepository.findByMembershipCodeStartingWith(membershipCode, pageRequest);
         }
-        return memberRepository.findByMembershipCodeAndOrgUnitId(membershipCode, orgUnitId);
+        return memberRepository.findByMembershipCodeStartingWithAndOrgUnitId(membershipCode, orgUnitId, pageRequest);
     }
 
-    private Optional<Member> findByNicNew(String nicNew, Long orgUnitId) {
+    private List<Member> findByNic(String nicNumber, Long orgUnitId) {
+        String trimmed = nicNumber.trim();
+        List<Member> members = new ArrayList<>();
+        NicUtils.parse(trimmed).ifPresentOrElse(result -> {
+            members.addAll(findByNicNewStartingWith(result.newNic(), orgUnitId));
+            members.addAll(findByNicOldStartingWith(result.oldNic(), orgUnitId));
+        }, () -> {
+            String normalized = trimmed.toUpperCase();
+            members.addAll(findByNicNewStartingWith(normalized, orgUnitId));
+            members.addAll(findByNicOldStartingWith(normalized, orgUnitId));
+        });
+        return uniqueById(members);
+    }
+
+    private List<Member> findByNicNewStartingWith(String nicNew, Long orgUnitId) {
         if (orgUnitId == null) {
-            return memberRepository.findByNicNew(nicNew);
+            return memberRepository.findByNicNewStartingWith(nicNew);
         }
-        return memberRepository.findByNicNewAndOrgUnitId(nicNew, orgUnitId);
+        return memberRepository.findByNicNewStartingWithAndOrgUnitId(nicNew, orgUnitId);
     }
 
     private List<Member> findByNicOldStartingWith(String nicOld, Long orgUnitId) {
@@ -270,11 +281,33 @@ public class MemberServiceImpl implements MemberService {
         return memberRepository.findByNicOldStartingWithAndOrgUnitId(nicOld, orgUnitId);
     }
 
-    private List<Member> findByMobileNumber(String mobileNumber, Long orgUnitId) {
+    private Page<Member> findByMobileNumberStartingWith(String mobileNumber, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMobileNumber(mobileNumber);
+            return memberRepository.findByMobileNumberStartingWith(mobileNumber, pageRequest);
         }
-        return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+        return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId, pageRequest);
+    }
+
+    private List<Member> uniqueById(List<Member> members) {
+        Map<Long, Member> unique = new LinkedHashMap<>();
+        for (Member member : members) {
+            unique.put(member.getId(), member);
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    private PageResponse<MemberRes> toPageResponse(List<Member> members, int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
+        members.sort(Comparator.comparing(Member::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+        int fromIndex = Math.min(page * size, members.size());
+        int toIndex = Math.min(fromIndex + size, members.size());
+        List<MemberRes> items = members.subList(fromIndex, toIndex).stream()
+                .map(this::toResponse)
+                .toList();
+        int totalPages = (int) Math.ceil((double) members.size() / size);
+        return new PageResponse<>(items, members.size(), totalPages, page, size);
     }
 
     private void enforceOrganizationScope(Long memberOrgUnitId) {
