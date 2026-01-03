@@ -1,6 +1,10 @@
 package me.nimnakse.water_management.members.service.impl;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -50,7 +54,8 @@ public class MemberServiceImpl implements MemberService {
         Member member = new Member();
         member.setMembershipCode(membershipCode);
         applyValues(member, request.orgUnitId(), request.membershipType(),
-                request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
+                request.salutation(), request.fullName(), request.corporateName(),
+                request.registrationNumber(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), null);
         Member saved = memberRepository.save(member);
@@ -65,7 +70,8 @@ public class MemberServiceImpl implements MemberService {
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         applyValues(member, request.orgUnitId(), request.membershipType(),
-                request.salutation(), request.fullName(), request.corporateName(), request.nicNumber(),
+                request.salutation(), request.fullName(), request.corporateName(),
+                request.registrationNumber(), request.nicNumber(),
                 request.mobileNumber(), request.dpNicFrontUrl(), request.dpNicRearUrl(),
                 request.signatureUrl(), request.brcDocumentUrl(), member.getId());
         return toResponse(member);
@@ -92,30 +98,29 @@ public class MemberServiceImpl implements MemberService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<MemberRes> search(String membershipCode, String nicNumber, String mobileNumber) {
+    public PageResponse<MemberRes> search(String membershipCode,
+                                          String nicNumber,
+                                          String registrationNumber,
+                                          String mobileNumber,
+                                          int page,
+                                          int size) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
-            return findByMembershipCode(membershipCode, orgUnitId)
-                    .map(this::toResponse)
-                    .stream()
-                    .toList();
+            Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         if (nicNumber != null && !nicNumber.isBlank()) {
-            NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
-                    .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
-            return findByNicNew(result.newNic(), orgUnitId)
-                    .map(this::toResponse)
-                    .map(List::of)
-                    .orElseGet(() -> findByNicOldStartingWith(result.numericKey(), orgUnitId).stream()
-                            .map(this::toResponse)
-                            .toList());
+            return toPageResponse(findByNic(nicNumber, orgUnitId), page, size);
+        }
+        if (registrationNumber != null && !registrationNumber.isBlank()) {
+            Page<Member> memberPage = findByRegistrationNumberStartingWith(registrationNumber, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
-            return findByMobileNumber(mobileNumber, orgUnitId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            Page<Member> memberPage = findByMobileNumberStartingWith(mobileNumber, orgUnitId, pageRequest(page, size));
+            return toPageResponse(memberPage);
         }
-        throw new BadRequestException("Provide membership code, NIC, or mobile number for search");
+        throw new BadRequestException("Provide membership code, NIC, registration number, or mobile number for search");
     }
 
     private void applyValues(Member member,
@@ -124,6 +129,7 @@ public class MemberServiceImpl implements MemberService {
                              String salutation,
                              String fullName,
                              String corporateName,
+                             String registrationNumber,
                              String nicNumber,
                              String mobileNumber,
                              String dpNicFrontUrl,
@@ -131,7 +137,7 @@ public class MemberServiceImpl implements MemberService {
                              String signatureUrl,
                              String brcDocumentUrl,
                              Long existingMemberId) {
-        validateMembershipDetails(membershipType, salutation, fullName, corporateName);
+        validateMembershipDetails(membershipType, salutation, fullName, corporateName, nicNumber, registrationNumber);
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
             throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
         }
@@ -147,22 +153,26 @@ public class MemberServiceImpl implements MemberService {
         member.setSignatureUrl(signatureUrl);
         member.setBrcDocumentUrl(brcDocumentUrl);
 
-        if (nicNumber != null && !nicNumber.isBlank()) {
+        if (membershipType == MemberType.PERSONAL) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
                     .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
             ensureUniqueNic(result, existingMemberId);
             member.setNicOld(result.oldNic());
             member.setNicNew(result.newNic());
+            member.setRegistrationNumber(null);
         } else {
             member.setNicOld(null);
             member.setNicNew(null);
+            member.setRegistrationNumber(registrationNumber);
         }
     }
 
     private void validateMembershipDetails(MemberType membershipType,
                                            String salutation,
                                            String fullName,
-                                           String corporateName) {
+                                           String corporateName,
+                                           String nicNumber,
+                                           String registrationNumber) {
         if (membershipType == MemberType.PERSONAL) {
             if (salutation == null || salutation.isBlank()) {
                 throw new BadRequestException("Salutation is required for personal members");
@@ -170,9 +180,15 @@ public class MemberServiceImpl implements MemberService {
             if (fullName == null || fullName.isBlank()) {
                 throw new BadRequestException("Full name is required for personal members");
             }
+            if (nicNumber == null || nicNumber.isBlank()) {
+                throw new BadRequestException("NIC number is required for personal members");
+            }
         } else if (membershipType == MemberType.CORPORATE) {
             if (corporateName == null || corporateName.isBlank()) {
                 throw new BadRequestException("Corporate name is required for corporate members");
+            }
+            if (registrationNumber == null || registrationNumber.isBlank()) {
+                throw new BadRequestException("Registration number is required for corporate members");
             }
         } else {
             throw new BadRequestException("Membership type is required");
@@ -233,21 +249,38 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private PageRequest pageRequest(int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
-    private Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
+    private Page<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMembershipCode(membershipCode);
+            return memberRepository.findByMembershipCodeStartingWith(membershipCode, pageRequest);
         }
-        return memberRepository.findByMembershipCodeAndOrgUnitId(membershipCode, orgUnitId);
+        return memberRepository.findByMembershipCodeStartingWithAndOrgUnitId(membershipCode, orgUnitId, pageRequest);
     }
 
-    private Optional<Member> findByNicNew(String nicNew, Long orgUnitId) {
+    private List<Member> findByNic(String nicNumber, Long orgUnitId) {
+        String trimmed = nicNumber.trim();
+        List<Member> members = new ArrayList<>();
+        NicUtils.parse(trimmed).ifPresentOrElse(result -> {
+            members.addAll(findByNicNewStartingWith(result.newNic(), orgUnitId));
+            members.addAll(findByNicOldStartingWith(result.oldNic(), orgUnitId));
+        }, () -> {
+            String normalized = trimmed.toUpperCase();
+            members.addAll(findByNicNewStartingWith(normalized, orgUnitId));
+            members.addAll(findByNicOldStartingWith(normalized, orgUnitId));
+        });
+        return uniqueById(members);
+    }
+
+    private List<Member> findByNicNewStartingWith(String nicNew, Long orgUnitId) {
         if (orgUnitId == null) {
-            return memberRepository.findByNicNew(nicNew);
+            return memberRepository.findByNicNewStartingWith(nicNew);
         }
-        return memberRepository.findByNicNewAndOrgUnitId(nicNew, orgUnitId);
+        return memberRepository.findByNicNewStartingWithAndOrgUnitId(nicNew, orgUnitId);
     }
 
     private List<Member> findByNicOldStartingWith(String nicOld, Long orgUnitId) {
@@ -257,11 +290,40 @@ public class MemberServiceImpl implements MemberService {
         return memberRepository.findByNicOldStartingWithAndOrgUnitId(nicOld, orgUnitId);
     }
 
-    private List<Member> findByMobileNumber(String mobileNumber, Long orgUnitId) {
+    private Page<Member> findByMobileNumberStartingWith(String mobileNumber, Long orgUnitId, PageRequest pageRequest) {
         if (orgUnitId == null) {
-            return memberRepository.findByMobileNumber(mobileNumber);
+            return memberRepository.findByMobileNumberStartingWith(mobileNumber, pageRequest);
         }
-        return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+        return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId, pageRequest);
+    }
+
+    private Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Long orgUnitId, PageRequest pageRequest) {
+        if (orgUnitId == null) {
+            return memberRepository.findByRegistrationNumberStartingWith(registrationNumber, pageRequest);
+        }
+        return memberRepository.findByRegistrationNumberStartingWithAndOrgUnitId(registrationNumber, orgUnitId, pageRequest);
+    }
+
+    private List<Member> uniqueById(List<Member> members) {
+        Map<Long, Member> unique = new LinkedHashMap<>();
+        for (Member member : members) {
+            unique.put(member.getId(), member);
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    private PageResponse<MemberRes> toPageResponse(List<Member> members, int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+        }
+        members.sort(Comparator.comparing(Member::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+        int fromIndex = Math.min(page * size, members.size());
+        int toIndex = Math.min(fromIndex + size, members.size());
+        List<MemberRes> items = members.subList(fromIndex, toIndex).stream()
+                .map(this::toResponse)
+                .toList();
+        int totalPages = (int) Math.ceil((double) members.size() / size);
+        return new PageResponse<>(items, members.size(), totalPages, page, size);
     }
 
     private void enforceOrganizationScope(Long memberOrgUnitId) {
@@ -280,6 +342,7 @@ public class MemberServiceImpl implements MemberService {
                 member.getSalutation(),
                 member.getFullName(),
                 member.getCorporateName(),
+                member.getRegistrationNumber(),
                 displayName,
                 member.getNicOld(),
                 member.getNicNew(),

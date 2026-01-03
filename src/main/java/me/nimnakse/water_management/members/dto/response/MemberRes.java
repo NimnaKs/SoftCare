@@ -12,6 +12,7 @@ public record MemberRes(
         String salutation,
         String fullName,
         String corporateName,
+        String registrationNumber,
         String displayName,
         String nicOld,
         String nicNew,

@@ -12,6 +12,7 @@ public record MemberUpdateReq(
         String salutation,
         String fullName,
         String corporateName,
+        String registrationNumber,
         String nicNumber,
         @NotBlank
         @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX,

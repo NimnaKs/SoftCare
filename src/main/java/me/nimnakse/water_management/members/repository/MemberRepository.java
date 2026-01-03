@@ -14,6 +14,14 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByMembershipCodeAndOrgUnitId(String membershipCode, Long orgUnitId);
 
+    List<Member> findByMembershipCodeStartingWith(String membershipCode);
+
+    List<Member> findByMembershipCodeStartingWithAndOrgUnitId(String membershipCode, Long orgUnitId);
+
+    Page<Member> findByMembershipCodeStartingWith(String membershipCode, Pageable pageable);
+
+    Page<Member> findByMembershipCodeStartingWithAndOrgUnitId(String membershipCode, Long orgUnitId, Pageable pageable);
+
     @Query("select max(m.membershipCode) from Member m where m.orgUnitId = :orgUnitId")
     String findMaxMembershipCodeByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
@@ -23,6 +31,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByNicNewAndOrgUnitId(String nicNew, Long orgUnitId);
 
+    List<Member> findByNicNewStartingWith(String nicNew);
+
+    List<Member> findByNicNewStartingWithAndOrgUnitId(String nicNew, Long orgUnitId);
+
     List<Member> findByNicOldStartingWith(String nicOld);
 
     List<Member> findByNicOldStartingWithAndOrgUnitId(String nicOld, Long orgUnitId);
@@ -30,6 +42,18 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     List<Member> findByMobileNumber(String mobileNumber);
 
     List<Member> findByMobileNumberAndOrgUnitId(String mobileNumber, Long orgUnitId);
+
+    List<Member> findByMobileNumberStartingWith(String mobileNumber);
+
+    List<Member> findByMobileNumberStartingWithAndOrgUnitId(String mobileNumber, Long orgUnitId);
+
+    Page<Member> findByMobileNumberStartingWith(String mobileNumber, Pageable pageable);
+
+    Page<Member> findByMobileNumberStartingWithAndOrgUnitId(String mobileNumber, Long orgUnitId, Pageable pageable);
+
+    Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Pageable pageable);
+
+    Page<Member> findByRegistrationNumberStartingWithAndOrgUnitId(String registrationNumber, Long orgUnitId, Pageable pageable);
 
     Page<Member> findByOrgUnitId(Long orgUnitId, Pageable pageable);
 }
