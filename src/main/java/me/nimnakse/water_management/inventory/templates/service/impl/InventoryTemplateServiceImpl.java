@@ -120,9 +120,16 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<InventoryTemplateRes> getPage(int page, int size) {
+    public PageResponse<InventoryTemplateRes> getPage(int page, int size, Long orgUnitId) {
         Pageable pageable = buildPageable(page, size);
-        Page<InventoryTemplate> templates = templateRepository.findAll(pageable);
+        Page<InventoryTemplate> templates;
+        if (orgUnitId != null) {
+            orgUnitRepository.findById(orgUnitId)
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+            templates = templateRepository.findAvailableForOrgUnit(orgUnitId, pageable);
+        } else {
+            templates = templateRepository.findAll(pageable);
+        }
         Map<Long, InventoryMasterCategory> categories = loadCategoriesMap(templates.getContent());
         List<InventoryTemplateRes> content = templates.getContent().stream()
                 .map(template -> toResponse(template, categories))
