@@ -42,7 +42,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         InventoryMasterCategory parent = loadParent(request.parentId());
         validateParentHierarchy(request.level(), parent);
         String normalizedName = normalizeName(request.name());
-        validateUniqueness(request.level(), normalizedName, request.parentId(), null);
+        /*validateUniqueness(request.level(), normalizedName, request.parentId(), null);*/
 
         InventoryMasterCategory category = new InventoryMasterCategory();
         applyRequest(category, parent, request.level(), normalizedName, request.specification01(),
@@ -74,7 +74,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         validateParentHierarchy(request.level(), newParent);
 
         String normalizedName = normalizeName(request.name());
-        validateUniqueness(request.level(), normalizedName, request.parentId(), id);
+        /*validateUniqueness(request.level(), normalizedName, request.parentId(), id);*/
 
         boolean hasChildren = repository.existsByParentId(id);
         if (Boolean.TRUE.equals(request.isLeaf()) && hasChildren) {
@@ -192,7 +192,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         updateParentLeafStatus(loadParent(category.getParentId()));
     }
 
-    private void validateUniqueness(Integer level, String name, Long parentId, Long id) {
+    /*private void validateUniqueness(Integer level, String name, Long parentId, Long id) {
         boolean exists;
         if (id == null) {
             exists = repository.existsByLevelAndNameIgnoreCaseAndParentId(level, name, parentId);
@@ -202,7 +202,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         if (exists) {
             throw new BadRequestException("Inventory master category already exists for the given level and parent");
         }
-    }
+    }*/
 
     private void validateLevelRange(Integer level) {
         if (level == null || level < 1 || level > 3) {
