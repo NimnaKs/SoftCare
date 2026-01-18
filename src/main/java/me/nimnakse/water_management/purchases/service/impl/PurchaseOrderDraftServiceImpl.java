@@ -252,7 +252,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     }
 
     private String generateReferenceNo(Long orgUnitId) {
-        String prefix = "PO-REF";
+        String prefix = "POD-REF";
         String maxNo = draftRepository.findMaxReferenceNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
