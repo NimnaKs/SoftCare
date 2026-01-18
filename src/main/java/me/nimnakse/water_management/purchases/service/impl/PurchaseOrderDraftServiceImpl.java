@@ -64,14 +64,10 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     public PurchaseOrderDraftRes create(PurchaseOrderDraftCreateReq request) {
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
-        String referenceNo = request.referenceNo().trim();
-        if (draftRepository.existsByReferenceNo(referenceNo)) {
-            throw new BadRequestException("Reference number already exists");
-        }
         ensureUniqueItems(request.items());
         PurchaseOrderDraft draft = new PurchaseOrderDraft();
         draft.setOrgUnitId(request.orgUnitId());
-        draft.setReferenceNo(referenceNo);
+        draft.setReferenceNo(generateReferenceNo(request.orgUnitId()));
         draft.setStatus(PurchaseOrderDraftStatus.PENDING);
         PurchaseOrderDraft savedDraft = draftRepository.save(draft);
         List<PurchaseOrderDraftItem> items = request.items().stream()
@@ -238,6 +234,26 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     private String generatePurchaseOrderNo(Long orgUnitId) {
         String prefix = String.format("PO-%d", orgUnitId);
         String maxNo = purchaseOrderRepository.findMaxPurchaseOrderNoByOrgUnitId(orgUnitId);
+        int nextSequence = 1;
+        if (maxNo != null && maxNo.startsWith(prefix)) {
+            String suffix = maxNo.substring(prefix.length());
+            if (suffix.startsWith("-")) {
+                suffix = suffix.substring(1);
+            }
+            if (!suffix.isBlank()) {
+                try {
+                    nextSequence = Integer.parseInt(suffix) + 1;
+                } catch (NumberFormatException ignored) {
+                    nextSequence = 1;
+                }
+            }
+        }
+        return String.format("%s-%03d", prefix, nextSequence);
+    }
+
+    private String generateReferenceNo(Long orgUnitId) {
+        String prefix = "PO-REF";
+        String maxNo = draftRepository.findMaxReferenceNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
             String suffix = maxNo.substring(prefix.length());

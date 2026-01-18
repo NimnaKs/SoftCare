@@ -5,15 +5,17 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import me.nimnakse.water_management.common.entity.BaseEntity;
 
 @Entity
-@Table(name = "purchase_order_drafts")
+@Table(name = "purchase_order_drafts",
+        uniqueConstraints = @UniqueConstraint(name = "uq_po_draft_org_ref", columnNames = {"org_unit_id", "reference_no"}))
 public class PurchaseOrderDraft extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
-    @Column(name = "reference_no", nullable = false, unique = true, length = 50)
+    @Column(name = "reference_no", nullable = false, length = 50)
     private String referenceNo;
 
     @Enumerated(EnumType.STRING)
