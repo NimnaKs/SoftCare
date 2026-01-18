@@ -824,7 +824,7 @@ CREATE TABLE purchase_order_drafts (
                                        created_by      BIGINT UNSIGNED NULL,
                                        created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                        updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                       UNIQUE KEY uq_po_draft_ref (reference_no),
+                                       UNIQUE KEY uq_po_draft_org_ref (org_unit_id, reference_no),
                                        INDEX idx_po_draft_org (org_unit_id),
                                        INDEX idx_po_draft_status (status),
                                        CONSTRAINT fk_po_draft_org
