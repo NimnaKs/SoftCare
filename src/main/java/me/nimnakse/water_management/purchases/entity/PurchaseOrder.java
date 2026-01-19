@@ -14,7 +14,7 @@ public class PurchaseOrder extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
-    @Column(name = "purchase_order_no", nullable = false, unique = true, length = 50)
+    @Column(name = "purchase_order_no", nullable = false, length = 50)
     private String purchaseOrderNo;
 
     @Column(name = "draft_id")

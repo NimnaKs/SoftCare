@@ -11,7 +11,7 @@ public class Supplier extends BaseEntity {
     @Column(name = "org_unit_id")
     private Long orgUnitId;
 
-    @Column(name = "supplier_code", unique = true)
+    @Column(name = "supplier_code")
     private String supplierCode;
 
     @Column(nullable = false, unique = true)

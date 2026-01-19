@@ -15,7 +15,7 @@ public class GrnInvoice extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
-    @Column(name = "grn_no", nullable = false, unique = true, length = 50)
+    @Column(name = "grn_no", nullable = false, length = 50)
     private String grnNo;
 
     @Column(name = "purchase_order_id")
