@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.expenses.accounts.repository;
 
 import java.util.List;
+import java.util.Optional;
 import me.nimnakse.water_management.expenses.accounts.entity.ExpenseAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,6 +20,8 @@ public interface ExpenseAccountRepository extends JpaRepository<ExpenseAccount, 
     boolean existsByMainCategoryId(Long mainCategoryId);
 
     List<ExpenseAccount> findByMainCategoryId(Long mainCategoryId);
+
+    Optional<ExpenseAccount> findByMainCategoryIdAndNameIgnoreCase(Long mainCategoryId, String name);
 
     @Modifying
     @Query("update ExpenseAccount ea set ea.isDefault = false where ea.mainCategory.id = :mainCategoryId")
