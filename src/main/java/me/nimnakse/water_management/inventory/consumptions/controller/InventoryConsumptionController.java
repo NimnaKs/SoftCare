@@ -7,6 +7,7 @@ import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionCreateReq;
 import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionUpdateReq;
+import me.nimnakse.water_management.inventory.consumptions.dto.response.InventoryConsumptionBatchRes;
 import me.nimnakse.water_management.inventory.consumptions.dto.response.InventoryConsumptionRes;
 import me.nimnakse.water_management.inventory.consumptions.service.InventoryConsumptionService;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +60,13 @@ public class InventoryConsumptionController {
     public ResponseEntity<ApiResponse<List<InventoryConsumptionRes>>> list(
             @RequestParam(required = false) Long inventoryTemplateId) {
         return ResponseEntity.ok(ApiResponse.success(consumptionService.list(inventoryTemplateId)));
+    }
+
+    @GetMapping("/batches")
+    @Operation(summary = "List available inventory batches", description = "Lists available batch numbers for inventory consumption.")
+    public ResponseEntity<ApiResponse<List<InventoryConsumptionBatchRes>>> listAvailableBatches(
+            @RequestParam Long inventoryTemplateId) {
+        return ResponseEntity.ok(ApiResponse.success(consumptionService.listAvailableBatches(inventoryTemplateId)));
     }
 
     @DeleteMapping("/{id}")

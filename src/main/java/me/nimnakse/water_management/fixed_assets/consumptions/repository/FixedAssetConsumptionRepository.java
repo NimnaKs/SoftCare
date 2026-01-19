@@ -9,4 +9,6 @@ public interface FixedAssetConsumptionRepository extends JpaRepository<FixedAsse
     List<FixedAssetConsumption> findByFixedAssetTemplateId(Long fixedAssetTemplateId);
 
     Optional<FixedAssetConsumption> findTopByBatchNoOrderByReferenceNoDesc(String batchNo);
+
+    Optional<FixedAssetConsumption> findTopByOrgUnitIdOrderByReferenceNoDesc(Long orgUnitId);
 }

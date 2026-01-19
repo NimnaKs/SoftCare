@@ -10,6 +10,9 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "fixed_asset_consumptions")
 public class FixedAssetConsumption extends BaseEntity {
+    @Column(name = "org_unit_id")
+    private Long orgUnitId;
+
     @Column(name = "fixed_asset_template_id", nullable = false)
     private Long fixedAssetTemplateId;
 
@@ -40,6 +43,14 @@ public class FixedAssetConsumption extends BaseEntity {
 
     public void setFixedAssetTemplateId(Long fixedAssetTemplateId) {
         this.fixedAssetTemplateId = fixedAssetTemplateId;
+    }
+
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
     }
 
     public Long getExpenseAccountId() {
