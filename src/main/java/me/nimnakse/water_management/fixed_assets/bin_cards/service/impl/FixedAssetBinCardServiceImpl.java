@@ -22,6 +22,7 @@ import me.nimnakse.water_management.purchases.entity.GrnInvoice;
 import me.nimnakse.water_management.purchases.entity.GrnInvoiceItem;
 import me.nimnakse.water_management.purchases.repository.GrnInvoiceItemRepository;
 import me.nimnakse.water_management.purchases.repository.GrnInvoiceRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.stock_cards.dto.response.BinCardEntryRes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,17 +34,20 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
     private final FixedAssetTemplateRepository templateRepository;
     private final GrnInvoiceItemRepository grnInvoiceItemRepository;
     private final GrnInvoiceRepository grnInvoiceRepository;
+    private final OrganizationAccessService organizationAccessService;
 
     public FixedAssetBinCardServiceImpl(FixedAssetInitialStockRepository initialStockRepository,
                                         FixedAssetConsumptionRepository consumptionRepository,
                                         FixedAssetTemplateRepository templateRepository,
                                         GrnInvoiceItemRepository grnInvoiceItemRepository,
-                                        GrnInvoiceRepository grnInvoiceRepository) {
+                                        GrnInvoiceRepository grnInvoiceRepository,
+                                        OrganizationAccessService organizationAccessService) {
         this.initialStockRepository = initialStockRepository;
         this.consumptionRepository = consumptionRepository;
         this.templateRepository = templateRepository;
         this.grnInvoiceItemRepository = grnInvoiceItemRepository;
         this.grnInvoiceRepository = grnInvoiceRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional(readOnly = true)
@@ -58,8 +62,12 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
         if (size <= 0) {
             throw new BadRequestException("Page size must be greater than zero");
         }
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         List<MovementEvent> events = new ArrayList<>();
-        for (FixedAssetInitialStock stock : initialStockRepository.findByTemplateId(fixedAssetTemplateId)) {
+        List<FixedAssetInitialStock> initialStocks = orgUnitId == null
+                ? initialStockRepository.findByTemplateId(fixedAssetTemplateId)
+                : initialStockRepository.findByOrgUnitIdAndTemplateId(orgUnitId, fixedAssetTemplateId);
+        for (FixedAssetInitialStock stock : initialStocks) {
             events.add(new MovementEvent(
                     stock.getCreatedAt(),
                     "Initial Stock",
@@ -70,7 +78,34 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
                     BigDecimal.ZERO
             ));
         }
-        List<FixedAssetConsumption> consumptions = consumptionRepository.findByFixedAssetTemplateId(fixedAssetTemplateId);
+        List<GrnInvoiceItem> grnItems = grnInvoiceItemRepository.findByFixedAssetTemplateId(fixedAssetTemplateId);
+        Map<Long, GrnInvoice> grnInvoices = grnInvoiceRepository.findAllById(
+                        grnItems.stream().map(GrnInvoiceItem::getGrnId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(GrnInvoice::getId, invoice -> invoice));
+        if (orgUnitId != null) {
+            grnItems = grnItems.stream()
+                    .filter(item -> {
+                        GrnInvoice invoice = grnInvoices.get(item.getGrnId());
+                        return invoice != null && orgUnitId.equals(invoice.getOrgUnitId());
+                    })
+                    .toList();
+        }
+        List<String> scopedBatchNos = new ArrayList<>();
+        initialStocks.stream()
+                .map(FixedAssetInitialStock::getBatchNo)
+                .filter(Objects::nonNull)
+                .forEach(scopedBatchNos::add);
+        grnItems.stream()
+                .map(GrnInvoiceItem::getBatchNo)
+                .filter(Objects::nonNull)
+                .forEach(scopedBatchNos::add);
+        List<FixedAssetConsumption> consumptions = consumptionRepository.findByFixedAssetTemplateId(fixedAssetTemplateId)
+                .stream()
+                .filter(consumption -> orgUnitId == null
+                        || (consumption.getBatchNo() != null
+                        && scopedBatchNos.contains(consumption.getBatchNo())))
+                .toList();
         for (FixedAssetConsumption consumption : consumptions) {
             events.add(new MovementEvent(
                     consumption.getConsumedAt().atStartOfDay(),
@@ -82,11 +117,6 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
                     consumption.getQuantity()
             ));
         }
-        List<GrnInvoiceItem> grnItems = grnInvoiceItemRepository.findByFixedAssetTemplateId(fixedAssetTemplateId);
-        Map<Long, GrnInvoice> grnInvoices = grnInvoiceRepository.findAllById(
-                        grnItems.stream().map(GrnInvoiceItem::getGrnId).collect(Collectors.toSet()))
-                .stream()
-                .collect(Collectors.toMap(GrnInvoice::getId, invoice -> invoice));
         for (GrnInvoiceItem item : grnItems) {
             GrnInvoice invoice = grnInvoices.get(item.getGrnId());
             LocalDateTime movementAt = invoice != null
