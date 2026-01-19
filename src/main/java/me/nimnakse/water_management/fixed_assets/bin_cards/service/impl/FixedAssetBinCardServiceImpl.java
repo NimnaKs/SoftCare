@@ -2,6 +2,7 @@ package me.nimnakse.water_management.fixed_assets.bin_cards.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -69,7 +70,7 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
                 : initialStockRepository.findByOrgUnitIdAndTemplateId(orgUnitId, fixedAssetTemplateId);
         for (FixedAssetInitialStock stock : initialStocks) {
             events.add(new MovementEvent(
-                    stock.getCreatedAt(),
+                    LocalDateTime.ofInstant(stock.getCreatedAt(), ZoneId.systemDefault()),
                     "Initial Stock",
                     stock.getBatchNo(),
                     stock.getBatchNo(),

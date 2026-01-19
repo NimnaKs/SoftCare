@@ -2,6 +2,7 @@ package me.nimnakse.water_management.inventory.bin_cards.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -69,7 +70,7 @@ public class InventoryBinCardServiceImpl implements InventoryBinCardService {
                 : initialStockRepository.findByOrgUnitIdAndTemplateId(orgUnitId, inventoryTemplateId);
         for (InventoryInitialStock stock : initialStocks) {
             events.add(new MovementEvent(
-                    stock.getCreatedAt(),
+                    LocalDateTime.ofInstant(stock.getCreatedAt(), ZoneId.systemDefault()),
                     "Initial Stock",
                     stock.getBatchNo(),
                     stock.getBatchNo(),
