@@ -1,0 +1,80 @@
+package me.nimnakse.water_management.payments.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import me.nimnakse.water_management.common.entity.BaseEntity;
+
+@Entity
+@Table(name = "payment_vouchers")
+public class PaymentVoucher extends BaseEntity {
+    @Column(name = "org_unit_id", nullable = false)
+    private Long orgUnitId;
+
+    @Column(name = "voucher_no", nullable = false, length = 50)
+    private String voucherNo;
+
+    @Column(name = "draft_id")
+    private Long draftId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private PaymentVoucherStatus status = PaymentVoucherStatus.PENDING;
+
+    @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
+    }
+
+    public String getVoucherNo() {
+        return voucherNo;
+    }
+
+    public void setVoucherNo(String voucherNo) {
+        this.voucherNo = voucherNo;
+    }
+
+    public Long getDraftId() {
+        return draftId;
+    }
+
+    public void setDraftId(Long draftId) {
+        this.draftId = draftId;
+    }
+
+    public PaymentVoucherStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PaymentVoucherStatus status) {
+        this.status = status;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
+    }
+}
