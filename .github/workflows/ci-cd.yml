@@ -43,9 +43,11 @@ jobs:
           path: dist
 
       - name: Select jar
+        shell: bash
         run: |
+          set -e
           JAR_PATH="$(ls dist/*.jar | grep -v 'original' | head -n 1)"
-          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
+          echo "JAR_PATH=$JAR_PATH" >> "$GITHUB_ENV"
 
       - name: Upload jar to EC2 (to /tmp)
         uses: appleboy/scp-action@v0.1.7
@@ -68,16 +70,18 @@ jobs:
           script: |
             set -e
 
-            # Ensure target directory exists
             sudo mkdir -p /var/app
 
             # Pick the latest uploaded jar from /tmp
             JAR_FILE="$(ls -t /tmp/*.jar | grep -v 'original' | head -n 1)"
 
-            # Move and rename exactly as you requested
+            # Move + rename to fixed name
             sudo mv "$JAR_FILE" /var/app/water-management-1.0.0.jar
             sudo chmod 644 /var/app/water-management-1.0.0.jar
 
-            # Restart your service
-            sudo systemctl restart ${{ secrets.EC2_SERVICE_NAME }}
-            sudo systemctl status ${{ secrets.EC2_SERVICE_NAME }} --no-pager
+            # Restart service
+            sudo systemctl restart "${{ secrets.EC2_SERVICE_NAME }}"
+
+            # Show status + last logs (kept on one line)
+            sudo systemctl status "${{ secrets.EC2_SERVICE_NAME }}" --no-pager
+            sudo journalctl -u "${{ secrets.EC2_SERVICE_NAME }}" -n 50 --no-pager
