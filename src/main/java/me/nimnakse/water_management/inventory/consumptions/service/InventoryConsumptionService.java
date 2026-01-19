@@ -3,6 +3,7 @@ package me.nimnakse.water_management.inventory.consumptions.service;
 import java.util.List;
 import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionCreateReq;
 import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionUpdateReq;
+import me.nimnakse.water_management.inventory.consumptions.dto.response.InventoryConsumptionBatchRes;
 import me.nimnakse.water_management.inventory.consumptions.dto.response.InventoryConsumptionRes;
 
 public interface InventoryConsumptionService {
@@ -13,6 +14,8 @@ public interface InventoryConsumptionService {
     InventoryConsumptionRes getById(Long id);
 
     List<InventoryConsumptionRes> list(Long inventoryTemplateId);
+
+    List<InventoryConsumptionBatchRes> listAvailableBatches(Long inventoryTemplateId);
 
     void delete(Long id);
 }

@@ -168,6 +168,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         applyItemSelection(item, request.inventoryItemId(), request.fixedAssetTemplateId());
         item.setBatchNo(buildBatchNo(grnNo, index));
         item.setQuantity(request.quantity());
+        item.setRemainingQuantity(request.quantity());
         item.setUnitCost(request.unitCost());
         item.setTotalAmount(request.quantity().multiply(request.unitCost()));
         return item;

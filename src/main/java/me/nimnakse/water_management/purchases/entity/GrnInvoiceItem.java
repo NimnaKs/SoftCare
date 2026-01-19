@@ -30,6 +30,9 @@ public class GrnInvoiceItem {
     @Column(nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
 
+    @Column(name = "remaining_quantity", precision = 14, scale = 3)
+    private BigDecimal remainingQuantity;
+
     @Column(name = "unit_cost", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitCost;
 
@@ -82,6 +85,14 @@ public class GrnInvoiceItem {
 
     public void setQuantity(BigDecimal quantity) {
         this.quantity = quantity;
+    }
+
+    public BigDecimal getRemainingQuantity() {
+        return remainingQuantity;
+    }
+
+    public void setRemainingQuantity(BigDecimal remainingQuantity) {
+        this.remainingQuantity = remainingQuantity;
     }
 
     public BigDecimal getUnitCost() {

@@ -9,4 +9,6 @@ public interface InventoryConsumptionRepository extends JpaRepository<InventoryC
     List<InventoryConsumption> findByInventoryTemplateId(Long inventoryTemplateId);
 
     Optional<InventoryConsumption> findTopByBatchNoOrderByReferenceNoDesc(String batchNo);
+
+    Optional<InventoryConsumption> findTopByOrgUnitIdOrderByReferenceNoDesc(Long orgUnitId);
 }

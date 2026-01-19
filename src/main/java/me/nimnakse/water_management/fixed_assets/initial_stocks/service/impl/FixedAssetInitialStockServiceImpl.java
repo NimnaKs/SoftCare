@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.fixed_assets.initial_stocks.service.impl;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
         stock.setBatchNo(batchNo);
         stock.setBatchSequence(nextSequence);
         stock.setQuantity(request.quantity());
+        stock.setRemainingQuantity(request.quantity());
         return toResponse(initialStockRepository.save(stock), template);
     }
 
@@ -67,9 +69,14 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
                 request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
             throw new BadRequestException("Initial fixed asset stock batch number already exists in the org unit");
         }
+        BigDecimal consumedQuantity = resolveConsumedQuantity(stock.getQuantity(), stock.getRemainingQuantity());
+        if (request.quantity().compareTo(consumedQuantity) < 0) {
+            throw new BadRequestException("Initial fixed asset stock quantity cannot be less than consumed quantity");
+        }
         stock.setOrgUnitId(request.orgUnitId());
         stock.setTemplateId(template.getId());
         stock.setQuantity(request.quantity());
+        stock.setRemainingQuantity(request.quantity().subtract(consumedQuantity));
         return toResponse(initialStockRepository.save(stock), template);
     }
 
@@ -132,6 +139,12 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
             throw new BadRequestException("Unable to generate a unique batch number");
         }
         return next;
+    }
+
+    private BigDecimal resolveConsumedQuantity(BigDecimal quantity, BigDecimal remainingQuantity) {
+        BigDecimal safeQuantity = quantity == null ? BigDecimal.ZERO : quantity;
+        BigDecimal safeRemaining = remainingQuantity == null ? safeQuantity : remainingQuantity;
+        return safeQuantity.subtract(safeRemaining);
     }
 
     private String formatBatchNo(int sequence) {

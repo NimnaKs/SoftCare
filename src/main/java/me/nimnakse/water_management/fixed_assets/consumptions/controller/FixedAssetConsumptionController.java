@@ -7,6 +7,7 @@ import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.fixed_assets.consumptions.dto.request.FixedAssetConsumptionCreateReq;
 import me.nimnakse.water_management.fixed_assets.consumptions.dto.request.FixedAssetConsumptionUpdateReq;
+import me.nimnakse.water_management.fixed_assets.consumptions.dto.response.FixedAssetConsumptionBatchRes;
 import me.nimnakse.water_management.fixed_assets.consumptions.dto.response.FixedAssetConsumptionRes;
 import me.nimnakse.water_management.fixed_assets.consumptions.service.FixedAssetConsumptionService;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +60,13 @@ public class FixedAssetConsumptionController {
     public ResponseEntity<ApiResponse<List<FixedAssetConsumptionRes>>> list(
             @RequestParam(required = false) Long fixedAssetTemplateId) {
         return ResponseEntity.ok(ApiResponse.success(consumptionService.list(fixedAssetTemplateId)));
+    }
+
+    @GetMapping("/batches")
+    @Operation(summary = "List available fixed asset batches", description = "Lists available batch numbers for fixed asset consumption.")
+    public ResponseEntity<ApiResponse<List<FixedAssetConsumptionBatchRes>>> listAvailableBatches(
+            @RequestParam Long fixedAssetTemplateId) {
+        return ResponseEntity.ok(ApiResponse.success(consumptionService.listAvailableBatches(fixedAssetTemplateId)));
     }
 
     @DeleteMapping("/{id}")

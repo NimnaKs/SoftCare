@@ -27,6 +27,9 @@ public class InventoryInitialStock extends BaseEntity {
     @Column(nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
 
+    @Column(name = "remaining_quantity", precision = 14, scale = 3)
+    private BigDecimal remainingQuantity;
+
     public Long getOrgUnitId() {
         return orgUnitId;
     }
@@ -65,5 +68,13 @@ public class InventoryInitialStock extends BaseEntity {
 
     public void setQuantity(BigDecimal quantity) {
         this.quantity = quantity;
+    }
+
+    public BigDecimal getRemainingQuantity() {
+        return remainingQuantity;
+    }
+
+    public void setRemainingQuantity(BigDecimal remainingQuantity) {
+        this.remainingQuantity = remainingQuantity;
     }
 }
