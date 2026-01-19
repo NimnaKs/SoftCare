@@ -2,7 +2,6 @@ package me.nimnakse.water_management.cash_accounts.service.impl;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import me.nimnakse.water_management.cash_accounts.CashAccountStatementDirection;
 import me.nimnakse.water_management.cash_accounts.dto.request.CashAccountTransferCreateReq;
 import me.nimnakse.water_management.cash_accounts.dto.response.CashAccountStatementEntryRes;
@@ -12,10 +11,14 @@ import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccountTransfer
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountTransferRepository;
 import me.nimnakse.water_management.cash_accounts.service.CashAccountTransferService;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,16 +68,34 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
 
     @Transactional(readOnly = true)
     @Override
-    public List<CashAccountStatementEntryRes> getStatement(Long accountId, Instant startAt, Instant endAt) {
+    public PageResponse<CashAccountStatementEntryRes> getStatement(Long accountId,
+                                                                   Instant startAt,
+                                                                   Instant endAt,
+                                                                   int page,
+                                                                   int size) {
         if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
             throw new BadRequestException("Start time must be before end time");
         }
         MonetaryAccount account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(account.getOrgUnitId());
-        return transferRepository.findStatementEntries(accountId, startAt, endAt).stream()
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<MonetaryAccountTransfer> transfers = transferRepository.findStatementEntries(
+                accountId,
+                startAt,
+                endAt,
+                pageRequest
+        );
+        var items = transfers.getContent().stream()
                 .map(transfer -> toStatementEntry(accountId, transfer))
                 .toList();
+        return new PageResponse<>(
+                items,
+                transfers.getTotalElements(),
+                transfers.getTotalPages(),
+                transfers.getNumber(),
+                transfers.getSize()
+        );
     }
 
     private CashAccountTransferRes toTransferResponse(MonetaryAccountTransfer transfer) {
