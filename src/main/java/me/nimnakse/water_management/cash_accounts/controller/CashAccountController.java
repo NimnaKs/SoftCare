@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import me.nimnakse.water_management.cash_accounts.dto.request.CashAccountCreateReq;
 import me.nimnakse.water_management.cash_accounts.dto.request.CashAccountUpdateReq;
 import java.time.Instant;
-import java.util.List;
 import me.nimnakse.water_management.cash_accounts.dto.response.CashAccountRes;
 import me.nimnakse.water_management.cash_accounts.dto.response.CashAccountStatementEntryRes;
 import me.nimnakse.water_management.cash_accounts.service.CashAccountService;
@@ -67,10 +66,12 @@ public class CashAccountController {
 
     @GetMapping("/{id}/statement")
     @Operation(summary = "Cash account statement", description = "Lists cash account activity within an optional time window.")
-    public ResponseEntity<ApiResponse<List<CashAccountStatementEntryRes>>> getStatement(
+    public ResponseEntity<ApiResponse<PageResponse<CashAccountStatementEntryRes>>> getStatement(
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAt,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt) {
-        return ResponseEntity.ok(ApiResponse.success(transferService.getStatement(id, startAt, endAt)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(transferService.getStatement(id, startAt, endAt, page, size)));
     }
 }
