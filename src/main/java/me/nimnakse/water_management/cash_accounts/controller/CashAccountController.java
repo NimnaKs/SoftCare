@@ -5,11 +5,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.cash_accounts.dto.request.CashAccountCreateReq;
 import me.nimnakse.water_management.cash_accounts.dto.request.CashAccountUpdateReq;
+import java.time.Instant;
+import java.util.List;
 import me.nimnakse.water_management.cash_accounts.dto.response.CashAccountRes;
+import me.nimnakse.water_management.cash_accounts.dto.response.CashAccountStatementEntryRes;
 import me.nimnakse.water_management.cash_accounts.service.CashAccountService;
+import me.nimnakse.water_management.cash_accounts.service.CashAccountTransferService;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.api.PageResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,9 +23,12 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 public class CashAccountController {
     private final CashAccountService cashAccountService;
+    private final CashAccountTransferService transferService;
 
-    public CashAccountController(CashAccountService cashAccountService) {
+    public CashAccountController(CashAccountService cashAccountService,
+                                 CashAccountTransferService transferService) {
         this.cashAccountService = cashAccountService;
+        this.transferService = transferService;
     }
 
     @PostMapping
@@ -55,5 +63,14 @@ public class CashAccountController {
     @Operation(summary = "Get cash account", description = "Fetches a cash account by identifier.")
     public ResponseEntity<ApiResponse<CashAccountRes>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(cashAccountService.getById(id)));
+    }
+
+    @GetMapping("/{id}/statement")
+    @Operation(summary = "Cash account statement", description = "Lists cash account activity within an optional time window.")
+    public ResponseEntity<ApiResponse<List<CashAccountStatementEntryRes>>> getStatement(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAt,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt) {
+        return ResponseEntity.ok(ApiResponse.success(transferService.getStatement(id, startAt, endAt)));
     }
 }
