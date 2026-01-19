@@ -159,7 +159,7 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     private String generateSupplierCode(Long orgUnitId) {
-        String prefix = "SUP-";
+        String prefix = "SUP";
         String maxCode = supplierRepository.findMaxSupplierCodeByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxCode != null && maxCode.startsWith(prefix)) {
