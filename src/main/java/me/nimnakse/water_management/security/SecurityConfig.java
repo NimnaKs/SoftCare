@@ -47,12 +47,8 @@ public class SecurityConfig {
                                 "/revenue-accounts/**",
                                 "/fixed-asset-master-categories/**",
                                 "/fixed-asset-templates/**",
-                                "/fixed-asset-consumptions/**",
-                                "/fixed-asset-bin-cards/**",
                                 "/inventory-master-categories/**",
                                 "/inventory-templates/**",
-                                "/inventory-consumptions/**",
-                                "/inventory-bin-cards/**",
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**",
                                 "/liability-main-categories/**",
@@ -93,7 +89,12 @@ public class SecurityConfig {
                                 "/members/**",
                                 "/employees/**",
                                 "/address-lines/**",
-                                "/connections/**"
+                                "/connections/**",
+                                "/inventory-consumptions/**",
+                                "/fixed-asset-consumptions/**",
+                                "/fixed-asset-bin-cards/**",
+                                "/inventory-consumptions/**",
+                                "/inventory-bin-cards/**"
                                 ).hasAuthority("APP_SCOPE_BRANCH_APP")
                         .anyRequest().authenticated()
                 )
