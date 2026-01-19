@@ -62,6 +62,7 @@ public class GrnInvoiceServiceImpl implements GrnInvoiceService {
                 .map(item -> new GrnInvoiceItemRes(
                         item.getId(),
                         item.getInventoryItemId(),
+                        item.getFixedAssetTemplateId(),
                         item.getBatchNo(),
                         item.getQuantity(),
                         item.getUnitCost(),
