@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -141,8 +142,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         invoice.setGrnDate(request.grnDate());
         invoice.setTotalAmount(calculateTotalAmount(request.items()));
         GrnInvoice savedInvoice = grnInvoiceRepository.save(invoice);
-        List<GrnInvoiceItem> grnItems = request.items().stream()
-                .map(itemReq -> buildGrnItem(savedInvoice.getId(), itemReq))
+        List<GrnInvoiceItemCreateReq> itemRequests = request.items();
+        List<GrnInvoiceItem> grnItems = IntStream.range(0, itemRequests.size())
+                .mapToObj(index -> buildGrnItem(savedInvoice.getId(), itemRequests.get(index), grnNo, index + 1))
                 .toList();
         grnInvoiceItemRepository.saveAll(grnItems);
         order.setStatus(PurchaseOrderStatus.CONVERTED_TO_GRN);
@@ -160,15 +162,19 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private GrnInvoiceItem buildGrnItem(Long grnId, GrnInvoiceItemCreateReq request) {
+    private GrnInvoiceItem buildGrnItem(Long grnId, GrnInvoiceItemCreateReq request, String grnNo, int index) {
         GrnInvoiceItem item = new GrnInvoiceItem();
         item.setGrnId(grnId);
         item.setInventoryItemId(request.inventoryItemId());
-        item.setBatchNo(request.batchNo().trim());
+        item.setBatchNo(buildBatchNo(grnNo, index));
         item.setQuantity(request.quantity());
         item.setUnitCost(request.unitCost());
         item.setTotalAmount(request.quantity().multiply(request.unitCost()));
         return item;
+    }
+
+    private String buildBatchNo(String grnNo, int index) {
+        return String.format("%s - B - %02d", grnNo, index);
     }
 
     private PurchaseOrderRes toPurchaseOrderResponse(PurchaseOrder order, List<PurchaseOrderItem> items) {
