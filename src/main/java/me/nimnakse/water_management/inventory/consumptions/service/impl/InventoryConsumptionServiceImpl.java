@@ -415,13 +415,17 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                 ? initialStockRepository.findByTemplateId(inventoryTemplateId)
                 : initialStockRepository.findByOrgUnitIdAndTemplateId(orgUnitId, inventoryTemplateId);
         return initialStocks.stream()
-                .map(stock -> new InventoryConsumptionBatchRes(
-                        stock.getBatchNo(),
-                        resolveRemaining(stock.getRemainingQuantity(), stock.getQuantity()),
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BatchSourceType.INITIAL_STOCK
-                ))
+                .map(stock -> {
+                    BigDecimal remaining = resolveRemaining(stock.getRemainingQuantity(), stock.getQuantity());
+                    BigDecimal unitCost = stock.getUnitCost() == null ? BigDecimal.ZERO : stock.getUnitCost();
+                    return new InventoryConsumptionBatchRes(
+                            stock.getBatchNo(),
+                            remaining,
+                            remaining.multiply(unitCost),
+                            unitCost,
+                            BatchSourceType.INITIAL_STOCK
+                    );
+                })
                 .toList();
     }
 
