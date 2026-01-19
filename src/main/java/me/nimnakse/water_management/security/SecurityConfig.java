@@ -65,6 +65,17 @@ public class SecurityConfig {
                                 "/inventory-templates/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
+                                "/members/**",
+                                "/employees/**",
+                                "/address-lines/**",
+                                "/connections/**",
+                                "/inventory-consumptions/**",
+                                "/fixed-asset-consumptions/**",
+                                "/fixed-asset-bin-cards/**",
+                                "/inventory-consumptions/**",
+                                "/inventory-bin-cards/**"
+                        ).hasAuthority("APP_SCOPE_BRANCH_APP")
+                        .requestMatchers(
                                 "/roles/**",
                                 "/users/**",
                                 "/water-projects/**",
@@ -85,17 +96,6 @@ public class SecurityConfig {
                                 "/liability-main-categories/**",
                                 "/liability-accounts/**"
                         ).hasAuthority("APP_SCOPE_ADMIN_PORTAL")
-                        .requestMatchers(
-                                "/members/**",
-                                "/employees/**",
-                                "/address-lines/**",
-                                "/connections/**",
-                                "/inventory-consumptions/**",
-                                "/fixed-asset-consumptions/**",
-                                "/fixed-asset-bin-cards/**",
-                                "/inventory-consumptions/**",
-                                "/inventory-bin-cards/**"
-                                ).hasAuthority("APP_SCOPE_BRANCH_APP")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
