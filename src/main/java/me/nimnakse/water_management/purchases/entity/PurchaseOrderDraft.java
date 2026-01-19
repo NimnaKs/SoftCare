@@ -2,8 +2,6 @@ package me.nimnakse.water_management.purchases.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import me.nimnakse.water_management.common.entity.BaseEntity;
@@ -17,10 +15,6 @@ public class PurchaseOrderDraft extends BaseEntity {
 
     @Column(name = "reference_no", nullable = false, length = 50)
     private String referenceNo;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PurchaseOrderDraftStatus status = PurchaseOrderDraftStatus.PENDING;
 
     @Column(name = "created_by")
     private Long createdBy;
@@ -39,14 +33,6 @@ public class PurchaseOrderDraft extends BaseEntity {
 
     public void setReferenceNo(String referenceNo) {
         this.referenceNo = referenceNo;
-    }
-
-    public PurchaseOrderDraftStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PurchaseOrderDraftStatus status) {
-        this.status = status;
     }
 
     public Long getCreatedBy() {

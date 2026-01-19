@@ -22,7 +22,6 @@ import me.nimnakse.water_management.purchases.dto.response.PurchaseOrderRes;
 import me.nimnakse.water_management.purchases.entity.PurchaseOrder;
 import me.nimnakse.water_management.purchases.entity.PurchaseOrderDraft;
 import me.nimnakse.water_management.purchases.entity.PurchaseOrderDraftItem;
-import me.nimnakse.water_management.purchases.entity.PurchaseOrderDraftStatus;
 import me.nimnakse.water_management.purchases.entity.PurchaseOrderItem;
 import me.nimnakse.water_management.purchases.repository.PurchaseOrderDraftItemRepository;
 import me.nimnakse.water_management.purchases.repository.PurchaseOrderDraftRepository;
@@ -68,7 +67,6 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         PurchaseOrderDraft draft = new PurchaseOrderDraft();
         draft.setOrgUnitId(request.orgUnitId());
         draft.setReferenceNo(generateReferenceNo(request.orgUnitId()));
-        draft.setStatus(PurchaseOrderDraftStatus.PENDING);
         PurchaseOrderDraft savedDraft = draftRepository.save(draft);
         List<PurchaseOrderDraftItem> items = request.items().stream()
                 .map(item -> buildDraftItem(savedDraft.getId(), item))
@@ -82,9 +80,6 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     public PurchaseOrderDraftRes update(Long id, PurchaseOrderDraftUpdateReq request) {
         PurchaseOrderDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
-        if (draft.getStatus() != PurchaseOrderDraftStatus.PENDING) {
-            throw new BadRequestException("Only pending drafts can be updated");
-        }
         List<PurchaseOrderDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
         Map<Long, PurchaseOrderDraftItem> byInventory = draftItems.stream()
                 .collect(Collectors.toMap(PurchaseOrderDraftItem::getInventoryItemId, item -> item));
@@ -105,15 +100,11 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     public PurchaseOrderDraftRes accept(Long id) {
         PurchaseOrderDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
-        if (draft.getStatus() != PurchaseOrderDraftStatus.PENDING) {
-            throw new BadRequestException("Only pending drafts can be accepted");
-        }
         List<PurchaseOrderDraftItem> items = draftItemRepository.findByDraftId(draft.getId());
         boolean missingCost = items.stream().anyMatch(item -> item.getUnitCost() == null);
         if (missingCost) {
             throw new BadRequestException("All draft items must have unit costs before accepting");
         }
-        draft.setStatus(PurchaseOrderDraftStatus.ACCEPTED);
         return toDraftResponse(draft, items);
     }
 
@@ -122,13 +113,6 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     public PurchaseOrderDraftRes cancel(Long id) {
         PurchaseOrderDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
-        if (draft.getStatus() == PurchaseOrderDraftStatus.CANCELLED) {
-            return toDraftResponse(draft, draftItemRepository.findByDraftId(draft.getId()));
-        }
-        if (draft.getStatus() == PurchaseOrderDraftStatus.ACCEPTED) {
-            throw new BadRequestException("Accepted drafts cannot be cancelled");
-        }
-        draft.setStatus(PurchaseOrderDraftStatus.CANCELLED);
         return toDraftResponse(draft, draftItemRepository.findByDraftId(draft.getId()));
     }
 
@@ -137,10 +121,11 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     public PurchaseOrderRes convertToPurchaseOrder(Long id) {
         PurchaseOrderDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
-        if (draft.getStatus() != PurchaseOrderDraftStatus.ACCEPTED) {
-            throw new BadRequestException("Only accepted drafts can be converted to purchase orders");
-        }
         List<PurchaseOrderDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
+        boolean missingCost = draftItems.stream().anyMatch(item -> item.getUnitCost() == null);
+        if (missingCost) {
+            throw new BadRequestException("All draft items must have unit costs before converting to purchase orders");
+        }
         PurchaseOrder order = new PurchaseOrder();
         order.setOrgUnitId(draft.getOrgUnitId());
         order.setDraftId(draft.getId());
@@ -232,7 +217,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     }
 
     private String generatePurchaseOrderNo(Long orgUnitId) {
-        String prefix = String.format("PO-%d", orgUnitId);
+        String prefix = "PO-REF";
         String maxNo = purchaseOrderRepository.findMaxPurchaseOrderNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -279,7 +264,6 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
                 draft.getId(),
                 draft.getOrgUnitId(),
                 draft.getReferenceNo(),
-                draft.getStatus(),
                 itemResponses,
                 draft.getCreatedAt(),
                 draft.getUpdatedAt()
