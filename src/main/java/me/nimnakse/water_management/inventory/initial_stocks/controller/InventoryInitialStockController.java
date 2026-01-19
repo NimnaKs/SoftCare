@@ -10,19 +10,12 @@ import me.nimnakse.water_management.inventory.initial_stocks.dto.request.Invento
 import me.nimnakse.water_management.inventory.initial_stocks.dto.response.InventoryInitialStockRes;
 import me.nimnakse.water_management.inventory.initial_stocks.service.InventoryInitialStockService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/inventory-initial-stocks")
 @Tag(name = "Inventory Initial Stocks", description = "Maintain opening inventory stock quantities")
+@CrossOrigin
 public class InventoryInitialStockController {
     private final InventoryInitialStockService initialStockService;
 
