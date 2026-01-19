@@ -18,8 +18,11 @@ public class GrnInvoiceItem {
     @Column(name = "grn_id", nullable = false)
     private Long grnId;
 
-    @Column(name = "inventory_item_id", nullable = false)
+    @Column(name = "inventory_item_id")
     private Long inventoryItemId;
+
+    @Column(name = "fixed_asset_template_id")
+    private Long fixedAssetTemplateId;
 
     @Column(name = "batch_no", nullable = false, length = 50)
     private String batchNo;
@@ -55,6 +58,14 @@ public class GrnInvoiceItem {
 
     public void setInventoryItemId(Long inventoryItemId) {
         this.inventoryItemId = inventoryItemId;
+    }
+
+    public Long getFixedAssetTemplateId() {
+        return fixedAssetTemplateId;
+    }
+
+    public void setFixedAssetTemplateId(Long fixedAssetTemplateId) {
+        this.fixedAssetTemplateId = fixedAssetTemplateId;
     }
 
     public String getBatchNo() {

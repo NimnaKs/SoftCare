@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record PurchaseOrderItemRes(
         Long id,
         Long inventoryItemId,
+        Long fixedAssetTemplateId,
         BigDecimal quantity,
         BigDecimal unitCost,
         BigDecimal totalAmount

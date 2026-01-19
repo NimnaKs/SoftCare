@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
@@ -81,12 +82,12 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         PurchaseOrderDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
         List<PurchaseOrderDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
-        Map<Long, PurchaseOrderDraftItem> byInventory = draftItems.stream()
-                .collect(Collectors.toMap(PurchaseOrderDraftItem::getInventoryItemId, item -> item));
+        Map<String, PurchaseOrderDraftItem> byItemKey = draftItems.stream()
+                .collect(Collectors.toMap(this::buildItemKey, Function.identity()));
         for (PurchaseOrderDraftItemUpdateReq itemReq : request.items()) {
-            PurchaseOrderDraftItem item = byInventory.get(itemReq.inventoryItemId());
+            PurchaseOrderDraftItem item = byItemKey.get(buildItemKey(itemReq.inventoryItemId(), itemReq.fixedAssetTemplateId()));
             if (item == null) {
-                throw new BadRequestException("Draft item not found for inventory item " + itemReq.inventoryItemId());
+                throw new BadRequestException("Draft item not found for item reference");
             }
             item.setUnitCost(itemReq.unitCost());
             item.setTotalAmount(calculateTotal(item.getQuantity(), itemReq.unitCost()));
@@ -174,20 +175,20 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     }
 
     private void ensureUniqueItems(List<PurchaseOrderDraftItemCreateReq> items) {
-        Map<Long, Integer> counts = new HashMap<>();
+        Map<String, Integer> counts = new HashMap<>();
         for (PurchaseOrderDraftItemCreateReq item : items) {
-            counts.merge(item.inventoryItemId(), 1, Integer::sum);
+            counts.merge(buildItemKey(item.inventoryItemId(), item.fixedAssetTemplateId()), 1, Integer::sum);
         }
         boolean hasDuplicates = counts.values().stream().anyMatch(count -> count > 1);
         if (hasDuplicates) {
-            throw new BadRequestException("Duplicate inventory items are not allowed in drafts");
+            throw new BadRequestException("Duplicate items are not allowed in drafts");
         }
     }
 
     private PurchaseOrderDraftItem buildDraftItem(Long draftId, PurchaseOrderDraftItemCreateReq request) {
         PurchaseOrderDraftItem item = new PurchaseOrderDraftItem();
         item.setDraftId(draftId);
-        item.setInventoryItemId(request.inventoryItemId());
+        applyItemSelection(item, request.inventoryItemId(), request.fixedAssetTemplateId());
         item.setQuantity(request.quantity());
         return item;
     }
@@ -196,6 +197,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         PurchaseOrderItem item = new PurchaseOrderItem();
         item.setPurchaseOrderId(orderId);
         item.setInventoryItemId(draftItem.getInventoryItemId());
+        item.setFixedAssetTemplateId(draftItem.getFixedAssetTemplateId());
         item.setQuantity(draftItem.getQuantity());
         item.setUnitCost(Objects.requireNonNull(draftItem.getUnitCost()));
         item.setTotalAmount(Objects.requireNonNull(draftItem.getTotalAmount()));
@@ -274,6 +276,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         return new PurchaseOrderDraftItemRes(
                 item.getId(),
                 item.getInventoryItemId(),
+                item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
                 item.getTotalAmount()
@@ -302,9 +305,38 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         return new PurchaseOrderItemRes(
                 item.getId(),
                 item.getInventoryItemId(),
+                item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
                 item.getTotalAmount()
         );
+    }
+
+    private String buildItemKey(PurchaseOrderDraftItem item) {
+        return buildItemKey(item.getInventoryItemId(), item.getFixedAssetTemplateId());
+    }
+
+    private String buildItemKey(Long inventoryItemId, Long fixedAssetTemplateId) {
+        if (inventoryItemId != null && fixedAssetTemplateId != null) {
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+        }
+        if (inventoryItemId != null) {
+            return "INV-" + inventoryItemId;
+        }
+        if (fixedAssetTemplateId != null) {
+            return "FAT-" + fixedAssetTemplateId;
+        }
+        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+    }
+
+    private void applyItemSelection(PurchaseOrderDraftItem item, Long inventoryItemId, Long fixedAssetTemplateId) {
+        if (inventoryItemId != null && fixedAssetTemplateId != null) {
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+        }
+        if (inventoryItemId == null && fixedAssetTemplateId == null) {
+            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+        }
+        item.setInventoryItemId(inventoryItemId);
+        item.setFixedAssetTemplateId(fixedAssetTemplateId);
     }
 }

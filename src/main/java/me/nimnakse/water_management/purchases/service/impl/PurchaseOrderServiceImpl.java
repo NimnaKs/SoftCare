@@ -127,11 +127,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             throw new BadRequestException("GRN number already exists");
         }
         List<PurchaseOrderItem> orderItems = purchaseOrderItemRepository.findByPurchaseOrderId(order.getId());
-        Map<Long, PurchaseOrderItem> orderItemMap = orderItems.stream()
-                .collect(Collectors.toMap(PurchaseOrderItem::getInventoryItemId, Function.identity()));
+        Map<String, PurchaseOrderItem> orderItemMap = orderItems.stream()
+                .collect(Collectors.toMap(this::buildItemKey, Function.identity()));
         for (GrnInvoiceItemCreateReq itemReq : request.items()) {
-            if (!orderItemMap.containsKey(itemReq.inventoryItemId())) {
-                throw new BadRequestException("Inventory item not found in purchase order: " + itemReq.inventoryItemId());
+            if (!orderItemMap.containsKey(buildItemKey(itemReq.inventoryItemId(), itemReq.fixedAssetTemplateId()))) {
+                throw new BadRequestException("Item not found in purchase order");
             }
         }
         GrnInvoice invoice = new GrnInvoice();
@@ -165,7 +165,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private GrnInvoiceItem buildGrnItem(Long grnId, GrnInvoiceItemCreateReq request, String grnNo, int index) {
         GrnInvoiceItem item = new GrnInvoiceItem();
         item.setGrnId(grnId);
-        item.setInventoryItemId(request.inventoryItemId());
+        applyItemSelection(item, request.inventoryItemId(), request.fixedAssetTemplateId());
         item.setBatchNo(buildBatchNo(grnNo, index));
         item.setQuantity(request.quantity());
         item.setUnitCost(request.unitCost());
@@ -199,6 +199,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         return new PurchaseOrderItemRes(
                 item.getId(),
                 item.getInventoryItemId(),
+                item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
                 item.getTotalAmount()
@@ -228,10 +229,39 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         return new GrnInvoiceItemRes(
                 item.getId(),
                 item.getInventoryItemId(),
+                item.getFixedAssetTemplateId(),
                 item.getBatchNo(),
                 item.getQuantity(),
                 item.getUnitCost(),
                 item.getTotalAmount()
         );
+    }
+
+    private String buildItemKey(PurchaseOrderItem item) {
+        return buildItemKey(item.getInventoryItemId(), item.getFixedAssetTemplateId());
+    }
+
+    private String buildItemKey(Long inventoryItemId, Long fixedAssetTemplateId) {
+        if (inventoryItemId != null && fixedAssetTemplateId != null) {
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+        }
+        if (inventoryItemId != null) {
+            return "INV-" + inventoryItemId;
+        }
+        if (fixedAssetTemplateId != null) {
+            return "FAT-" + fixedAssetTemplateId;
+        }
+        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+    }
+
+    private void applyItemSelection(GrnInvoiceItem item, Long inventoryItemId, Long fixedAssetTemplateId) {
+        if (inventoryItemId != null && fixedAssetTemplateId != null) {
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+        }
+        if (inventoryItemId == null && fixedAssetTemplateId == null) {
+            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+        }
+        item.setInventoryItemId(inventoryItemId);
+        item.setFixedAssetTemplateId(fixedAssetTemplateId);
     }
 }

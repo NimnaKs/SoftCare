@@ -12,8 +12,11 @@ public class PurchaseOrderDraftItem extends BaseEntity {
     @Column(name = "draft_id", nullable = false)
     private Long draftId;
 
-    @Column(name = "inventory_item_id", nullable = false)
+    @Column(name = "inventory_item_id")
     private Long inventoryItemId;
+
+    @Column(name = "fixed_asset_template_id")
+    private Long fixedAssetTemplateId;
 
     @Column(nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
@@ -38,6 +41,14 @@ public class PurchaseOrderDraftItem extends BaseEntity {
 
     public void setInventoryItemId(Long inventoryItemId) {
         this.inventoryItemId = inventoryItemId;
+    }
+
+    public Long getFixedAssetTemplateId() {
+        return fixedAssetTemplateId;
+    }
+
+    public void setFixedAssetTemplateId(Long fixedAssetTemplateId) {
+        this.fixedAssetTemplateId = fixedAssetTemplateId;
     }
 
     public BigDecimal getQuantity() {

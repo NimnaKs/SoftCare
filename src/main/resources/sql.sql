@@ -838,18 +838,21 @@ CREATE TABLE purchase_order_drafts (
 CREATE TABLE purchase_order_draft_items (
                                             id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                             draft_id          BIGINT UNSIGNED NOT NULL,
-                                            inventory_item_id BIGINT UNSIGNED NOT NULL,
+                                            inventory_item_id BIGINT UNSIGNED NULL,
+                                            fixed_asset_template_id BIGINT UNSIGNED NULL,
                                             quantity          DECIMAL(14,3) NOT NULL,
                                             unit_cost         DECIMAL(14,2) NULL,
                                             total_amount      DECIMAL(14,2) NULL,
                                             created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                             updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                            UNIQUE KEY uq_po_draft_item (draft_id, inventory_item_id),
+                                            UNIQUE KEY uq_po_draft_item (draft_id, inventory_item_id, fixed_asset_template_id),
                                             INDEX idx_po_draft_item_draft (draft_id),
                                             CONSTRAINT fk_po_draft_item_draft
                                                 FOREIGN KEY (draft_id) REFERENCES purchase_order_drafts(id) ON DELETE CASCADE,
                                             CONSTRAINT fk_po_draft_item_inventory
-                                                FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id)
+                                                FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id),
+                                            CONSTRAINT fk_po_draft_item_fixed_asset
+                                                FOREIGN KEY (fixed_asset_template_id) REFERENCES fixed_asset_templates(id)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
@@ -884,16 +887,19 @@ CREATE TABLE purchase_orders (
 CREATE TABLE purchase_order_items (
                                       id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                       purchase_order_id   BIGINT UNSIGNED NOT NULL,
-                                      inventory_item_id   BIGINT UNSIGNED NOT NULL,
+                                      inventory_item_id   BIGINT UNSIGNED NULL,
+                                      fixed_asset_template_id BIGINT UNSIGNED NULL,
                                       quantity            DECIMAL(14,3) NOT NULL,
                                       unit_cost           DECIMAL(14,2) NOT NULL,
                                       total_amount        DECIMAL(14,2) NOT NULL,
-                                      UNIQUE KEY uq_po_item (purchase_order_id, inventory_item_id),
+                                      UNIQUE KEY uq_po_item (purchase_order_id, inventory_item_id, fixed_asset_template_id),
                                       INDEX idx_po_item_po (purchase_order_id),
                                       CONSTRAINT fk_po_item_po
                                           FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
                                       CONSTRAINT fk_po_item_inventory
-                                          FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id)
+                                          FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id),
+                                      CONSTRAINT fk_po_item_fixed_asset
+                                          FOREIGN KEY (fixed_asset_template_id) REFERENCES fixed_asset_templates(id)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
@@ -928,18 +934,22 @@ CREATE TABLE grn_invoices (
 CREATE TABLE grn_invoice_items (
                                    id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                    grn_id             BIGINT UNSIGNED NOT NULL,
-                                   inventory_item_id  BIGINT UNSIGNED NOT NULL,
+                                   inventory_item_id  BIGINT UNSIGNED NULL,
+                                   fixed_asset_template_id BIGINT UNSIGNED NULL,
                                    batch_no           VARCHAR(50) NOT NULL,
                                    quantity           DECIMAL(14,3) NOT NULL,
                                    unit_cost          DECIMAL(14,2) NOT NULL,
                                    total_amount       DECIMAL(14,2) NOT NULL,
-                                   UNIQUE KEY uq_grn_item_batch (grn_id, inventory_item_id, batch_no),
+                                   UNIQUE KEY uq_grn_item_batch (grn_id, inventory_item_id, fixed_asset_template_id, batch_no),
                                    INDEX idx_grn_item_grn (grn_id),
                                    INDEX idx_grn_item_inventory (inventory_item_id),
+                                   INDEX idx_grn_item_fixed_asset (fixed_asset_template_id),
                                    CONSTRAINT fk_grn_item_grn
                                        FOREIGN KEY (grn_id) REFERENCES grn_invoices(id) ON DELETE CASCADE,
                                    CONSTRAINT fk_grn_item_inventory
-                                       FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id)
+                                       FOREIGN KEY (inventory_item_id) REFERENCES branch_inventory_items(id),
+                                   CONSTRAINT fk_grn_item_fixed_asset
+                                       FOREIGN KEY (fixed_asset_template_id) REFERENCES fixed_asset_templates(id)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
