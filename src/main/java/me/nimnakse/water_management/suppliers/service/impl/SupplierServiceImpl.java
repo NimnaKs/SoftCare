@@ -104,8 +104,8 @@ public class SupplierServiceImpl implements SupplierService {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         PageRequest pageRequest = pageRequest(page, size);
         Page<Supplier> suppliers = orgUnitId == null
-                ? supplierRepository.findAll(pageRequest)
-                : supplierRepository.findByOrgUnitId(orgUnitId, pageRequest);
+                ? supplierRepository.findByIsActiveTrue(pageRequest)
+                : supplierRepository.findByOrgUnitIdAndIsActiveTrue(orgUnitId, pageRequest);
         return toPageResponse(suppliers);
     }
 

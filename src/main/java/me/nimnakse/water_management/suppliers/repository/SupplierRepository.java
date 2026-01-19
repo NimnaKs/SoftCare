@@ -13,7 +13,9 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 
-    Page<Supplier> findByOrgUnitId(Long orgUnitId, Pageable pageable);
+    Page<Supplier> findByOrgUnitIdAndIsActiveTrue(Long orgUnitId, Pageable pageable);
+
+    Page<Supplier> findByIsActiveTrue(Pageable pageable);
 
     @Query("select max(s.supplierCode) from Supplier s where s.orgUnitId = :orgUnitId")
     String findMaxSupplierCodeByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
