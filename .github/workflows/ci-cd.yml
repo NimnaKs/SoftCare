@@ -1,0 +1,83 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["dev"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "maven"
+
+      - name: Build
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: dist
+
+      - name: Select jar
+        run: |
+          JAR_PATH="$(ls dist/*.jar | grep -v 'original' | head -n 1)"
+          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
+
+      - name: Upload jar to EC2 (to /tmp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          source: ${{ env.JAR_PATH }}
+          target: /tmp
+          strip_components: 1
+
+      - name: Deploy & Restart (to /var/app/)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            set -e
+
+            # Ensure target directory exists
+            sudo mkdir -p /var/app
+
+            # Pick the latest uploaded jar from /tmp
+            JAR_FILE="$(ls -t /tmp/*.jar | grep -v 'original' | head -n 1)"
+
+            # Move and rename exactly as you requested
+            sudo mv "$JAR_FILE" /var/app/water-management-1.0.0.jar
+            sudo chmod 644 /var/app/water-management-1.0.0.jar
+
+            # Restart your service
+            sudo systemctl restart ${{ secrets.EC2_SERVICE_NAME }}
+            sudo systemctl status ${{ secrets.EC2_SERVICE_NAME }} --no-pager
