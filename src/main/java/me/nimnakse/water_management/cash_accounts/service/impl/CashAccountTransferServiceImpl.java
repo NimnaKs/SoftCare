@@ -11,6 +11,8 @@ import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccountTransfer
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountTransferRepository;
 import me.nimnakse.water_management.cash_accounts.service.CashAccountTransferService;
+import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
+import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -26,13 +28,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class CashAccountTransferServiceImpl implements CashAccountTransferService {
     private final MonetaryAccountRepository accountRepository;
     private final MonetaryAccountTransferRepository transferRepository;
+    private final MonetaryTransactionService transactionService;
     private final OrganizationAccessService organizationAccessService;
 
     public CashAccountTransferServiceImpl(MonetaryAccountRepository accountRepository,
-                                          MonetaryAccountTransferRepository transferRepository,
-                                          OrganizationAccessService organizationAccessService) {
+            MonetaryAccountTransferRepository transferRepository,
+            MonetaryTransactionService transactionService,
+            OrganizationAccessService organizationAccessService) {
         this.accountRepository = accountRepository;
         this.transferRepository = transferRepository;
+        this.transactionService = transactionService;
         this.organizationAccessService = organizationAccessService;
     }
 
@@ -63,16 +68,33 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
         transfer.setAmount(amount);
         transfer.setDescription(trimToNull(request.description()));
         MonetaryAccountTransfer saved = transferRepository.save(transfer);
+
+        // Record Ledger Transactions
+        transactionService.recordTransaction(
+                fromAccount.getId(),
+                amount.negate(),
+                MonetaryTransaction.TransactionType.TRANSFER_OUT,
+                null,
+                "Transfer to " + toAccount.getAccountName() + ": " + transfer.getDescription(),
+                saved.getId());
+        transactionService.recordTransaction(
+                toAccount.getId(),
+                amount,
+                MonetaryTransaction.TransactionType.TRANSFER_IN,
+                null,
+                "Transfer from " + fromAccount.getAccountName() + ": " + transfer.getDescription(),
+                saved.getId());
+
         return toTransferResponse(saved);
     }
 
     @Transactional(readOnly = true)
     @Override
     public PageResponse<CashAccountStatementEntryRes> getStatement(Long accountId,
-                                                                   Instant startAt,
-                                                                   Instant endAt,
-                                                                   int page,
-                                                                   int size) {
+            Instant startAt,
+            Instant endAt,
+            int page,
+            int size) {
         if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
             throw new BadRequestException("Start time must be before end time");
         }
@@ -84,8 +106,7 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
                 accountId,
                 startAt,
                 endAt,
-                pageRequest
-        );
+                pageRequest);
         var items = transfers.getContent().stream()
                 .map(transfer -> toStatementEntry(accountId, transfer))
                 .toList();
@@ -94,8 +115,7 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
                 transfers.getTotalElements(),
                 transfers.getTotalPages(),
                 transfers.getNumber(),
-                transfers.getSize()
-        );
+                transfers.getSize());
     }
 
     private CashAccountTransferRes toTransferResponse(MonetaryAccountTransfer transfer) {
@@ -109,8 +129,7 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
                 toAccount.getAccountName(),
                 transfer.getAmount(),
                 transfer.getDescription(),
-                transfer.getCreatedAt()
-        );
+                transfer.getCreatedAt());
     }
 
     private CashAccountStatementEntryRes toStatementEntry(Long accountId, MonetaryAccountTransfer transfer) {
@@ -123,8 +142,7 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
                 counterparty.getAccountName(),
                 transfer.getAmount(),
                 transfer.getDescription(),
-                transfer.getCreatedAt()
-        );
+                transfer.getCreatedAt());
     }
 
     private String trimToNull(String value) {

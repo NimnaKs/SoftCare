@@ -27,6 +27,8 @@ import me.nimnakse.water_management.payments.repository.PaymentVoucherDraftRepos
 import me.nimnakse.water_management.payments.repository.PaymentVoucherItemRepository;
 import me.nimnakse.water_management.payments.repository.PaymentVoucherRepository;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
+import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
+import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.payments.service.PaymentVoucherDraftService;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.data.domain.Page;
@@ -42,6 +44,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
     private final PaymentVoucherRepository paymentVoucherRepository;
     private final PaymentVoucherItemRepository paymentVoucherItemRepository;
     private final MonetaryAccountRepository monetaryAccountRepository;
+    private final MonetaryTransactionService transactionService;
     private final OrgUnitRepository orgUnitRepository;
     private final OrganizationAccessService organizationAccessService;
 
@@ -50,6 +53,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
             PaymentVoucherRepository paymentVoucherRepository,
             PaymentVoucherItemRepository paymentVoucherItemRepository,
             MonetaryAccountRepository monetaryAccountRepository,
+            MonetaryTransactionService transactionService,
             OrgUnitRepository orgUnitRepository,
             OrganizationAccessService organizationAccessService) {
         this.draftRepository = draftRepository;
@@ -57,6 +61,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         this.paymentVoucherRepository = paymentVoucherRepository;
         this.paymentVoucherItemRepository = paymentVoucherItemRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
+        this.transactionService = transactionService;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
     }
@@ -160,6 +165,18 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 .map(item -> buildVoucherItem(savedVoucher.getId(), item))
                 .toList();
         paymentVoucherItemRepository.saveAll(voucherItems);
+
+        // Record Ledger Transactions (Row by Row)
+        for (PaymentVoucherDraftItem item : draftItems) {
+            transactionService.recordTransaction(
+                    account.getId(),
+                    item.getTotalAmount().negate(),
+                    MonetaryTransaction.TransactionType.EXPENSE,
+                    savedVoucher.getVoucherNo(),
+                    item.getDescription() != null ? item.getDescription() : "Expense Payment",
+                    savedVoucher.getId());
+        }
+
         return toVoucherResponse(savedVoucher, voucherItems);
     }
 
