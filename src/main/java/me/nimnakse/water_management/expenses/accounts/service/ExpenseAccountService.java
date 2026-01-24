@@ -4,6 +4,7 @@ import java.util.List;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountCreateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountUpdateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.response.ExpenseAccountRes;
+import me.nimnakse.water_management.expenses.main_categories.entity.ExpenseMainCategory;
 
 public interface ExpenseAccountService {
     ExpenseAccountRes create(ExpenseAccountCreateReq request);
@@ -15,4 +16,6 @@ public interface ExpenseAccountService {
     List<ExpenseAccountRes> list(Long mainCategoryId);
 
     void delete(Long id);
+
+    String generateAccountCode(ExpenseMainCategory mainCategory);
 }

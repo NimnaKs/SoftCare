@@ -151,7 +151,7 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private String generateAccountCode(ExpenseMainCategory mainCategory) {
+    public String generateAccountCode(ExpenseMainCategory mainCategory) {
         String typePrefix = mainCategory.getExpenseType() == ExpenseType.OPERATING ? "OP" : "NO";
         String cat = String.format("%02d", mainCategory.getId());
         int nextSeq = accountRepository.findTopByMainCategoryIdOrderByAccountCodeDesc(mainCategory.getId())

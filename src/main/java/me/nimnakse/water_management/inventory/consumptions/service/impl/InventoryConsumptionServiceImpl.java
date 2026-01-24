@@ -12,6 +12,7 @@ import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.expenses.ExpenseType;
 import me.nimnakse.water_management.expenses.accounts.entity.ExpenseAccount;
 import me.nimnakse.water_management.expenses.accounts.repository.ExpenseAccountRepository;
+import me.nimnakse.water_management.expenses.accounts.service.ExpenseAccountService;
 import me.nimnakse.water_management.expenses.main_categories.entity.ExpenseMainCategory;
 import me.nimnakse.water_management.expenses.main_categories.repository.ExpenseMainCategoryRepository;
 import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionCreateReq;
@@ -46,6 +47,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     private final GrnInvoiceItemRepository grnInvoiceItemRepository;
     private final GrnInvoiceRepository grnInvoiceRepository;
     private final OrganizationAccessService organizationAccessService;
+    private final ExpenseAccountService expenseAccountService;
 
     public InventoryConsumptionServiceImpl(InventoryConsumptionRepository consumptionRepository,
                                            InventoryTemplateRepository templateRepository,
@@ -54,7 +56,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                                            InventoryInitialStockRepository initialStockRepository,
                                            GrnInvoiceItemRepository grnInvoiceItemRepository,
                                            GrnInvoiceRepository grnInvoiceRepository,
-                                           OrganizationAccessService organizationAccessService) {
+                                           OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
         this.consumptionRepository = consumptionRepository;
         this.templateRepository = templateRepository;
         this.expenseAccountRepository = expenseAccountRepository;
@@ -63,6 +65,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
         this.grnInvoiceItemRepository = grnInvoiceItemRepository;
         this.grnInvoiceRepository = grnInvoiceRepository;
         this.organizationAccessService = organizationAccessService;
+        this.expenseAccountService = expenseAccountService;
     }
 
     @Transactional
@@ -189,19 +192,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
         account.setIsActive(Boolean.TRUE);
         account.setIsDefault(Boolean.TRUE);
         expenseAccountRepository.clearDefaultForMainCategory(mainCategory.getId());
-        account.setAccountNumber(generateAccountNumber());
+        account.setAccountCode(expenseAccountService.generateAccountCode(mainCategory));
         return expenseAccountRepository.save(account);
-    }
-
-    private String generateAccountNumber() {
-        String base = "CONSUMPTION-MATERIAL";
-        String candidate = base;
-        int counter = 1;
-        while (expenseAccountRepository.existsByAccountNumberIgnoreCase(candidate)) {
-            candidate = base + "-" + counter;
-            counter += 1;
-        }
-        return candidate.toUpperCase(Locale.ROOT);
     }
 
     private void applyRequest(InventoryConsumption consumption,

@@ -26,4 +26,6 @@ public interface ExpenseAccountRepository extends JpaRepository<ExpenseAccount, 
     void clearDefaultForMainCategory(@Param("mainCategoryId") Long mainCategoryId);
 
     Optional<ExpenseAccount> findTopByMainCategoryIdOrderByAccountCodeDesc(Long id);
+
+    boolean existsByAccountCodeIgnoreCase(String candidate);
 }

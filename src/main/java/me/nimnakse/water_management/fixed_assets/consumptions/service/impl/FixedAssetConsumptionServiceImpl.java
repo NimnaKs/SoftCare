@@ -12,6 +12,7 @@ import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.expenses.ExpenseType;
 import me.nimnakse.water_management.expenses.accounts.entity.ExpenseAccount;
 import me.nimnakse.water_management.expenses.accounts.repository.ExpenseAccountRepository;
+import me.nimnakse.water_management.expenses.accounts.service.ExpenseAccountService;
 import me.nimnakse.water_management.expenses.main_categories.entity.ExpenseMainCategory;
 import me.nimnakse.water_management.expenses.main_categories.repository.ExpenseMainCategoryRepository;
 import me.nimnakse.water_management.fixed_assets.consumptions.dto.request.FixedAssetConsumptionCreateReq;
@@ -46,6 +47,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     private final GrnInvoiceItemRepository grnInvoiceItemRepository;
     private final GrnInvoiceRepository grnInvoiceRepository;
     private final OrganizationAccessService organizationAccessService;
+    private final ExpenseAccountService expenseAccountService;
 
     public FixedAssetConsumptionServiceImpl(FixedAssetConsumptionRepository consumptionRepository,
                                             FixedAssetTemplateRepository templateRepository,
@@ -54,7 +56,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                                             FixedAssetInitialStockRepository initialStockRepository,
                                             GrnInvoiceItemRepository grnInvoiceItemRepository,
                                             GrnInvoiceRepository grnInvoiceRepository,
-                                            OrganizationAccessService organizationAccessService) {
+                                            OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
         this.consumptionRepository = consumptionRepository;
         this.templateRepository = templateRepository;
         this.expenseAccountRepository = expenseAccountRepository;
@@ -63,6 +65,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         this.grnInvoiceItemRepository = grnInvoiceItemRepository;
         this.grnInvoiceRepository = grnInvoiceRepository;
         this.organizationAccessService = organizationAccessService;
+        this.expenseAccountService = expenseAccountService;
     }
 
     @Transactional
@@ -189,7 +192,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         account.setIsActive(Boolean.TRUE);
         account.setIsDefault(Boolean.TRUE);
         expenseAccountRepository.clearDefaultForMainCategory(mainCategory.getId());
-        account.setAccountNumber(generateAccountNumber());
+        account.setAccountCode(expenseAccountService.generateAccountCode(mainCategory));
         return expenseAccountRepository.save(account);
     }
 
@@ -197,7 +200,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         String base = "CONSUMPTION-MATERIAL";
         String candidate = base;
         int counter = 1;
-        while (expenseAccountRepository.existsByAccountNumberIgnoreCase(candidate)) {
+        while (expenseAccountRepository.existsByAccountCodeIgnoreCase(candidate)) {
             candidate = base + "-" + counter;
             counter += 1;
         }
