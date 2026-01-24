@@ -413,13 +413,17 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                 ? initialStockRepository.findByTemplateId(fixedAssetTemplateId)
                 : initialStockRepository.findByOrgUnitIdAndTemplateId(orgUnitId, fixedAssetTemplateId);
         return initialStocks.stream()
-                .map(stock -> new FixedAssetConsumptionBatchRes(
-                        stock.getBatchNo(),
-                        resolveRemaining(stock.getRemainingQuantity(), stock.getQuantity()),
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BatchSourceType.INITIAL_STOCK
-                ))
+                .map(stock -> {
+                    BigDecimal remaining = resolveRemaining(stock.getRemainingQuantity(), stock.getQuantity());
+                    BigDecimal unitCost = stock.getUnitCost() == null ? BigDecimal.ZERO : stock.getUnitCost();
+                    return new FixedAssetConsumptionBatchRes(
+                            stock.getBatchNo(),
+                            remaining,
+                            remaining.multiply(unitCost),
+                            unitCost,
+                            BatchSourceType.INITIAL_STOCK
+                    );
+                })
                 .toList();
     }
 

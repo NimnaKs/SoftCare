@@ -8,6 +8,8 @@ public record InventoryInitialStockUpdateReq(
         @NotNull Long orgUnitId,
         @NotNull Long templateId,
         @NotNull @DecimalMin(value = "0.001", message = "Quantity must be greater than zero")
-        BigDecimal quantity
+        BigDecimal quantity,
+        @NotNull @DecimalMin(value = "0.00", message = "Unit cost must be zero or positive")
+        BigDecimal unitCost
 ) {
 }

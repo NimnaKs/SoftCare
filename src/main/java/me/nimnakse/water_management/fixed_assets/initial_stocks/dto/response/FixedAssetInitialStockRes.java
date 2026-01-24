@@ -10,6 +10,7 @@ public record FixedAssetInitialStockRes(
         String templateCode,
         String batchNo,
         BigDecimal quantity,
+        BigDecimal unitCost,
         Instant createdAt,
         Instant updatedAt
 ) {

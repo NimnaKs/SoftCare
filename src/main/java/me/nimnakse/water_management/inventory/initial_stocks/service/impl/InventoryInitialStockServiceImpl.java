@@ -54,6 +54,7 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
         stock.setBatchSequence(nextSequence);
         stock.setQuantity(request.quantity());
         stock.setRemainingQuantity(request.quantity());
+        stock.setUnitCost(request.unitCost());
         return toResponse(initialStockRepository.save(stock), template);
     }
 
@@ -77,6 +78,7 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
         stock.setTemplateId(template.getId());
         stock.setQuantity(request.quantity());
         stock.setRemainingQuantity(request.quantity().subtract(consumedQuantity));
+        stock.setUnitCost(request.unitCost());
         return toResponse(initialStockRepository.save(stock), template);
     }
 
@@ -171,6 +173,7 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
                 template != null ? template.getTemplateCode() : null,
                 stock.getBatchNo(),
                 stock.getQuantity(),
+                stock.getUnitCost(),
                 stock.getCreatedAt(),
                 stock.getUpdatedAt()
         );
