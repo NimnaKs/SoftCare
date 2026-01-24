@@ -31,9 +31,9 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     @Override
     public ExpenseMainCategoryRes create(ExpenseMainCategoryCreateReq request) {
         String normalizedName = request.name().trim();
-        validateUniqueness(request.code(), null, normalizedName);
+        validateUniqueness(null, normalizedName);
         ExpenseMainCategory category = new ExpenseMainCategory();
-        applyRequest(category, request.expenseType(), request.code(), normalizedName, request.description(),
+        applyRequest(category, request.expenseType(), normalizedName, request.description(),
                 request.isSystem(), request.isActive());
         return toResponse(mainCategoryRepository.save(category));
     }
@@ -44,8 +44,8 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
         ExpenseMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
-        validateUniqueness(request.code(), id, normalizedName);
-        applyRequest(category, request.expenseType(), request.code(), normalizedName, request.description(),
+        validateUniqueness(id, normalizedName);
+        applyRequest(category, request.expenseType(),normalizedName, request.description(),
                 request.isSystem(), request.isActive());
         return toResponse(mainCategoryRepository.save(category));
     }
@@ -80,18 +80,12 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
         mainCategoryRepository.delete(category);
     }
 
-    private void validateUniqueness(Integer code, Long id, String name) {
+    private void validateUniqueness(Long id, String name) {
         if (id == null) {
-            if (mainCategoryRepository.existsByCode(code)) {
-                throw new BadRequestException("Expense main category code already exists");
-            }
             if (mainCategoryRepository.existsByNameIgnoreCase(name)) {
                 throw new BadRequestException("Expense main category name already exists");
             }
         } else {
-            if (mainCategoryRepository.existsByCodeAndIdNot(code, id)) {
-                throw new BadRequestException("Expense main category code already exists");
-            }
             if (mainCategoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
                 throw new BadRequestException("Expense main category name already exists");
             }
@@ -100,13 +94,11 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
 
     private void applyRequest(ExpenseMainCategory category,
                               ExpenseType expenseType,
-                              Integer code,
                               String name,
                               String description,
                               Boolean isSystem,
                               Boolean isActive) {
         category.setExpenseType(expenseType);
-        category.setCode(code);
         category.setName(name.trim());
         category.setDescription(trimToNull(description));
         if (isSystem != null) {
@@ -121,7 +113,6 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
         return new ExpenseMainCategoryRes(
                 category.getId(),
                 category.getExpenseType(),
-                category.getCode(),
                 category.getName(),
                 category.getDescription(),
                 category.getIsSystem(),

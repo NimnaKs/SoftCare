@@ -15,9 +15,6 @@ public class ExpenseMainCategory extends BaseEntity {
     @Column(name = "expense_type", nullable = false)
     private ExpenseType expenseType;
 
-    @Column(name = "code", nullable = false, unique = true)
-    private Integer code;
-
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
@@ -36,14 +33,6 @@ public class ExpenseMainCategory extends BaseEntity {
 
     public void setExpenseType(ExpenseType expenseType) {
         this.expenseType = expenseType;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public void setCode(Integer code) {
-        this.code = code;
     }
 
     public String getName() {

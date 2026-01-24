@@ -6,7 +6,6 @@ import me.nimnakse.water_management.expenses.ExpenseType;
 public record ExpenseMainCategoryRes(
         Long id,
         ExpenseType expenseType,
-        Integer code,
         String name,
         String description,
         Boolean isSystem,

@@ -8,7 +8,6 @@ import me.nimnakse.water_management.expenses.ExpenseType;
 
 public record ExpenseMainCategoryUpdateReq(
         @NotNull ExpenseType expenseType,
-        @NotNull @Min(1) Integer code,
         @NotBlank @Size(max = 255) String name,
         @Size(max = 500) String description,
         Boolean isSystem,

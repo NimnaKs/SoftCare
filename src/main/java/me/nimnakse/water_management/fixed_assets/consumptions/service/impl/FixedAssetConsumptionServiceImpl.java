@@ -177,8 +177,6 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         category.setDescription("Auto-generated consumption expense category");
         category.setIsSystem(Boolean.TRUE);
         category.setIsActive(Boolean.TRUE);
-        Integer maxCode = mainCategoryRepository.findMaxCode();
-        category.setCode(maxCode == null ? 1 : maxCode + 1);
         return mainCategoryRepository.save(category);
     }
 
