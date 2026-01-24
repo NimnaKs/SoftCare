@@ -28,9 +28,6 @@ public class ExpenseAccount extends BaseEntity {
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = Boolean.FALSE;
 
-    @Column(name = "function_key", length = 100)
-    private String functionKey;
-
     @Column(name = "is_system", nullable = false)
     private Boolean isSystem = Boolean.FALSE;
 
@@ -75,14 +72,6 @@ public class ExpenseAccount extends BaseEntity {
 
     public void setIsDefault(Boolean aDefault) {
         isDefault = aDefault;
-    }
-
-    public String getFunctionKey() {
-        return functionKey;
-    }
-
-    public void setFunctionKey(String functionKey) {
-        this.functionKey = functionKey;
     }
 
     public Boolean getIsSystem() {
