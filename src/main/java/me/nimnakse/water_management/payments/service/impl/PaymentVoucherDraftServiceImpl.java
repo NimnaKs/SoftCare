@@ -154,7 +154,6 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         voucher.setTotalAmount(totalAmount);
         voucher.setPaymentDate(request.paymentDate());
         voucher.setFundSourceId(request.fundSourceId());
-        voucher.setPaymentMethodId(request.paymentMethodId());
 
         PaymentVoucher savedVoucher = paymentVoucherRepository.save(voucher);
         List<PaymentVoucherItem> voucherItems = draftItems.stream()

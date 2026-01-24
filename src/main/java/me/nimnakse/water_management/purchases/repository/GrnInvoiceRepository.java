@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.purchases.repository;
 
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,8 @@ public interface GrnInvoiceRepository extends JpaRepository<GrnInvoice, Long> {
 
     @Query("select max(g.grnNo) from GrnInvoice g where g.orgUnitId = :orgUnitId")
     String findMaxGrnNoByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
+
+    List<GrnInvoice> findByOrgUnitIdAndIdNotIn(Long orgUnitId, List<Long> userIds);
+
+    List<GrnInvoice> findByOrgUnitId(Long orgUnitId);
 }

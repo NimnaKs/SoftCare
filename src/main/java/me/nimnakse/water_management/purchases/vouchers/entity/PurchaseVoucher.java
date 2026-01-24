@@ -1,16 +1,15 @@
-package me.nimnakse.water_management.payments.entity;
+package me.nimnakse.water_management.purchases.vouchers.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import me.nimnakse.water_management.common.entity.BaseEntity;
 
 @Entity
-@Table(name = "payment_vouchers")
-public class PaymentVoucher extends BaseEntity {
+@Table(name = "purchase_vouchers")
+public class PurchaseVoucher extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
@@ -24,7 +23,7 @@ public class PaymentVoucher extends BaseEntity {
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "payment_date")
-    private java.time.LocalDate paymentDate;
+    private LocalDate paymentDate;
 
     @Column(name = "fund_source_id")
     private Long fundSourceId;
@@ -64,19 +63,11 @@ public class PaymentVoucher extends BaseEntity {
         this.totalAmount = totalAmount;
     }
 
-    public Long getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(Long createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public java.time.LocalDate getPaymentDate() {
+    public LocalDate getPaymentDate() {
         return paymentDate;
     }
 
-    public void setPaymentDate(java.time.LocalDate paymentDate) {
+    public void setPaymentDate(LocalDate paymentDate) {
         this.paymentDate = paymentDate;
     }
 
@@ -88,4 +79,11 @@ public class PaymentVoucher extends BaseEntity {
         this.fundSourceId = fundSourceId;
     }
 
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
+    }
 }
