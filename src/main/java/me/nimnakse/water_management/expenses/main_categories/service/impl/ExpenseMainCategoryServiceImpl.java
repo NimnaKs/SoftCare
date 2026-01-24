@@ -61,7 +61,7 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     @Transactional(readOnly = true)
     @Override
     public List<ExpenseMainCategoryRes> list() {
-        return mainCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "code", "name")).stream()
+        return mainCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "id", "name")).stream()
                 .map(this::toResponse)
                 .toList();
     }
