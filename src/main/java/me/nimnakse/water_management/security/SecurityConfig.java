@@ -73,7 +73,8 @@ public class SecurityConfig {
                                 "/fixed-asset-consumptions/**",
                                 "/fixed-asset-bin-cards/**",
                                 "/inventory-consumptions/**",
-                                "/inventory-bin-cards/**"
+                                "/inventory-bin-cards/**",
+                                "/monetary-transactions/**"
                         ).hasAuthority("APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 "/roles/**",
