@@ -5,11 +5,10 @@ import java.time.Instant;
 public record ExpenseAccountRes(
         Long id,
         Long mainCategoryId,
-        String accountNumber,
+        String accountCode,
         String name,
         String description,
         Boolean isDefault,
-        String functionKey,
         Boolean isSystem,
         Boolean isActive,
         Instant createdAt,

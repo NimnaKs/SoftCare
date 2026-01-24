@@ -16,8 +16,8 @@ public class ExpenseAccount extends BaseEntity {
     @JoinColumn(name = "main_category_id", nullable = false)
     private ExpenseMainCategory mainCategory;
 
-    @Column(name = "account_number", nullable = false, unique = true)
-    private String accountNumber;
+    @Column(name = "account_code", nullable = false, unique = true)
+    private String accountCode;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -45,12 +45,12 @@ public class ExpenseAccount extends BaseEntity {
         this.mainCategory = mainCategory;
     }
 
-    public String getAccountNumber() {
-        return accountNumber;
+    public String getAccountCode() {
+        return accountCode;
     }
 
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
+    public void setAccountCode(String accountNumber) {
+        this.accountCode = accountNumber;
     }
 
     public String getName() {

@@ -3,15 +3,13 @@ package me.nimnakse.water_management.expenses.accounts.repository;
 import java.util.List;
 import java.util.Optional;
 import me.nimnakse.water_management.expenses.accounts.entity.ExpenseAccount;
+import org.springframework.data.domain.Range;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ExpenseAccountRepository extends JpaRepository<ExpenseAccount, Long> {
-    boolean existsByAccountNumberIgnoreCase(String accountNumber);
-
-    boolean existsByAccountNumberIgnoreCaseAndIdNot(String accountNumber, Long id);
 
     boolean existsByMainCategoryIdAndNameIgnoreCase(Long mainCategoryId, String name);
 
@@ -26,4 +24,6 @@ public interface ExpenseAccountRepository extends JpaRepository<ExpenseAccount, 
     @Modifying
     @Query("update ExpenseAccount ea set ea.isDefault = false where ea.mainCategory.id = :mainCategoryId")
     void clearDefaultForMainCategory(@Param("mainCategoryId") Long mainCategoryId);
+
+    Optional<ExpenseAccount> findTopByMainCategoryIdOrderByAccountCodeDesc(Long id);
 }

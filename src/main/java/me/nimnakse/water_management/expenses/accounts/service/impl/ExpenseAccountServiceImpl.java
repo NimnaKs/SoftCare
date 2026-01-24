@@ -4,6 +4,7 @@ import java.util.List;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.expenses.ExpenseType;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountCreateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountUpdateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.response.ExpenseAccountRes;
@@ -30,13 +31,13 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     @Transactional
     @Override
     public ExpenseAccountRes create(ExpenseAccountCreateReq request) {
-        String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
-        validateUniqueness(normalizedAccountNumber, null, request.mainCategoryId(), normalizedName);
+        validateUniqueness(null, request.mainCategoryId(), normalizedName);
         ExpenseMainCategory mainCategory = getMainCategory(request.mainCategoryId());
         ExpenseAccount account = new ExpenseAccount();
-        applyRequest(account, mainCategory, normalizedAccountNumber, normalizedName, request.description(),
-                request.isDefault(), request.functionKey(), request.isSystem(), request.isActive());
+        account.setAccountCode(generateAccountCode(mainCategory));
+        applyRequest(account, mainCategory, normalizedName, request.description(),
+                request.isDefault(), request.isSystem(), request.isActive());
         return toResponse(accountRepository.save(account));
     }
 
@@ -45,12 +46,11 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     public ExpenseAccountRes update(Long id, ExpenseAccountUpdateReq request) {
         ExpenseAccount account = accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND));
-        String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
-        validateUniqueness(normalizedAccountNumber, id, request.mainCategoryId(), normalizedName);
+        validateUniqueness(id, request.mainCategoryId(), normalizedName);
         ExpenseMainCategory mainCategory = getMainCategory(request.mainCategoryId());
-        applyRequest(account, mainCategory, normalizedAccountNumber, normalizedName, request.description(),
-                request.isDefault(), request.functionKey(), request.isSystem(), request.isActive());
+        applyRequest(account, mainCategory, normalizedName, request.description(),
+                request.isDefault(), request.isSystem(), request.isActive());
         return toResponse(accountRepository.save(account));
     }
 
@@ -87,18 +87,12 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
         accountRepository.delete(account);
     }
 
-    private void validateUniqueness(String accountNumber, Long id, Long mainCategoryId, String name) {
+    private void validateUniqueness(Long id, Long mainCategoryId, String name) {
         if (id == null) {
-            if (accountRepository.existsByAccountNumberIgnoreCase(accountNumber)) {
-                throw new BadRequestException("Expense account number already exists");
-            }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCase(mainCategoryId, name)) {
                 throw new BadRequestException("Expense account name already exists for the main category");
             }
         } else {
-            if (accountRepository.existsByAccountNumberIgnoreCaseAndIdNot(accountNumber, id)) {
-                throw new BadRequestException("Expense account number already exists");
-            }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCaseAndIdNot(mainCategoryId, name, id)) {
                 throw new BadRequestException("Expense account name already exists for the main category");
             }
@@ -112,18 +106,14 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
 
     private void applyRequest(ExpenseAccount account,
                               ExpenseMainCategory mainCategory,
-                              String accountNumber,
                               String name,
                               String description,
                               Boolean isDefault,
-                              String functionKey,
                               Boolean isSystem,
                               Boolean isActive) {
         account.setMainCategory(mainCategory);
-        account.setAccountNumber(accountNumber.trim());
         account.setName(name.trim());
         account.setDescription(trimToNull(description));
-        account.setFunctionKey(trimToNull(functionKey));
         if (isSystem != null) {
             account.setIsSystem(isSystem);
         }
@@ -142,11 +132,10 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
         return new ExpenseAccountRes(
                 account.getId(),
                 account.getMainCategory().getId(),
-                account.getAccountNumber(),
+                account.getAccountCode(),
                 account.getName(),
                 account.getDescription(),
                 account.getIsDefault(),
-                account.getFunctionKey(),
                 account.getIsSystem(),
                 account.getIsActive(),
                 account.getCreatedAt(),
@@ -161,4 +150,17 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+    private String generateAccountCode(ExpenseMainCategory mainCategory) {
+        String typePrefix = mainCategory.getExpenseType() == ExpenseType.OPERATING ? "OP" : "NO";
+        String cat = String.format("%02d", mainCategory.getId());
+        int nextSeq = accountRepository.findTopByMainCategoryIdOrderByAccountCodeDesc(mainCategory.getId())
+                .map(a -> {
+                    String[] parts = a.getAccountCode().split("-");
+                    return Integer.parseInt(parts[2]) + 1;
+                })
+                .orElse(1);
+        return String.format("%s-%s-%03d", typePrefix, cat, nextSeq);
+    }
+
 }
