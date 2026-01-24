@@ -5,12 +5,14 @@ import java.time.Instant;
 import java.util.List;
 
 public record PaymentVoucherRes(
-                Long id,
-                Long orgUnitId,
-                String voucherNo,
-                Long draftId,
-                BigDecimal totalAmount,
-                List<PaymentVoucherItemRes> items,
-                Instant createdAt,
-                Instant updatedAt) {
+        Long id,
+        Long orgUnitId,
+        String voucherNo,
+        Long draftId,
+        BigDecimal totalAmount,
+        Long fundSourceId,
+        String fundSourceName,
+        List<PaymentVoucherItemRes> items,
+        Instant createdAt,
+        Instant updatedAt) {
 }

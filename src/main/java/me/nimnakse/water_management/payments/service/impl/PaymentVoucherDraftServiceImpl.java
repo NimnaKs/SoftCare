@@ -28,6 +28,7 @@ import me.nimnakse.water_management.payments.repository.PaymentVoucherItemReposi
 import me.nimnakse.water_management.payments.repository.PaymentVoucherRepository;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
 import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
+import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount;
 import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.payments.service.PaymentVoucherDraftService;
 import me.nimnakse.water_management.security.OrganizationAccessService;
@@ -151,6 +152,10 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         if (account.getCurrentBalance().compareTo(totalAmount) < 0) {
             throw new BadRequestException("Insufficient balance in fund source");
         }
+
+        // Deduct Balance
+        account.setCurrentBalance(account.getCurrentBalance().subtract(totalAmount));
+        monetaryAccountRepository.save(account);
 
         PaymentVoucher voucher = new PaymentVoucher();
         voucher.setOrgUnitId(draft.getOrgUnitId());
@@ -313,6 +318,10 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
     }
 
     private PaymentVoucherRes toVoucherResponse(PaymentVoucher voucher, List<PaymentVoucherItem> items) {
+        String fundSourceName = monetaryAccountRepository.findById(voucher.getFundSourceId())
+                .map(MonetaryAccount::getAccountName)
+                .orElse(null);
+
         List<PaymentVoucherItemRes> itemResponses = items.stream()
                 .map(this::toVoucherItemResponse)
                 .toList();
@@ -322,6 +331,8 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 voucher.getVoucherNo(),
                 voucher.getDraftId(),
                 voucher.getTotalAmount(),
+                voucher.getFundSourceId(),
+                fundSourceName,
                 itemResponses,
                 voucher.getCreatedAt(),
                 voucher.getUpdatedAt());
