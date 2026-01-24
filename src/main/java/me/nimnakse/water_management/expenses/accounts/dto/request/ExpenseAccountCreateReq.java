@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record ExpenseAccountCreateReq(
         @NotNull Long mainCategoryId,
-        @NotBlank @Size(max = 50) String accountCode,
+        String accountCode,
         @NotBlank @Size(max = 255) String name,
         @Size(max = 500) String description,
         Boolean isDefault,
