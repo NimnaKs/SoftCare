@@ -7,6 +7,4 @@ public interface PaymentVoucherService {
     PaymentVoucherRes getById(Long id);
 
     PageResponse<PaymentVoucherRes> getPage(int page, int size);
-
-    PaymentVoucherRes reject(Long id);
 }

@@ -305,7 +305,6 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 voucher.getOrgUnitId(),
                 voucher.getVoucherNo(),
                 voucher.getDraftId(),
-                voucher.getStatus(),
                 voucher.getTotalAmount(),
                 itemResponses,
                 voucher.getCreatedAt(),

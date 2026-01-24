@@ -9,7 +9,6 @@ import me.nimnakse.water_management.payments.dto.response.PaymentVoucherItemRes;
 import me.nimnakse.water_management.payments.dto.response.PaymentVoucherRes;
 import me.nimnakse.water_management.payments.entity.PaymentVoucher;
 import me.nimnakse.water_management.payments.entity.PaymentVoucherItem;
-import me.nimnakse.water_management.payments.entity.PaymentVoucherStatus;
 import me.nimnakse.water_management.payments.repository.PaymentVoucherItemRepository;
 import me.nimnakse.water_management.payments.repository.PaymentVoucherRepository;
 import me.nimnakse.water_management.payments.service.PaymentVoucherService;
@@ -27,8 +26,8 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
     private final OrganizationAccessService organizationAccessService;
 
     public PaymentVoucherServiceImpl(PaymentVoucherRepository voucherRepository,
-                                     PaymentVoucherItemRepository voucherItemRepository,
-                                     OrganizationAccessService organizationAccessService) {
+            PaymentVoucherItemRepository voucherItemRepository,
+            OrganizationAccessService organizationAccessService) {
         this.voucherRepository = voucherRepository;
         this.voucherItemRepository = voucherItemRepository;
         this.organizationAccessService = organizationAccessService;
@@ -54,20 +53,8 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         List<PaymentVoucherRes> items = vouchers.getContent().stream()
                 .map(voucher -> toVoucherResponse(voucher, voucherItemRepository.findByVoucherId(voucher.getId())))
                 .toList();
-        return new PageResponse<>(items, vouchers.getTotalElements(), vouchers.getTotalPages(), vouchers.getNumber(), vouchers.getSize());
-    }
-
-    @Transactional
-    @Override
-    public PaymentVoucherRes reject(Long id) {
-        PaymentVoucher voucher = getVoucher(id);
-        organizationAccessService.enforceOrgUnitAccess(voucher.getOrgUnitId());
-        if (voucher.getStatus() != PaymentVoucherStatus.PENDING) {
-            throw new BadRequestException("Only pending payment vouchers can be rejected");
-        }
-        voucher.setStatus(PaymentVoucherStatus.REJECTED);
-        List<PaymentVoucherItem> items = voucherItemRepository.findByVoucherId(voucher.getId());
-        return toVoucherResponse(voucher, items);
+        return new PageResponse<>(items, vouchers.getTotalElements(), vouchers.getTotalPages(), vouchers.getNumber(),
+                vouchers.getSize());
     }
 
     private PaymentVoucher getVoucher(Long id) {
@@ -84,12 +71,10 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
                 voucher.getOrgUnitId(),
                 voucher.getVoucherNo(),
                 voucher.getDraftId(),
-                voucher.getStatus(),
                 voucher.getTotalAmount(),
                 itemResponses,
                 voucher.getCreatedAt(),
-                voucher.getUpdatedAt()
-        );
+                voucher.getUpdatedAt());
     }
 
     private PaymentVoucherItemRes toVoucherItemResponse(PaymentVoucherItem item) {
@@ -97,7 +82,6 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
                 item.getId(),
                 item.getExpenseAccountId(),
                 item.getDescription(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 }

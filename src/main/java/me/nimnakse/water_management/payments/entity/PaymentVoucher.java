@@ -20,10 +20,6 @@ public class PaymentVoucher extends BaseEntity {
     @Column(name = "draft_id")
     private Long draftId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private PaymentVoucherStatus status = PaymentVoucherStatus.PENDING;
-
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -61,14 +57,6 @@ public class PaymentVoucher extends BaseEntity {
 
     public void setDraftId(Long draftId) {
         this.draftId = draftId;
-    }
-
-    public PaymentVoucherStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PaymentVoucherStatus status) {
-        this.status = status;
     }
 
     public BigDecimal getTotalAmount() {

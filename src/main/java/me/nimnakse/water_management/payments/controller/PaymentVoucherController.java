@@ -34,9 +34,4 @@ public class PaymentVoucherController {
         return ResponseEntity.ok(ApiResponse.success(voucherService.getPage(page, size)));
     }
 
-    @PostMapping("/{id}/reject")
-    @Operation(summary = "Reject payment voucher")
-    public ResponseEntity<ApiResponse<PaymentVoucherRes>> reject(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(voucherService.reject(id)));
-    }
 }
