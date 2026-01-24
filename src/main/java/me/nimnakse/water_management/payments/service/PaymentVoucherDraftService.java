@@ -15,7 +15,8 @@ public interface PaymentVoucherDraftService {
 
     PaymentVoucherDraftRes cancel(Long id);
 
-    PaymentVoucherRes convertToPaymentVoucher(Long id);
+    PaymentVoucherRes convertToPaymentVoucher(Long id,
+            me.nimnakse.water_management.payments.dto.request.PaymentVoucherConvertReq request);
 
     PaymentVoucherDraftRes getById(Long id);
 

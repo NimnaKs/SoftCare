@@ -26,6 +26,7 @@ import me.nimnakse.water_management.payments.repository.PaymentVoucherDraftItemR
 import me.nimnakse.water_management.payments.repository.PaymentVoucherDraftRepository;
 import me.nimnakse.water_management.payments.repository.PaymentVoucherItemRepository;
 import me.nimnakse.water_management.payments.repository.PaymentVoucherRepository;
+import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
 import me.nimnakse.water_management.payments.service.PaymentVoucherDraftService;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.data.domain.Page;
@@ -40,19 +41,22 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
     private final PaymentVoucherDraftItemRepository draftItemRepository;
     private final PaymentVoucherRepository paymentVoucherRepository;
     private final PaymentVoucherItemRepository paymentVoucherItemRepository;
+    private final MonetaryAccountRepository monetaryAccountRepository;
     private final OrgUnitRepository orgUnitRepository;
     private final OrganizationAccessService organizationAccessService;
 
     public PaymentVoucherDraftServiceImpl(PaymentVoucherDraftRepository draftRepository,
-                                          PaymentVoucherDraftItemRepository draftItemRepository,
-                                          PaymentVoucherRepository paymentVoucherRepository,
-                                          PaymentVoucherItemRepository paymentVoucherItemRepository,
-                                          OrgUnitRepository orgUnitRepository,
-                                          OrganizationAccessService organizationAccessService) {
+            PaymentVoucherDraftItemRepository draftItemRepository,
+            PaymentVoucherRepository paymentVoucherRepository,
+            PaymentVoucherItemRepository paymentVoucherItemRepository,
+            MonetaryAccountRepository monetaryAccountRepository,
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.draftRepository = draftRepository;
         this.draftItemRepository = draftItemRepository;
         this.paymentVoucherRepository = paymentVoucherRepository;
         this.paymentVoucherItemRepository = paymentVoucherItemRepository;
+        this.monetaryAccountRepository = monetaryAccountRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
     }
@@ -117,19 +121,41 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
 
     @Transactional
     @Override
-    public PaymentVoucherRes convertToPaymentVoucher(Long id) {
+    public PaymentVoucherRes convertToPaymentVoucher(Long id,
+            me.nimnakse.water_management.payments.dto.request.PaymentVoucherConvertReq request) {
         PaymentVoucherDraft draft = getDraft(id);
         organizationAccessService.enforceOrgUnitAccess(draft.getOrgUnitId());
+
+        // Validate Fund Source and Balance
+        me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount account = monetaryAccountRepository
+                .findById(request.fundSourceId())
+                .orElseThrow(() -> new NotFoundException("Fund source not found", ErrorCode.NOT_FOUND));
+
+        if (!account.getOrgUnitId().equals(draft.getOrgUnitId())) {
+            throw new BadRequestException("Fund source does not belong to the same organization unit");
+        }
+
         List<PaymentVoucherDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
         boolean missingAmount = draftItems.stream().anyMatch(item -> item.getTotalAmount() == null);
         if (missingAmount) {
             throw new BadRequestException("All draft items must have amounts before converting to payment vouchers");
         }
+
+        BigDecimal totalAmount = calculateTotalAmount(draftItems);
+
+        if (account.getCurrentBalance().compareTo(totalAmount) < 0) {
+            throw new BadRequestException("Insufficient balance in fund source");
+        }
+
         PaymentVoucher voucher = new PaymentVoucher();
         voucher.setOrgUnitId(draft.getOrgUnitId());
         voucher.setDraftId(draft.getId());
         voucher.setVoucherNo(generatePaymentVoucherNo(draft.getOrgUnitId()));
-        voucher.setTotalAmount(calculateTotalAmount(draftItems));
+        voucher.setTotalAmount(totalAmount);
+        voucher.setPaymentDate(request.paymentDate());
+        voucher.setFundSourceId(request.fundSourceId());
+        voucher.setPaymentMethodId(request.paymentMethodId());
+
         PaymentVoucher savedVoucher = paymentVoucherRepository.save(voucher);
         List<PaymentVoucherItem> voucherItems = draftItems.stream()
                 .map(item -> buildVoucherItem(savedVoucher.getId(), item))
@@ -158,7 +184,8 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         List<PaymentVoucherDraftRes> items = drafts.getContent().stream()
                 .map(draft -> toDraftResponse(draft, draftItemRepository.findByDraftId(draft.getId())))
                 .toList();
-        return new PageResponse<>(items, drafts.getTotalElements(), drafts.getTotalPages(), drafts.getNumber(), drafts.getSize());
+        return new PageResponse<>(items, drafts.getTotalElements(), drafts.getTotalPages(), drafts.getNumber(),
+                drafts.getSize());
     }
 
     private PaymentVoucherDraft getDraft(Long id) {
@@ -258,8 +285,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 draft.getReferenceNo(),
                 itemResponses,
                 draft.getCreatedAt(),
-                draft.getUpdatedAt()
-        );
+                draft.getUpdatedAt());
     }
 
     private PaymentVoucherDraftItemRes toDraftItemResponse(PaymentVoucherDraftItem item) {
@@ -267,8 +293,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 item.getId(),
                 item.getExpenseAccountId(),
                 item.getDescription(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private PaymentVoucherRes toVoucherResponse(PaymentVoucher voucher, List<PaymentVoucherItem> items) {
@@ -284,8 +309,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 voucher.getTotalAmount(),
                 itemResponses,
                 voucher.getCreatedAt(),
-                voucher.getUpdatedAt()
-        );
+                voucher.getUpdatedAt());
     }
 
     private PaymentVoucherItemRes toVoucherItemResponse(PaymentVoucherItem item) {
@@ -293,8 +317,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 item.getId(),
                 item.getExpenseAccountId(),
                 item.getDescription(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private String trimToNull(String value) {

@@ -26,14 +26,15 @@ public class PaymentVoucherDraftController {
 
     @PostMapping
     @Operation(summary = "Create payment voucher draft")
-    public ResponseEntity<ApiResponse<PaymentVoucherDraftRes>> create(@Valid @RequestBody PaymentVoucherDraftCreateReq request) {
+    public ResponseEntity<ApiResponse<PaymentVoucherDraftRes>> create(
+            @Valid @RequestBody PaymentVoucherDraftCreateReq request) {
         return ResponseEntity.ok(ApiResponse.success(draftService.create(request)));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update payment voucher draft amounts")
     public ResponseEntity<ApiResponse<PaymentVoucherDraftRes>> update(@PathVariable Long id,
-                                                                      @Valid @RequestBody PaymentVoucherDraftUpdateReq request) {
+            @Valid @RequestBody PaymentVoucherDraftUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(draftService.update(id, request)));
     }
 
@@ -51,8 +52,10 @@ public class PaymentVoucherDraftController {
 
     @PostMapping("/{id}/convert-to-voucher")
     @Operation(summary = "Convert draft to payment voucher")
-    public ResponseEntity<ApiResponse<PaymentVoucherRes>> convertToPaymentVoucher(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(draftService.convertToPaymentVoucher(id)));
+    public ResponseEntity<ApiResponse<PaymentVoucherRes>> convertToPaymentVoucher(
+            @PathVariable Long id,
+            @Valid @RequestBody me.nimnakse.water_management.payments.dto.request.PaymentVoucherConvertReq request) {
+        return ResponseEntity.ok(ApiResponse.success(draftService.convertToPaymentVoucher(id, request)));
     }
 
     @GetMapping("/{id}")

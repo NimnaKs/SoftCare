@@ -27,6 +27,15 @@ public class PaymentVoucher extends BaseEntity {
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    @Column(name = "payment_date")
+    private java.time.LocalDate paymentDate;
+
+    @Column(name = "fund_source_id")
+    private Long fundSourceId;
+
+    @Column(name = "payment_method_id")
+    private Long paymentMethodId;
+
     @Column(name = "created_by")
     private Long createdBy;
 
@@ -76,5 +85,29 @@ public class PaymentVoucher extends BaseEntity {
 
     public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public java.time.LocalDate getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(java.time.LocalDate paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public Long getFundSourceId() {
+        return fundSourceId;
+    }
+
+    public void setFundSourceId(Long fundSourceId) {
+        this.fundSourceId = fundSourceId;
+    }
+
+    public Long getPaymentMethodId() {
+        return paymentMethodId;
+    }
+
+    public void setPaymentMethodId(Long paymentMethodId) {
+        this.paymentMethodId = paymentMethodId;
     }
 }
