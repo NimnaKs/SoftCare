@@ -290,4 +290,24 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         return String.valueOf(next); // ex: 400117, 400118
     }
 
+    @Transactional
+    @Override
+    public void activate(Long id) {
+        OrgUnit orgUnit = orgUnitRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
+        orgUnit.setIsActive(true);
+        orgUnitRepository.save(orgUnit);
+    }
+
+    @Transactional
+    @Override
+    public void deactivate(Long id) {
+        OrgUnit orgUnit = orgUnitRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
+        orgUnit.setIsActive(false);
+        orgUnitRepository.save(orgUnit);
+    }
+
 }

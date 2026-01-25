@@ -27,4 +27,8 @@ public interface OrgUnitService {
     PageResponse<OrgUnitRes> getLevelFourUnits(Long levelThreeId, int page, int size);
 
     PageResponse<OrgUnitRes> getLevelFiveUnits(Long levelFourId, int page, int size);
+
+    void activate(Long id);
+
+    void deactivate(Long id);
 }

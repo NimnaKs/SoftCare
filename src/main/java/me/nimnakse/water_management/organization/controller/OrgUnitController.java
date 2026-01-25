@@ -41,7 +41,8 @@ public class OrgUnitController {
 
     @GetMapping("/tree")
     @Operation(summary = "Get org unit tree", description = "Returns an org unit tree, optionally filtered by project.")
-    public ResponseEntity<ApiResponse<List<OrgUnitTreeRes>>> getTree(@RequestParam(required = false) Long waterProjectId) {
+    public ResponseEntity<ApiResponse<List<OrgUnitTreeRes>>> getTree(
+            @RequestParam(required = false) Long waterProjectId) {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.getTree(waterProjectId)));
     }
 
@@ -54,7 +55,7 @@ public class OrgUnitController {
     @PutMapping("/{id}")
     @Operation(summary = "Update org unit", description = "Updates an organization unit by identifier.")
     public ResponseEntity<ApiResponse<OrgUnitRes>> update(@PathVariable Long id,
-                                                         @Valid @RequestBody OrgUnitUpdateReq request) {
+            @Valid @RequestBody OrgUnitUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.update(id, request)));
     }
 
@@ -100,5 +101,19 @@ public class OrgUnitController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(orgUnitService.getLevelFiveUnits(levelFourId, page, size)));
+    }
+
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activate org unit", description = "Activates an organization unit account.")
+    public ResponseEntity<ApiResponse<Void>> activate(@PathVariable Long id) {
+        orgUnitService.activate(id);
+        return ResponseEntity.ok(ApiResponse.success("Org unit activated", null));
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    @Operation(summary = "Deactivate org unit", description = "Deactivates an organization unit account.")
+    public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
+        orgUnitService.deactivate(id);
+        return ResponseEntity.ok(ApiResponse.success("Org unit deactivated", null));
     }
 }
