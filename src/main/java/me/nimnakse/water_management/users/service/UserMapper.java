@@ -11,6 +11,7 @@ import org.mapstruct.Mapping;
 public interface UserMapper {
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "orgUnitId", source = "orgUnit.id")
+    @Mapping(target = "agencyId", source = "agency.id")
     UserRes toUserRes(User user);
 
     @Mapping(target = "orgUnitId", source = "orgUnit.id")

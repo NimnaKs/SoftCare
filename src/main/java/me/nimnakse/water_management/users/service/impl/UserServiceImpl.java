@@ -37,25 +37,31 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final OrgUnitRepository orgUnitRepository;
+    private final me.nimnakse.water_management.agencies.repository.AgencyRepository agencyRepository;
 
     public UserServiceImpl(UserRepository userRepository,
             UserRoleRepository userRoleRepository,
             RoleRepository roleRepository,
             UserMapper userMapper,
             PasswordEncoder passwordEncoder,
-            OrgUnitRepository orgUnitRepository) {
+            OrgUnitRepository orgUnitRepository,
+            me.nimnakse.water_management.agencies.repository.AgencyRepository agencyRepository) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.orgUnitRepository = orgUnitRepository;
+        this.agencyRepository = agencyRepository;
     }
 
     @Transactional
     @Override
     public UserRes create(UserCreateReq request) {
+        validateAgencySelection(request.appScope(), request.agencyId());
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
+        me.nimnakse.water_management.agencies.entity.Agency agency = resolveAgency(request.agencyId());
+
         User user = new User();
         user.setUsername(request.username());
         user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
@@ -66,6 +72,7 @@ public class UserServiceImpl implements UserService {
         user.setAddress(request.address());
         user.setProfilePhotoUrl(request.profilePhotoUrl());
         user.setOrgUnit(orgUnit);
+        user.setAgency(agency);
         user.setStatus(UserStatus.ACTIVE);
 
         User savedUser = userRepository.save(user);
@@ -79,11 +86,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public UserRes update(Long id, UserUpdateReq request) {
+        validateAgencySelection(request.appScope(), request.agencyId());
         User user = userRepository.findById(id)
                 .orElseThrow(
                         () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
 
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
+        me.nimnakse.water_management.agencies.entity.Agency agency = resolveAgency(request.agencyId());
+
         user.setNic(request.nic());
         user.setUsername(request.username());
         user.setName(request.name());
@@ -92,6 +102,7 @@ public class UserServiceImpl implements UserService {
         user.setAddress(request.address());
         user.setProfilePhotoUrl(request.profilePhotoUrl());
         user.setOrgUnit(orgUnit);
+        user.setAgency(agency);
 
         user = userRepository.save(user);
 
@@ -115,7 +126,7 @@ public class UserServiceImpl implements UserService {
         UserRes baseRes = userMapper.toUserRes(user);
         return new UserRes(baseRes.id(), baseRes.username(), baseRes.nic(), baseRes.name(), baseRes.mobileNumber(),
                 baseRes.secondaryContactNumber(), baseRes.address(), baseRes.profilePhotoUrl(), baseRes.status(),
-                baseRes.orgUnitId(), roles);
+                baseRes.orgUnitId(), baseRes.agencyId(), roles);
     }
 
     @Transactional
@@ -225,6 +236,22 @@ public class UserServiceImpl implements UserService {
                         () -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
+    private me.nimnakse.water_management.agencies.entity.Agency resolveAgency(Long agencyId) {
+        if (agencyId == null) {
+            return null;
+        }
+        return agencyRepository.findById(agencyId)
+                .orElseThrow(
+                        () -> new NotFoundException("Agency not found", "නියෝජිතායතනය හමු නොවීය", ErrorCode.NOT_FOUND));
+    }
+
+    private void validateAgencySelection(RoleAppScope appScope, Long agencyId) {
+        if (appScope == RoleAppScope.AGENCY_APP && agencyId == null) {
+            throw new BadRequestException("Agency is required for AGENCY_APP scope",
+                    "AGENCY_APP විෂය පථය සඳහා නියෝජිතායතනය අවශ්‍ය වේ");
+        }
+    }
+
     private UserRes buildUserResponse(User user, List<Role> roles) {
         List<RoleRes> roleRes = roles.stream()
                 .map(role -> new RoleRes(role.getId(), role.getName(), role.getDescription(), role.getAppScope()))
@@ -232,7 +259,7 @@ public class UserServiceImpl implements UserService {
         UserRes baseRes = userMapper.toUserRes(user);
         return new UserRes(baseRes.id(), baseRes.username(), baseRes.nic(), baseRes.name(), baseRes.mobileNumber(),
                 baseRes.secondaryContactNumber(), baseRes.address(), baseRes.profilePhotoUrl(), baseRes.status(),
-                baseRes.orgUnitId(), roleRes);
+                baseRes.orgUnitId(), baseRes.agencyId(), roleRes);
     }
 
     private UserRes toUserResWithRoles(User user) {
@@ -246,6 +273,6 @@ public class UserServiceImpl implements UserService {
         return new UserRes(
                 base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
                 base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
-                base.status(), base.orgUnitId(), roles);
+                base.status(), base.orgUnitId(), base.agencyId(), roles);
     }
 }

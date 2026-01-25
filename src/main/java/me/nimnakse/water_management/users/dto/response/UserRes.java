@@ -5,16 +5,16 @@ import me.nimnakse.water_management.roles.dto.RoleRes;
 import me.nimnakse.water_management.users.entity.UserStatus;
 
 public record UserRes(
-        Long id,
-        String username,
-        String nic,
-        String name,
-        String mobileNumber,
-        String secondaryContactNumber,
-        String address,
-        String profilePhotoUrl,
-        UserStatus status,
-        Long orgUnitId,
-        List<RoleRes> roles
-) {
+                Long id,
+                String username,
+                String nic,
+                String name,
+                String mobileNumber,
+                String secondaryContactNumber,
+                String address,
+                String profilePhotoUrl,
+                UserStatus status,
+                Long orgUnitId,
+                Long agencyId,
+                List<RoleRes> roles) {
 }

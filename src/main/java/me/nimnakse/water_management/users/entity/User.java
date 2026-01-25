@@ -49,4 +49,8 @@ public class User extends BaseEntity {
     @ManyToOne(optional = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "org_unit_id")
     private OrgUnit orgUnit;
+
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "agency_id")
+    private me.nimnakse.water_management.agencies.entity.Agency agency;
 }
