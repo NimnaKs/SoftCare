@@ -45,7 +45,7 @@ public class AgencyServiceImpl implements AgencyService {
         Agency agency = new Agency();
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
-                request.ownerNicNumber(), request.secondaryContactNo(), request.serviceChargePercent(),
+                request.secondaryContactNo(), request.serviceChargePercent(),
                 request.subscriptionFee(), request.totalCharges(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
@@ -64,7 +64,7 @@ public class AgencyServiceImpl implements AgencyService {
 
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
-                request.ownerNicNumber(), request.secondaryContactNo(), request.serviceChargePercent(),
+                request.secondaryContactNo(), request.serviceChargePercent(),
                 request.subscriptionFee(), request.totalCharges(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
@@ -120,7 +120,6 @@ public class AgencyServiceImpl implements AgencyService {
                 agency.getBusinessAddress(),
                 agency.getBrcNumber(),
                 agency.getOwnerName(),
-                agency.getOwnerNicNumber(),
                 agency.getSecondaryContactNo(),
                 agency.getServiceChargePercent(),
                 agency.getSubscriptionFee(),
@@ -138,7 +137,6 @@ public class AgencyServiceImpl implements AgencyService {
             String businessAddress,
             String brcNumber,
             String ownerName,
-            String ownerNicNumber,
             String secondaryContactNo,
             BigDecimal serviceChargePercent,
             BigDecimal subscriptionFee,
@@ -151,7 +149,6 @@ public class AgencyServiceImpl implements AgencyService {
         agency.setBusinessAddress(businessAddress);
         agency.setBrcNumber(brcNumber);
         agency.setOwnerName(ownerName);
-        agency.setOwnerNicNumber(ownerNicNumber);
         agency.setSecondaryContactNo(secondaryContactNo);
         agency.setServiceChargePercent(
                 serviceChargePercent != null ? serviceChargePercent : DEFAULT_SERVICE_CHARGE_PERCENT);

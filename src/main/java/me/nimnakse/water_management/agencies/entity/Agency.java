@@ -41,9 +41,6 @@ public class Agency extends BaseEntity {
     @Column(name = "owner_name", nullable = false, length = 255)
     private String ownerName;
 
-    @Column(name = "owner_nic_number", nullable = false, length = 30)
-    private String ownerNicNumber;
-
     @Column(name = "secondary_contact_no", length = 20)
     private String secondaryContactNo;
 
