@@ -66,6 +66,9 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         orgUnit.setLevel(request.level());
         orgUnit.setParentId(request.parentId());
         orgUnit.setWaterProjectId(request.waterProjectId());
+        if (request.isActive() != null) {
+            orgUnit.setIsActive(request.isActive());
+        }
 
         if (request.level() == OrgUnitLevel.BRANCH) {
 
@@ -94,7 +97,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         for (OrgUnit unit : units) {
             nodes.put(unit.getId(), new OrgUnitTreeRes(unit.getId(), unit.getName(), unit.getLevel(),
                     unit.getParentId(), unit.getWaterProjectId(), unit.getOrganizationCode(),
-                    new ArrayList<>()));
+                    unit.getIsActive(), new ArrayList<>()));
         }
 
         List<OrgUnitTreeRes> roots = new ArrayList<>();
@@ -133,6 +136,9 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         orgUnit.setLevel(request.level());
         orgUnit.setParentId(request.parentId());
         orgUnit.setWaterProjectId(request.waterProjectId());
+        if (request.isActive() != null) {
+            orgUnit.setIsActive(request.isActive());
+        }
 
         if (orgUnit.getLevel() == OrgUnitLevel.BRANCH &&
                 StringUtils.hasText(request.organizationCode())) {
@@ -200,7 +206,8 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     private OrgUnitRes toResponse(OrgUnit orgUnit) {
         return new OrgUnitRes(orgUnit.getId(), orgUnit.getName(), orgUnit.getLevel(),
                 orgUnit.getParentId(), orgUnit.getWaterProjectId(),
-                (orgUnit.getOrganizationCode() != null) ? orgUnit.getOrganizationCode() : null);
+                (orgUnit.getOrganizationCode() != null) ? orgUnit.getOrganizationCode() : null,
+                orgUnit.getIsActive());
     }
 
     private void validateParent(OrgUnitLevel level, Long parentId) {

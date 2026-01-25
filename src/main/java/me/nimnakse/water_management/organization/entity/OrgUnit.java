@@ -29,4 +29,7 @@ public class OrgUnit extends BaseEntity {
 
     @Column(name = "organization_code", length = 50, unique = true)
     private String organizationCode;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 }
