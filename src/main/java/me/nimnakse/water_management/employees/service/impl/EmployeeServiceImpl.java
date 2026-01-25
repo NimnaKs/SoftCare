@@ -27,8 +27,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final OrganizationAccessService organizationAccessService;
 
     public EmployeeServiceImpl(EmployeeRepository employeeRepository,
-                               OrgUnitRepository orgUnitRepository,
-                               OrganizationAccessService organizationAccessService) {
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.employeeRepository = employeeRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
@@ -40,7 +40,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         if (employeeRepository.existsByNic(request.nic())) {
-            throw new BadRequestException("Employee NIC already exists");
+            throw new BadRequestException("Employee NIC already exists",
+                    "සේවකයාගේ ජාතික හැඳුනුම්පත් අංකය දැනටමත් පවතී");
         }
         validateMobileNumbers(request.mobileNumber(), request.secondaryContactNumber());
         Employee employee = new Employee();
@@ -53,11 +54,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeRes update(Long id, EmployeeUpdateReq request) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Employee not found", "සේවකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         if (!employee.getNic().equals(request.nic()) && employeeRepository.existsByNic(request.nic())) {
-            throw new BadRequestException("Employee NIC already exists");
+            throw new BadRequestException("Employee NIC already exists",
+                    "සේවකයාගේ ජාතික හැඳුනුම්පත් අංකය දැනටමත් පවතී");
         }
         validateMobileNumbers(request.mobileNumber(), request.secondaryContactNumber());
         apply(employee, request);
@@ -68,7 +71,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeRes getById(Long id) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Employee not found", "සේවකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         enforceOrganizationScope(employee.getOrgUnitId());
         return toResponse(employee);
     }
@@ -88,7 +92,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public void deactivate(Long id) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Employee not found", "සේවකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         employee.setStatus(EmployeeStatus.DEACTIVATED);
     }
 
@@ -120,7 +125,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -130,10 +135,12 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private void validateMobileNumbers(String mobileNumber, String secondary) {
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
-            throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
+            throw new BadRequestException("Mobile number must be a 10-digit number starting with 07",
+                    "ජංගම දුරකථන අංකය 07 න් ආරම්භ වන ඉලක්කම් 10 ක අංකයක් විය යුතුය");
         }
         if (secondary != null && !secondary.isBlank() && !ValidationUtils.isValidSriLankaPhone(secondary)) {
-            throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number");
+            throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number",
+                    "ද්විතීයික සම්බන්ධතා අංකය ඉලක්කම් 10 ක ශ්‍රී ලාංකික දුරකථන අංකයක් විය යුතුය");
         }
     }
 
@@ -141,7 +148,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         var items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {
@@ -163,7 +171,6 @@ public class EmployeeServiceImpl implements EmployeeService {
                 employee.getProfilePhotoUrl(),
                 employee.getStatus(),
                 employee.getCreatedAt(),
-                employee.getUpdatedAt()
-        );
+                employee.getUpdatedAt());
     }
 }

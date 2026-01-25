@@ -39,11 +39,11 @@ public class UserServiceImpl implements UserService {
     private final OrgUnitRepository orgUnitRepository;
 
     public UserServiceImpl(UserRepository userRepository,
-                           UserRoleRepository userRoleRepository,
-                           RoleRepository roleRepository,
-                           UserMapper userMapper,
-                           PasswordEncoder passwordEncoder,
-                           OrgUnitRepository orgUnitRepository) {
+            UserRoleRepository userRoleRepository,
+            RoleRepository roleRepository,
+            UserMapper userMapper,
+            PasswordEncoder passwordEncoder,
+            OrgUnitRepository orgUnitRepository) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
@@ -80,7 +80,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserRes update(Long id, UserUpdateReq request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
 
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         user.setNic(request.nic());
@@ -105,7 +106,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserRes getById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
         List<RoleRes> roles = userRoleRepository.findByIdUserId(user.getId()).stream()
                 .map(UserRole::getRole)
                 .map(role -> new RoleRes(role.getId(), role.getName(), role.getDescription(), role.getAppScope()))
@@ -120,7 +122,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deactivate(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
         user.setStatus(UserStatus.DEACTIVATED);
         userRepository.save(user);
     }
@@ -129,7 +132,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public void activate(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
     }
@@ -138,7 +142,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updatePassword(Long id, UserPasswordUpdateReq request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("User not found", "පරිශීලකයා හමු නොවීය", ErrorCode.USER_NOT_FOUND));
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         userRepository.save(user);
     }
@@ -190,15 +195,16 @@ public class UserServiceImpl implements UserService {
                 usersPage.getNumber(), usersPage.getSize());
     }
 
-
     private List<Role> loadAndValidateRoles(List<Long> roleIds, RoleAppScope appScope) {
         List<Role> roles = roleRepository.findByIdInAndDeletedAtIsNull(roleIds);
         if (roles.size() != roleIds.size()) {
-            throw new NotFoundException("One or more roles not found", ErrorCode.ROLE_NOT_FOUND);
+            throw new NotFoundException("One or more roles not found", "භූමිකාවන් එකක් හෝ කිහිපයක් හමු නොවීය",
+                    ErrorCode.ROLE_NOT_FOUND);
         }
         boolean matchesScope = roles.stream().allMatch(role -> role.getAppScope() == appScope);
         if (!matchesScope) {
-            throw new BadRequestException("Roles do not match requested app scope");
+            throw new BadRequestException("Roles do not match requested app scope",
+                    "භූමිකාවන් ඉල්ලන ලද යෙදුම් විෂය පථයට නොගැලපේ");
         }
         return roles;
     }
@@ -215,7 +221,8 @@ public class UserServiceImpl implements UserService {
             return null;
         }
         return orgUnitRepository.findById(orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private UserRes buildUserResponse(User user, List<Role> roles) {
@@ -239,7 +246,6 @@ public class UserServiceImpl implements UserService {
         return new UserRes(
                 base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
                 base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
-                base.status(), base.orgUnitId(), roles
-        );
+                base.status(), base.orgUnitId(), roles);
     }
 }

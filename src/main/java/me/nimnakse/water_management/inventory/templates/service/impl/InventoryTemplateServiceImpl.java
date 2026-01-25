@@ -39,9 +39,9 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
     private final SecureRandom random = new SecureRandom();
 
     public InventoryTemplateServiceImpl(InventoryTemplateRepository templateRepository,
-                                        InventoryTemplateImportRepository importRepository,
-                                        InventoryMasterCategoryRepository categoryRepository,
-                                        OrgUnitRepository orgUnitRepository) {
+            InventoryTemplateImportRepository importRepository,
+            InventoryMasterCategoryRepository categoryRepository,
+            OrgUnitRepository orgUnitRepository) {
         this.templateRepository = templateRepository;
         this.importRepository = importRepository;
         this.categoryRepository = categoryRepository;
@@ -51,9 +51,12 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
     @Transactional
     @Override
     public InventoryTemplateRes create(InventoryTemplateCreateReq request) {
-        InventoryMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 category not found");
-        InventoryMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 category not found");
-        InventoryMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3, "Level 3 category not found");
+        InventoryMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 category not found",
+                "මට්ටම 1 ප්‍රභේදය හමු නොවීය");
+        InventoryMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 category not found",
+                "මට්ටම 2 ප්‍රභේදය හමු නොවීය");
+        InventoryMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3,
+                "Level 3 category not found", "මට්ටම 3 ප්‍රභේදය හමු නොවීය");
         validateHierarchy(levelOne, levelTwo, levelThree);
 
         String templateCode = resolveTemplateCode(request.templateCode(), null);
@@ -69,19 +72,22 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
         return toResponse(saved, Map.of(
                 levelOne.getId(), levelOne,
                 levelTwo.getId(), levelTwo,
-                levelThree.getId(), levelThree
-        ));
+                levelThree.getId(), levelThree));
     }
 
     @Transactional
     @Override
     public InventoryTemplateRes update(Long id, InventoryTemplateUpdateReq request) {
         InventoryTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory template not found", "ඉන්වෙන්ටරි සැකිල්ල හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
 
-        InventoryMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 category not found");
-        InventoryMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 category not found");
-        InventoryMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3, "Level 3 category not found");
+        InventoryMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 category not found",
+                "මට්ටම 1 ප්‍රභේදය හමු නොවීය");
+        InventoryMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 category not found",
+                "මට්ටම 2 ප්‍රභේදය හමු නොවීය");
+        InventoryMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3,
+                "Level 3 category not found", "මට්ටම 3 ප්‍රභේදය හමු නොවීය");
         validateHierarchy(levelOne, levelTwo, levelThree);
 
         String templateCode = resolveTemplateCode(request.templateCode(), id);
@@ -96,15 +102,15 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
         return toResponse(saved, Map.of(
                 levelOne.getId(), levelOne,
                 levelTwo.getId(), levelTwo,
-                levelThree.getId(), levelThree
-        ));
+                levelThree.getId(), levelThree));
     }
 
     @Transactional(readOnly = true)
     @Override
     public InventoryTemplateRes getById(Long id) {
         InventoryTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory template not found", "ඉන්වෙන්ටරි සැකිල්ල හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         return toResponse(template, loadCategoriesMap(List.of(template)));
     }
 
@@ -125,7 +131,8 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
         Page<InventoryTemplate> templates;
         if (orgUnitId != null) {
             orgUnitRepository.findById(orgUnitId)
-                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය",
+                            ErrorCode.NOT_FOUND));
             templates = templateRepository.findAvailableForOrgUnit(orgUnitId, pageable);
         } else {
             templates = templateRepository.findAll(pageable);
@@ -139,15 +146,15 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 templates.getTotalElements(),
                 templates.getTotalPages(),
                 templates.getNumber(),
-                templates.getSize()
-        );
+                templates.getSize());
     }
 
     @Transactional
     @Override
     public void delete(Long id) {
         InventoryTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory template not found", "ඉන්වෙන්ටරි සැකිල්ල හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         templateRepository.delete(template);
     }
 
@@ -155,10 +162,12 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
     @Override
     public List<InventoryTemplateRes> importTemplates(InventoryTemplateImportReq request) {
         OrgUnit orgUnit = orgUnitRepository.findById(request.orgUnitId())
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
 
         if (request.templateIds().isEmpty()) {
-            throw new BadRequestException("At least one template id must be provided");
+            throw new BadRequestException("At least one template id must be provided",
+                    "අවම වශයෙන් එක් සැකිලි හැඳුනුම්පතක්වත් සැපයිය යුතුය");
         }
 
         List<InventoryTemplate> templates = templateRepository.findByIdIn(request.templateIds());
@@ -167,7 +176,8 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 .filter(id -> !foundIds.contains(id))
                 .toList();
         if (!missing.isEmpty()) {
-            throw new NotFoundException("One or more inventory templates were not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("One or more inventory templates were not found",
+                    "ඉන්වෙන්ටරි සැකිලි එකක් හෝ කිහිපයක් සොයාගත නොහැකි විය", ErrorCode.NOT_FOUND);
         }
 
         for (InventoryTemplate template : templates) {
@@ -189,7 +199,8 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
     @Override
     public PageResponse<InventoryTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size) {
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
         Page<InventoryTemplate> templatesPage = templateRepository.findImportedForOrgUnit(
@@ -205,8 +216,7 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 templatesPage.getTotalElements(),
                 templatesPage.getTotalPages(),
                 templatesPage.getNumber(),
-                templatesPage.getSize()
-        );
+                templatesPage.getSize());
     }
 
     private InventoryTemplateRes toResponse(InventoryTemplate template, Map<Long, InventoryMasterCategory> categories) {
@@ -226,8 +236,7 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 template.getLevelThreeCategoryId(),
                 levelThree != null ? levelThree.getName() : null,
                 template.getCreatedAt(),
-                template.getUpdatedAt()
-        );
+                template.getUpdatedAt());
     }
 
     private Map<Long, InventoryMasterCategory> loadCategoriesMap(List<InventoryTemplate> templates) {
@@ -250,20 +259,23 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
     }
 
     private void validateHierarchy(InventoryMasterCategory levelOne, InventoryMasterCategory levelTwo,
-                                   InventoryMasterCategory levelThree) {
+            InventoryMasterCategory levelThree) {
         if (!Objects.equals(levelTwo.getParentId(), levelOne.getId())) {
-            throw new BadRequestException("Level 2 category must belong to the provided level 1 category");
+            throw new BadRequestException("Level 2 category must belong to the provided level 1 category",
+                    "මට්ටම 2 ප්‍රභේදය සපයන ලද මට්ටම 1 ප්‍රභේදයට අයත් විය යුතුය");
         }
         if (!Objects.equals(levelThree.getParentId(), levelTwo.getId())) {
-            throw new BadRequestException("Level 3 category must belong to the provided level 2 category");
+            throw new BadRequestException("Level 3 category must belong to the provided level 2 category",
+                    "මට්ටම 3 ප්‍රභේදය සපයන ලද මට්ටම 2 ප්‍රභේදයට අයත් විය යුතුය");
         }
     }
 
-    private InventoryMasterCategory loadCategory(Long categoryId, int expectedLevel, String notFoundMessage) {
+    private InventoryMasterCategory loadCategory(Long categoryId, int expectedLevel, String messageEn,
+            String messageSn) {
         InventoryMasterCategory category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(messageEn, messageSn, ErrorCode.NOT_FOUND));
         if (category.getLevel() != expectedLevel) {
-            throw new BadRequestException(notFoundMessage);
+            throw new BadRequestException(messageEn, messageSn);
         }
         return category;
     }
@@ -278,17 +290,21 @@ public class InventoryTemplateServiceImpl implements InventoryTemplateService {
                 ? templateRepository.existsByTemplateCodeIgnoreCase(normalized)
                 : templateRepository.existsByTemplateCodeIgnoreCaseAndIdNot(normalized, currentId);
         if (exists) {
-            throw new BadRequestException("Inventory template code must be unique");
+            throw new BadRequestException("Inventory template code must be unique",
+                    "ඉන්වෙන්ටරි සැකිලි කේතය අද්විතීය විය යුතුය");
         }
         return normalized;
     }
 
     private void validateCombinationUniqueness(Long levelOneId, Long levelTwoId, Long levelThreeId, Long currentId) {
         boolean exists = currentId == null
-                ? templateRepository.existsByLevelOneCategoryIdAndLevelTwoCategoryIdAndLevelThreeCategoryId(levelOneId, levelTwoId, levelThreeId)
-                : templateRepository.existsByLevelOneCategoryIdAndLevelTwoCategoryIdAndLevelThreeCategoryIdAndIdNot(levelOneId, levelTwoId, levelThreeId, currentId);
+                ? templateRepository.existsByLevelOneCategoryIdAndLevelTwoCategoryIdAndLevelThreeCategoryId(levelOneId,
+                        levelTwoId, levelThreeId)
+                : templateRepository.existsByLevelOneCategoryIdAndLevelTwoCategoryIdAndLevelThreeCategoryIdAndIdNot(
+                        levelOneId, levelTwoId, levelThreeId, currentId);
         if (exists) {
-            throw new BadRequestException("Inventory template already exists for the provided category combination");
+            throw new BadRequestException("Inventory template already exists for the provided category combination",
+                    "සපයන ලද ප්‍රභේද සංයෝජනය සඳහා ඉන්වෙන්ටරි සැකිල්ල දැනටමත් පවතී");
         }
     }
 

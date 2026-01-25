@@ -38,8 +38,8 @@ public class MemberServiceImpl implements MemberService {
     private final OrganizationAccessService organizationAccessService;
 
     public MemberServiceImpl(MemberRepository memberRepository,
-                             OrgUnitRepository orgUnitRepository,
-                             OrganizationAccessService organizationAccessService) {
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.memberRepository = memberRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
@@ -66,7 +66,8 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberRes update(Long id, MemberUpdateReq request) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Member not found", "සාමාජිකයා හමු නොවීය", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         applyValues(member, request.orgUnitId(), request.membershipType(),
@@ -81,7 +82,8 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberRes getById(Long id) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Member not found", "සාමාජිකයා හමු නොවීය", ErrorCode.NOT_FOUND));
         enforceOrganizationScope(member.getOrgUnitId());
         return toResponse(member);
     }
@@ -99,47 +101,51 @@ public class MemberServiceImpl implements MemberService {
     @Transactional(readOnly = true)
     @Override
     public PageResponse<MemberRes> search(String membershipCode,
-                                          String nicNumber,
-                                          String registrationNumber,
-                                          String mobileNumber,
-                                          int page,
-                                          int size) {
+            String nicNumber,
+            String registrationNumber,
+            String mobileNumber,
+            int page,
+            int size) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (membershipCode != null && !membershipCode.isBlank()) {
-            Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId, pageRequest(page, size));
+            Page<Member> memberPage = findByMembershipCodeStartingWith(membershipCode, orgUnitId,
+                    pageRequest(page, size));
             return toPageResponse(memberPage);
         }
         if (nicNumber != null && !nicNumber.isBlank()) {
             return toPageResponse(findByNic(nicNumber, orgUnitId), page, size);
         }
         if (registrationNumber != null && !registrationNumber.isBlank()) {
-            Page<Member> memberPage = findByRegistrationNumberStartingWith(registrationNumber, orgUnitId, pageRequest(page, size));
+            Page<Member> memberPage = findByRegistrationNumberStartingWith(registrationNumber, orgUnitId,
+                    pageRequest(page, size));
             return toPageResponse(memberPage);
         }
         if (mobileNumber != null && !mobileNumber.isBlank()) {
             Page<Member> memberPage = findByMobileNumberStartingWith(mobileNumber, orgUnitId, pageRequest(page, size));
             return toPageResponse(memberPage);
         }
-        throw new BadRequestException("Provide membership code, NIC, registration number, or mobile number for search");
+        throw new BadRequestException("Provide membership code, NIC, registration number, or mobile number for search",
+                "සෙවීම සඳහා සාමාජික කේතය, ජාතික හැඳුනුම්පත් අංකය, ලියාපදිංචි අංකය හෝ ජංගම දුරකථන අංකය ලබා දෙන්න");
     }
 
     private void applyValues(Member member,
-                             Long orgUnitId,
-                             MemberType membershipType,
-                             String salutation,
-                             String fullName,
-                             String corporateName,
-                             String registrationNumber,
-                             String nicNumber,
-                             String mobileNumber,
-                             String dpNicFrontUrl,
-                             String dpNicRearUrl,
-                             String signatureUrl,
-                             String brcDocumentUrl,
-                             Long existingMemberId) {
+            Long orgUnitId,
+            MemberType membershipType,
+            String salutation,
+            String fullName,
+            String corporateName,
+            String registrationNumber,
+            String nicNumber,
+            String mobileNumber,
+            String dpNicFrontUrl,
+            String dpNicRearUrl,
+            String signatureUrl,
+            String brcDocumentUrl,
+            Long existingMemberId) {
         validateMembershipDetails(membershipType, salutation, fullName, corporateName, nicNumber, registrationNumber);
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
-            throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
+            throw new BadRequestException("Mobile number 1 must be a 10-digit number starting with 07",
+                    "ජංගම දුරකථන අංක 1 07 න් ආරම්භ වන ඉලක්කම් 10 ක අංකයක් විය යුතුය");
         }
 
         member.setOrgUnitId(orgUnitId);
@@ -155,7 +161,8 @@ public class MemberServiceImpl implements MemberService {
 
         if (membershipType == MemberType.PERSONAL) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
-                    .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
+                    .orElseThrow(() -> new BadRequestException("Invalid NIC format",
+                            "වැරදි ජාතික හැඳුනුම්පත් අංක ආකෘතියක්"));
             ensureUniqueNic(result, existingMemberId);
             member.setNicOld(result.oldNic());
             member.setNicNew(result.newNic());
@@ -168,30 +175,35 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private void validateMembershipDetails(MemberType membershipType,
-                                           String salutation,
-                                           String fullName,
-                                           String corporateName,
-                                           String nicNumber,
-                                           String registrationNumber) {
+            String salutation,
+            String fullName,
+            String corporateName,
+            String nicNumber,
+            String registrationNumber) {
         if (membershipType == MemberType.PERSONAL) {
             if (salutation == null || salutation.isBlank()) {
-                throw new BadRequestException("Salutation is required for personal members");
+                throw new BadRequestException("Salutation is required for personal members",
+                        "පුද්ගලික සාමාජිකයින් සඳහා ආචාරශීලී ආමන්ත්‍රණය අවශ්‍ය වේ");
             }
             if (fullName == null || fullName.isBlank()) {
-                throw new BadRequestException("Full name is required for personal members");
+                throw new BadRequestException("Full name is required for personal members",
+                        "පුද්ගලික සාමාජිකයින් සඳහා සම්පූර්ණ නම අවශ්‍ය වේ");
             }
             if (nicNumber == null || nicNumber.isBlank()) {
-                throw new BadRequestException("NIC number is required for personal members");
+                throw new BadRequestException("NIC number is required for personal members",
+                        "පුද්ගලික සාමාජිකයින් සඳහා ජාතික හැඳුනුම්පත් අංකය අවශ්‍යයි");
             }
         } else if (membershipType == MemberType.CORPORATE) {
             if (corporateName == null || corporateName.isBlank()) {
-                throw new BadRequestException("Corporate name is required for corporate members");
+                throw new BadRequestException("Corporate name is required for corporate members",
+                        "සංස්ථාපිත සාමාජිකයින් සඳහා සංස්ථාපිත නාමය අවශ්‍ය වේ");
             }
             if (registrationNumber == null || registrationNumber.isBlank()) {
-                throw new BadRequestException("Registration number is required for corporate members");
+                throw new BadRequestException("Registration number is required for corporate members",
+                        "සංස්ථාපිත සාමාජිකයින් සඳහා ලියාපදිංචි අංකය අවශ්‍ය වේ");
             }
         } else {
-            throw new BadRequestException("Membership type is required");
+            throw new BadRequestException("Membership type is required", "සාමාජිකත්ව වර්ගය අවශ්‍යයි");
         }
     }
 
@@ -199,24 +211,29 @@ public class MemberServiceImpl implements MemberService {
         memberRepository.findByNicNew(result.newNic())
                 .filter(member -> existingMemberId == null || !member.getId().equals(existingMemberId))
                 .ifPresent(member -> {
-                    throw new BadRequestException("NIC is already assigned to another member");
+                    throw new BadRequestException("NIC is already assigned to another member",
+                            "මෙම ජාතික හැඳුනුම්පත් අංකය දැනටමත් වෙනත් සාමාජිකයෙකුට පවරා ඇත");
                 });
         memberRepository.findByNicOldStartingWith(result.numericKey()).stream()
                 .filter(member -> existingMemberId == null || !member.getId().equals(existingMemberId))
                 .findAny()
                 .ifPresent(member -> {
-                    throw new BadRequestException("NIC is already assigned to another member");
+                    throw new BadRequestException("NIC is already assigned to another member",
+                            "දැනටමත් පවරා ඇති ජාතික හැඳුනුම්පත් අංකයකි");
                 });
     }
 
     private OrgUnit validateOrgUnit(Long orgUnitId) {
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND));
         if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
-            throw new BadRequestException("Members must be attached to a branch org unit");
+            throw new BadRequestException("Members must be attached to a branch org unit",
+                    "සාමාජිකයින් ශාඛා ආයතන ඒකකයකට අනුයුක්ත කළ යුතුය");
         }
         if (!StringUtils.hasText(orgUnit.getOrganizationCode())) {
-            throw new BadRequestException("Branch org unit must have an organization code");
+            throw new BadRequestException("Branch org unit must have an organization code",
+                    "ශාඛා ආයතන ඒකකයට සංවිධාන කේතයක් තිබිය යුතුය");
         }
         return orgUnit;
     }
@@ -245,17 +262,20 @@ public class MemberServiceImpl implements MemberService {
         List<MemberRes> items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {
         if (page < 0 || size <= 0) {
-            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero",
+                    "පිටු දර්ශකය සෘණ නොවිය යුතු අතර ප්‍රමාණය ශුන්‍යයට වඩා වැඩි විය යුතුය");
         }
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
     }
 
-    private Page<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId, PageRequest pageRequest) {
+    private Page<Member> findByMembershipCodeStartingWith(String membershipCode, Long orgUnitId,
+            PageRequest pageRequest) {
         if (orgUnitId == null) {
             return memberRepository.findByMembershipCodeStartingWith(membershipCode, pageRequest);
         }
@@ -297,11 +317,13 @@ public class MemberServiceImpl implements MemberService {
         return memberRepository.findByMobileNumberStartingWithAndOrgUnitId(mobileNumber, orgUnitId, pageRequest);
     }
 
-    private Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Long orgUnitId, PageRequest pageRequest) {
+    private Page<Member> findByRegistrationNumberStartingWith(String registrationNumber, Long orgUnitId,
+            PageRequest pageRequest) {
         if (orgUnitId == null) {
             return memberRepository.findByRegistrationNumberStartingWith(registrationNumber, pageRequest);
         }
-        return memberRepository.findByRegistrationNumberStartingWithAndOrgUnitId(registrationNumber, orgUnitId, pageRequest);
+        return memberRepository.findByRegistrationNumberStartingWithAndOrgUnitId(registrationNumber, orgUnitId,
+                pageRequest);
     }
 
     private List<Member> uniqueById(List<Member> members) {
@@ -314,9 +336,11 @@ public class MemberServiceImpl implements MemberService {
 
     private PageResponse<MemberRes> toPageResponse(List<Member> members, int page, int size) {
         if (page < 0 || size <= 0) {
-            throw new BadRequestException("Page index must be non-negative and size must be greater than zero");
+            throw new BadRequestException("Page index must be non-negative and size must be greater than zero",
+                    "පිටු දර්ශකය සෘණ නොවිය යුතු අතර ප්‍රමාණය ශුන්‍යයට වඩා වැඩි විය යුතුය");
         }
-        members.sort(Comparator.comparing(Member::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+        members.sort(
+                Comparator.comparing(Member::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
         int fromIndex = Math.min(page * size, members.size());
         int toIndex = Math.min(fromIndex + size, members.size());
         List<MemberRes> items = members.subList(fromIndex, toIndex).stream()
@@ -352,7 +376,6 @@ public class MemberServiceImpl implements MemberService {
                 member.getSignatureUrl(),
                 member.getBrcDocumentUrl(),
                 member.getCreatedAt(),
-                member.getUpdatedAt()
-        );
+                member.getUpdatedAt());
     }
 }

@@ -29,7 +29,8 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public RoleRes getRole(Long id) {
         Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Role not found", "භූමිකාව සොයාගත නොහැක",
+                        ErrorCode.ROLE_NOT_FOUND));
         return toRes(role);
     }
 
@@ -45,7 +46,8 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public RoleRes update(Long id, RoleUpdateReq request) {
         Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Role not found", "භූමිකාව සොයාගත නොහැක",
+                        ErrorCode.ROLE_NOT_FOUND));
         role.setName(request.name());
         role.setDescription(request.description());
         role.setAppScope(request.appScope());
@@ -56,7 +58,8 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void delete(Long id) {
         Role role = roleRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Role not found", ErrorCode.ROLE_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Role not found", "භූමිකාව සොයාගත නොහැක",
+                        ErrorCode.ROLE_NOT_FOUND));
         role.setDeletedAt(Instant.now());
         role.setName(role.getName() + "_deleted_" + id);
         roleRepository.save(role);

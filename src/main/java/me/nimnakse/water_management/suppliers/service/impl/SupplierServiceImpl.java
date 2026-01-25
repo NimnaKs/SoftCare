@@ -38,10 +38,10 @@ public class SupplierServiceImpl implements SupplierService {
     private final LiabilityAccountRepository accountRepository;
 
     public SupplierServiceImpl(SupplierRepository supplierRepository,
-                               OrgUnitRepository orgUnitRepository,
-                               OrganizationAccessService organizationAccessService,
-                               LiabilityMainCategoryRepository mainCategoryRepository,
-                               LiabilityAccountRepository accountRepository) {
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService,
+            LiabilityMainCategoryRepository mainCategoryRepository,
+            LiabilityAccountRepository accountRepository) {
         this.supplierRepository = supplierRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
@@ -56,7 +56,7 @@ public class SupplierServiceImpl implements SupplierService {
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         String normalizedName = request.name().trim();
         if (supplierRepository.existsByNameIgnoreCase(normalizedName)) {
-            throw new BadRequestException("Supplier name already exists");
+            throw new BadRequestException("Supplier name already exists", "සැපයුම්කරුගේ නම දැනටමත් පවතී");
         }
         validateContactNumbers(request.mobileNumber1(), request.mobileNumber2(), request.telephoneNumber());
         Supplier supplier = new Supplier();
@@ -72,12 +72,13 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     public SupplierRes update(Long id, SupplierUpdateReq request) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Supplier not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Supplier not found", "සැපයුම්කරු සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         String normalizedName = request.name().trim();
         if (supplierRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, supplier.getId())) {
-            throw new BadRequestException("Supplier name already exists");
+            throw new BadRequestException("Supplier name already exists", "සැපයුම්කරුගේ නම දැනටමත් පවතී");
         }
         validateContactNumbers(request.mobileNumber1(), request.mobileNumber2(), request.telephoneNumber());
         boolean orgUnitChanged = !Objects.equals(supplier.getOrgUnitId(), request.orgUnitId());
@@ -93,7 +94,8 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     public SupplierRes getById(Long id) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Supplier not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Supplier not found", "සැපයුම්කරු සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(supplier.getOrgUnitId());
         return toResponse(supplier);
     }
@@ -113,7 +115,8 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     public void deactivate(Long id) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Supplier not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Supplier not found", "සැපයුම්කරු සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(supplier.getOrgUnitId());
         supplier.setIsActive(Boolean.FALSE);
     }
@@ -142,19 +145,22 @@ public class SupplierServiceImpl implements SupplierService {
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
     private void validateContactNumbers(String mobileNumber1, String mobileNumber2, String telephoneNumber) {
         if (StringUtils.hasText(mobileNumber1) && !ValidationUtils.isValidSriLankaMobile(mobileNumber1.trim())) {
-            throw new BadRequestException("Mobile number 1 must be a 10-digit number starting with 07");
+            throw new BadRequestException("Mobile number 1 must be a 10-digit number starting with 07",
+                    "ජංගම දුරකථන අංක 1 07 න් ආරම්භ වන ඉලක්කම් 10 ක අංකයක් විය යුතුය");
         }
         if (StringUtils.hasText(mobileNumber2) && !ValidationUtils.isValidSriLankaMobile(mobileNumber2.trim())) {
-            throw new BadRequestException("Mobile number 2 must be a 10-digit number starting with 07");
+            throw new BadRequestException("Mobile number 2 must be a 10-digit number starting with 07",
+                    "ජංගම දුරකථන අංක 2 07 න් ආරම්භ වන ඉලක්කම් 10 ක අංකයක් විය යුතුය");
         }
         if (StringUtils.hasText(telephoneNumber) && !ValidationUtils.isValidSriLankaPhone(telephoneNumber.trim())) {
-            throw new BadRequestException("Telephone number must be a 10-digit Sri Lankan phone number");
+            throw new BadRequestException("Telephone number must be a 10-digit Sri Lankan phone number",
+                    "දුරකථන අංකය ඉලක්කම් 10 ක ශ්‍රී ලාංකික දුරකථන අංකයක් විය යුතුය");
         }
     }
 
@@ -224,7 +230,8 @@ public class SupplierServiceImpl implements SupplierService {
         var items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {
@@ -247,8 +254,7 @@ public class SupplierServiceImpl implements SupplierService {
                 supplier.getLiabilityAccountId(),
                 supplier.getIsActive(),
                 supplier.getCreatedAt(),
-                supplier.getUpdatedAt()
-        );
+                supplier.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

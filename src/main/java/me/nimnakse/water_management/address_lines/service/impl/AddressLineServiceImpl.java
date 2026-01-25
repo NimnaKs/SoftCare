@@ -27,8 +27,8 @@ public class AddressLineServiceImpl implements AddressLineService {
     private final OrganizationAccessService organizationAccessService;
 
     public AddressLineServiceImpl(AddressLineRepository addressLineRepository,
-                                  OrgUnitRepository orgUnitRepository,
-                                  OrganizationAccessService organizationAccessService) {
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.addressLineRepository = addressLineRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
@@ -39,14 +39,16 @@ public class AddressLineServiceImpl implements AddressLineService {
     public AddressLineRes create(AddressLineCreateReq request) {
         validateRequest(request.orgUnitId(), request.level(), request.parentLine1Id(),
                 request.parentLine2Id(), request.parentLine3Id(), request.postalCode(), null);
-        if (addressLineRepository.existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
-                request.level(),
-                request.name(),
-                request.parentLine1Id(),
-                request.parentLine2Id(),
-                request.parentLine3Id(),
-                request.orgUnitId())) {
-            throw new BadRequestException("Address line already exists in the same hierarchy");
+        if (addressLineRepository
+                .existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
+                        request.level(),
+                        request.name(),
+                        request.parentLine1Id(),
+                        request.parentLine2Id(),
+                        request.parentLine3Id(),
+                        request.orgUnitId())) {
+            throw new BadRequestException("Address line already exists in the same hierarchy",
+                    "එම ධූරාවලිය තුළම ලිපින පේළිය දැනටමත් පවතී");
         }
         AddressLine line = new AddressLine();
         line.setOrgUnitId(request.orgUnitId());
@@ -64,7 +66,7 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Override
     public List<AddressLineRes> search(String query) {
         if (query == null || query.isBlank()) {
-            throw new BadRequestException("Search query is required");
+            throw new BadRequestException("Search query is required", "සෙවුම් විමසුම අවශ්‍ය වේ");
         }
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         List<AddressLine> lines = orgUnitId == null
@@ -120,7 +122,8 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Override
     public AddressLineRes update(Long id, AddressLineUpdateReq request) {
         AddressLine line = addressLineRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Address line not found", "ලිපිනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         validateRequest(request.orgUnitId(), request.level(), request.parentLine1Id(),
                 request.parentLine2Id(), request.parentLine3Id(), request.postalCode(), id);
         if (addressLineRepository
@@ -132,7 +135,8 @@ public class AddressLineServiceImpl implements AddressLineService {
                         request.parentLine3Id(),
                         request.orgUnitId(),
                         id)) {
-            throw new BadRequestException("Address line already exists in the same hierarchy");
+            throw new BadRequestException("Address line already exists in the same hierarchy",
+                    "එම ධූරාවලිය තුළම ලිපින පේළිය දැනටමත් පවතී");
         }
         boolean shouldRegenerateInternalCode = shouldRegenerateInternalCode(line, request);
         line.setOrgUnitId(request.orgUnitId());
@@ -152,49 +156,57 @@ public class AddressLineServiceImpl implements AddressLineService {
     @Override
     public void delete(Long id) {
         AddressLine line = addressLineRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Address line not found", "ලිපින පේළිය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         if (addressLineRepository.existsByParentLine1IdOrParentLine2IdOrParentLine3Id(id, id, id)) {
-            throw new BadRequestException("Address line has child entries and cannot be deleted");
+            throw new BadRequestException("Address line has child entries and cannot be deleted",
+                    "ලිපින පේළියට අනු ප්‍රවේශයන් ඇති බැවින් මකා දැමිය නොහැක");
         }
         addressLineRepository.delete(line);
     }
 
     private void validateRequest(Long orgUnitId, Integer level, Long parentLine1Id,
-                                 Long parentLine2Id, Long parentLine3Id,
-                                 String postalCode, Long currentId) {
+            Long parentLine2Id, Long parentLine3Id,
+            String postalCode, Long currentId) {
         validateOrgUnit(orgUnitId);
         organizationAccessService.enforceOrgUnitAccess(orgUnitId);
         int levelValue = level;
         if (levelValue < 1 || levelValue > 4) {
-            throw new BadRequestException("Address line level must be between 1 and 4");
+            throw new BadRequestException("Address line level must be between 1 and 4",
+                    "ලිපින පේළි මට්ටම 1 සහ 4 අතර විය යුතුය");
         }
         if (currentId != null) {
             if (currentId.equals(parentLine1Id) || currentId.equals(parentLine2Id) || currentId.equals(parentLine3Id)) {
-                throw new BadRequestException("Address line cannot reference itself as a parent");
+                throw new BadRequestException("Address line cannot reference itself as a parent",
+                        "ලිපින පේළිය එහිම දෙමාපිය පේළිය ලෙස යොමු කළ නොහැක");
             }
         }
         if (levelValue == 1) {
             if (parentLine1Id != null || parentLine2Id != null || parentLine3Id != null) {
-                throw new BadRequestException("Line 1 cannot have parent references");
+                throw new BadRequestException("Line 1 cannot have parent references",
+                        "පළමු පේළියට දෙමාපිය යොමු කිරීම් තිබිය නොහැක");
             }
             if (postalCode == null || postalCode.isBlank()) {
-                throw new BadRequestException("Postal code is required for line 1");
+                throw new BadRequestException("Postal code is required for line 1",
+                        "පළමු පේළිය සඳහා තැපැල් කේතය අවශ්‍ය වේ");
             }
             if (!postalCode.matches("\\d+")) {
-                throw new BadRequestException("Postal code must be numeric");
+                throw new BadRequestException("Postal code must be numeric", "තැපැල් කේතය අංකිත විය යුතුය");
             }
         }
         if (levelValue == 2) {
             requireParent(parentLine1Id, "Line 1");
             if (parentLine2Id != null || parentLine3Id != null) {
-                throw new BadRequestException("Line 2 can only link to line 1");
+                throw new BadRequestException("Line 2 can only link to line 1",
+                        "පේළිය 2 සම්බන්ධ කළ හැක්කේ පේළිය 1 ට පමණි");
             }
         }
         if (levelValue == 3) {
             requireParent(parentLine1Id, "Line 1");
             requireParent(parentLine2Id, "Line 2");
             if (parentLine3Id != null) {
-                throw new BadRequestException("Line 3 can only link to line 1 and 2");
+                throw new BadRequestException("Line 3 can only link to line 1 and 2",
+                        "පේළිය 3 සම්බන්ධ කළ හැක්කේ පේළිය 1 සහ 2 ට පමණි");
             }
         }
         if (levelValue == 4) {
@@ -215,25 +227,28 @@ public class AddressLineServiceImpl implements AddressLineService {
 
     private void requireParent(Long parentId, String label) {
         if (parentId == null) {
-            throw new BadRequestException(label + " is required for this level");
+            throw new BadRequestException(label + " is required for this level", label + " මෙම මට්ටම සඳහා අවශ්‍ය වේ");
         }
     }
 
     private void validateParentLevel(Long parentId, int expectedLevel) {
         AddressLine parent = addressLineRepository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent line not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Parent line not found", "දෙමාපිය පේළිය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (parent.getLevel() != expectedLevel) {
-            throw new BadRequestException("Parent line level mismatch");
+            throw new BadRequestException("Parent line level mismatch", "දෙමාපිය පේළි මට්ටම නොගැලපේ");
         }
     }
 
     private AddressLine findLine(Long id, Long orgUnitId) {
         if (orgUnitId == null) {
             return addressLineRepository.findById(id)
-                    .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Address line not found", "ලිපින පේළිය සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
         }
         return addressLineRepository.findByIdAndOrgUnitId(id, orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Address line not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිත ආයතනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
     }
 
     private AddressLine findLineOrNull(Long id, Long orgUnitId, String notFoundMessage) {
@@ -242,15 +257,17 @@ public class AddressLineServiceImpl implements AddressLineService {
         }
         if (orgUnitId == null) {
             return addressLineRepository.findById(id)
-                    .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
+                    .orElseThrow(
+                            () -> new NotFoundException(notFoundMessage, "ලිපින පේළිය හමු නොවීය", ErrorCode.NOT_FOUND));
         }
         return addressLineRepository.findByIdAndOrgUnitId(id, orgUnitId)
-                .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException(notFoundMessage, "ලිපින පේළිය හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -259,7 +276,8 @@ public class AddressLineServiceImpl implements AddressLineService {
             return line.getPostalCode();
         }
         String prefix = loadParentInternalCode(line);
-        int nextIndex = addressLineRepository.findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdOrderByInternalCodeDesc(
+        int nextIndex = addressLineRepository
+                .findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdOrderByInternalCodeDesc(
                         line.getLevel(),
                         line.getParentLine1Id(),
                         line.getParentLine2Id(),
@@ -281,16 +299,19 @@ public class AddressLineServiceImpl implements AddressLineService {
     private String loadParentInternalCode(AddressLine line) {
         if (line.getLevel() == 2) {
             return addressLineRepository.findById(line.getParentLine1Id())
-                    .orElseThrow(() -> new NotFoundException("Parent line 1 not found", ErrorCode.NOT_FOUND))
+                    .orElseThrow(() -> new NotFoundException("Parent line 1 not found", "දෙමාපිය පේළිය 1 සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND))
                     .getInternalCode();
         }
         if (line.getLevel() == 3) {
             return addressLineRepository.findById(line.getParentLine2Id())
-                    .orElseThrow(() -> new NotFoundException("Parent line 2 not found", ErrorCode.NOT_FOUND))
+                    .orElseThrow(() -> new NotFoundException("Parent line 2 not found", "දෙමාපිය පේළිය 2 සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND))
                     .getInternalCode();
         }
         return addressLineRepository.findById(line.getParentLine3Id())
-                .orElseThrow(() -> new NotFoundException("Parent line 3 not found", ErrorCode.NOT_FOUND))
+                .orElseThrow(() -> new NotFoundException("Parent line 3 not found", "දෙමාපිය පේළිය 3 සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND))
                 .getInternalCode();
     }
 
@@ -327,8 +348,7 @@ public class AddressLineServiceImpl implements AddressLineService {
                 line.getParentLine3Id(),
                 line.getPostalCode(),
                 line.getCreatedAt(),
-                line.getUpdatedAt()
-        );
+                line.getUpdatedAt());
     }
 
     private AddressLineRes toResponseOrNull(AddressLine line) {

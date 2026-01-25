@@ -30,7 +30,7 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
     private final FixedAssetTemplateService fixedAssetTemplateService;
 
     public FixedAssetMasterCategoryServiceImpl(FixedAssetMasterCategoryRepository repository,
-                                               FixedAssetTemplateService fixedAssetTemplateService) {
+            FixedAssetTemplateService fixedAssetTemplateService) {
         this.repository = repository;
         this.fixedAssetTemplateService = fixedAssetTemplateService;
     }
@@ -60,7 +60,8 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
     @Override
     public FixedAssetMasterCategoryRes update(Long id, FixedAssetMasterCategoryUpdateReq request) {
         FixedAssetMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found",
+                        "ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         validateParent(request.parentId(), request.level(), id);
         validateUniqueness(request.level(), request.name(), request.parentId(), id);
         applyRequest(category,
@@ -82,7 +83,8 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
     @Override
     public FixedAssetMasterCategoryRes getById(Long id) {
         FixedAssetMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found",
+                        "ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
@@ -121,8 +123,7 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                     unit,
                     category.getIsSystem(),
                     category.getIsActive(),
-                    new ArrayList<>()
-            ));
+                    new ArrayList<>()));
         }
 
         List<FixedAssetMasterCategoryTreeRes> roots = new ArrayList<>();
@@ -147,9 +148,11 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<FixedAssetMasterCategoryRes> getLevelTwoCategories(Long levelOneCategoryId, int page, int size) {
+    public PageResponse<FixedAssetMasterCategoryRes> getLevelTwoCategories(Long levelOneCategoryId, int page,
+            int size) {
         FixedAssetMasterCategory parent = loadCategory(levelOneCategoryId);
-        validateLevel(parent, 1, "Level 1 fixed asset category not found");
+        validateLevel(parent, 1, "Level 1 fixed asset category not found",
+                "මට්ටම 1 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
         Pageable pageable = buildPageable(page, size);
         Page<FixedAssetMasterCategory> categories = repository.findByLevelAndParentId(2, parent.getId(), pageable);
         return toPageResponse(categories);
@@ -157,9 +160,11 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<FixedAssetMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page, int size) {
+    public PageResponse<FixedAssetMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page,
+            int size) {
         FixedAssetMasterCategory parent = loadCategory(levelTwoCategoryId);
-        validateLevel(parent, 2, "Level 2 fixed asset category not found");
+        validateLevel(parent, 2, "Level 2 fixed asset category not found",
+                "මට්ටම 2 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
         Pageable pageable = buildPageable(page, size);
         Page<FixedAssetMasterCategory> categories = repository.findByLevelAndParentId(3, parent.getId(), pageable);
         return toPageResponse(categories);
@@ -169,12 +174,15 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
     @Override
     public void delete(Long id) {
         FixedAssetMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found",
+                        "ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
-            throw new BadRequestException("System fixed asset categories cannot be deleted");
+            throw new BadRequestException("System fixed asset categories cannot be deleted",
+                    "පද්ධති ස්ථාවර වත්කම් ප්‍රභේද මකා දැමිය නොහැක");
         }
         if (repository.existsByParentId(id)) {
-            throw new BadRequestException("Category has child categories and cannot be deleted");
+            throw new BadRequestException("Category has child categories and cannot be deleted",
+                    "අනු ප්‍රභේද පවතින ප්‍රභේද මකා දැමිය නොහැක");
         }
         repository.delete(category);
     }
@@ -184,15 +192,19 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
             return;
         }
         FixedAssetMasterCategory parent = repository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found",
+                        "ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (parentId.equals(currentId)) {
-            throw new BadRequestException("Category cannot reference itself as parent");
+            throw new BadRequestException("Category cannot reference itself as parent",
+                    "ප්‍රභේදය එහිම දෙමාපිය ප්‍රභේදයක් ලෙස යොමු කළ නොහැක");
         }
         if (Boolean.TRUE.equals(parent.getIsLeaf())) {
-            throw new BadRequestException("Cannot assign a leaf category as parent");
+            throw new BadRequestException("Cannot assign a leaf category as parent",
+                    "පත්‍ර ප්‍රභේදයක් දෙමාපිය ප්‍රභේදයක් ලෙස පවරනු ලැබිය නොහැක");
         }
         if (level != null && parent.getLevel() != null && level <= parent.getLevel()) {
-            throw new BadRequestException("Child level must be greater than parent level");
+            throw new BadRequestException("Child level must be greater than parent level",
+                    "අනු ප්‍රභේද මට්ටම දෙමාපිය ප්‍රභේද මට්ටමට වඩා වැඩි විය යුතුය");
         }
     }
 
@@ -202,16 +214,22 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
         }
 
         FixedAssetMasterCategory levelTwo = repository.findById(category.getParentId())
-                .orElseThrow(() -> new NotFoundException("Parent category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (levelTwo.getParentId() == null) {
-            throw new BadRequestException("Level 2 fixed asset category must have a level 1 parent");
+            throw new BadRequestException("Level 2 fixed asset category must have a level 1 parent",
+                    "මට්ටම 2 ස්ථාවර වත්කම් ප්‍රභේදයකට මට්ටම 1 දෙමාපිය ප්‍රභේදයක් තිබිය යුතුය");
         }
 
         FixedAssetMasterCategory levelOne = repository.findById(levelTwo.getParentId())
-                .orElseThrow(() -> new NotFoundException("Level 1 fixed asset category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Level 1 fixed asset category not found",
+                                "මට්ටම 1 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
 
-        validateLevel(levelOne, 1, "Level 1 fixed asset category not found");
-        validateLevel(levelTwo, 2, "Level 2 fixed asset category not found");
+        validateLevel(levelOne, 1, "Level 1 fixed asset category not found",
+                "මට්ටම 1 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
+        validateLevel(levelTwo, 2, "Level 2 fixed asset category not found",
+                "මට්ටම 2 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
 
         fixedAssetTemplateService.createIfMissing(levelOne.getId(), levelTwo.getId(), category.getId());
     }
@@ -228,20 +246,21 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                     : repository.existsByLevelAndNameIgnoreCaseAndParentIdAndIdNot(level, name, parentId, id);
         }
         if (exists) {
-            throw new BadRequestException("Category with the same level and name already exists for the parent");
+            throw new BadRequestException("Category with the same level and name already exists for the parent",
+                    "දෙමාපිය ප්‍රභේදය සඳහා එම මට්ටමේම සහ එම නමින්ම ප්‍රභේදයක් දැනටමත් පවතී");
         }
     }
 
     private void applyRequest(FixedAssetMasterCategory category,
-                              Long parentId,
-                              Integer level,
-                              String name,
-                              String specification01,
-                              String specification02,
-                              String unit,
-                              Boolean isLeaf,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            Long parentId,
+            Integer level,
+            String name,
+            String specification01,
+            String specification02,
+            String unit,
+            Boolean isLeaf,
+            Boolean isSystem,
+            Boolean isActive) {
         category.setParentId(parentId);
         category.setLevel(level);
         category.setName(name.trim());
@@ -267,12 +286,14 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
 
     private FixedAssetMasterCategory loadCategory(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset category not found",
+                        "ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
     }
 
-    private void validateLevel(FixedAssetMasterCategory category, int expectedLevel, String notFoundMessage) {
+    private void validateLevel(FixedAssetMasterCategory category, int expectedLevel, String messageEn,
+            String messageSn) {
         if (category.getLevel() != expectedLevel) {
-            throw new BadRequestException(notFoundMessage);
+            throw new BadRequestException(messageEn, messageSn);
         }
     }
 
@@ -282,8 +303,7 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.getNumber(),
-                page.getSize()
-        );
+                page.getSize());
     }
 
     private String trimToNull(String value) {
@@ -307,7 +327,6 @@ public class FixedAssetMasterCategoryServiceImpl implements FixedAssetMasterCate
                 category.getIsSystem(),
                 category.getIsActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 }

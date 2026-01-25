@@ -18,7 +18,8 @@ public class GlobalExceptionHandler {
         List<String> details = ex.getBindingResult().getFieldErrors().stream()
                 .map(this::formatFieldError)
                 .collect(Collectors.toList());
-        ApiError apiError = ApiError.of("Validation failed", ErrorCode.VALIDATION_ERROR, details);
+        ApiError apiError = ApiError.of("Validation failed", "සත්‍යාපනය අසාර්ථකයි", ErrorCode.VALIDATION_ERROR,
+                details);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
@@ -27,25 +28,27 @@ public class GlobalExceptionHandler {
         List<String> details = ex.getConstraintViolations().stream()
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .toList();
-        ApiError apiError = ApiError.of("Validation failed", ErrorCode.VALIDATION_ERROR, details);
+        ApiError apiError = ApiError.of("Validation failed", "සත්‍යාපනය අසාර්ථකයි", ErrorCode.VALIDATION_ERROR,
+                details);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NotFoundException ex) {
-        ApiError apiError = ApiError.of(ex.getMessage(), ex.getErrorCode(), List.of());
+        ApiError apiError = ApiError.of(ex.getMessage(), ex.getMessageSn(), ex.getErrorCode(), List.of());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiError> handleBadRequest(BadRequestException ex) {
-        ApiError apiError = ApiError.of(ex.getMessage(), ex.getErrorCode(), List.of());
+        ApiError apiError = ApiError.of(ex.getMessage(), ex.getMessageSn(), ex.getErrorCode(), List.of());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
-        ApiError apiError = ApiError.of("Unexpected error", ErrorCode.INTERNAL_ERROR, List.of(ex.getMessage()));
+        ApiError apiError = ApiError.of("Unexpected error", "අනපේක්ෂිත දෝෂයක්", ErrorCode.INTERNAL_ERROR,
+                List.of(ex.getMessage()));
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
     }
 

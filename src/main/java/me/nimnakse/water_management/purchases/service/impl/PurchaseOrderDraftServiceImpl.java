@@ -46,11 +46,11 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
     private final OrganizationAccessService organizationAccessService;
 
     public PurchaseOrderDraftServiceImpl(PurchaseOrderDraftRepository draftRepository,
-                                         PurchaseOrderDraftItemRepository draftItemRepository,
-                                         PurchaseOrderRepository purchaseOrderRepository,
-                                         PurchaseOrderItemRepository purchaseOrderItemRepository,
-                                         OrgUnitRepository orgUnitRepository,
-                                         OrganizationAccessService organizationAccessService) {
+            PurchaseOrderDraftItemRepository draftItemRepository,
+            PurchaseOrderRepository purchaseOrderRepository,
+            PurchaseOrderItemRepository purchaseOrderItemRepository,
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.draftRepository = draftRepository;
         this.draftItemRepository = draftItemRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
@@ -85,9 +85,11 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         Map<String, PurchaseOrderDraftItem> byItemKey = draftItems.stream()
                 .collect(Collectors.toMap(this::buildItemKey, Function.identity()));
         for (PurchaseOrderDraftItemUpdateReq itemReq : request.items()) {
-            PurchaseOrderDraftItem item = byItemKey.get(buildItemKey(itemReq.inventoryItemId(), itemReq.fixedAssetTemplateId()));
+            PurchaseOrderDraftItem item = byItemKey
+                    .get(buildItemKey(itemReq.inventoryItemId(), itemReq.fixedAssetTemplateId()));
             if (item == null) {
-                throw new BadRequestException("Draft item not found for item reference");
+                throw new BadRequestException("Draft item not found for item reference",
+                        "අයිතම විමර්ශනය සඳහා කෙටුම්පත් අයිතමය හමු නොවීය");
             }
             item.setUnitCost(itemReq.unitCost());
             item.setTotalAmount(calculateTotal(item.getQuantity(), itemReq.unitCost()));
@@ -104,7 +106,8 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         List<PurchaseOrderDraftItem> items = draftItemRepository.findByDraftId(draft.getId());
         boolean missingCost = items.stream().anyMatch(item -> item.getUnitCost() == null);
         if (missingCost) {
-            throw new BadRequestException("All draft items must have unit costs before accepting");
+            throw new BadRequestException("All draft items must have unit costs before accepting",
+                    "පිළිගැනීමට පෙර සියලුම කෙටුම්පත් අයිතම සඳහා ඒකක පිරිවැයක් තිබිය යුතුය");
         }
         return toDraftResponse(draft, items);
     }
@@ -125,7 +128,8 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         List<PurchaseOrderDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
         boolean missingCost = draftItems.stream().anyMatch(item -> item.getUnitCost() == null);
         if (missingCost) {
-            throw new BadRequestException("All draft items must have unit costs before converting to purchase orders");
+            throw new BadRequestException("All draft items must have unit costs before converting to purchase orders",
+                    "මිලදී ගැනීමේ ඇණවුම් බවට පරිවර්තනය කිරීමට පෙර සියලුම කෙටුම්පත් අයිතම සඳහා ඒකක පිරිවැයක් තිබිය යුතුය");
         }
         PurchaseOrder order = new PurchaseOrder();
         order.setOrgUnitId(draft.getOrgUnitId());
@@ -160,17 +164,19 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         List<PurchaseOrderDraftRes> items = drafts.getContent().stream()
                 .map(draft -> toDraftResponse(draft, draftItemRepository.findByDraftId(draft.getId())))
                 .toList();
-        return new PageResponse<>(items, drafts.getTotalElements(), drafts.getTotalPages(), drafts.getNumber(), drafts.getSize());
+        return new PageResponse<>(items, drafts.getTotalElements(), drafts.getTotalPages(), drafts.getNumber(),
+                drafts.getSize());
     }
 
     private PurchaseOrderDraft getDraft(Long id) {
         return draftRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Purchase order draft not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Purchase order draft not found",
+                        "මිලදී ගැනීමේ ඇණවුම් කෙටුම්පත හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -181,7 +187,8 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         }
         boolean hasDuplicates = counts.values().stream().anyMatch(count -> count > 1);
         if (hasDuplicates) {
-            throw new BadRequestException("Duplicate items are not allowed in drafts");
+            throw new BadRequestException("Duplicate items are not allowed in drafts",
+                    "කෙටුම්පත් වල අනුපිටපත් අයිතම වලට ඉඩ නොදේ");
         }
     }
 
@@ -268,8 +275,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
                 draft.getReferenceNo(),
                 itemResponses,
                 draft.getCreatedAt(),
-                draft.getUpdatedAt()
-        );
+                draft.getUpdatedAt());
     }
 
     private PurchaseOrderDraftItemRes toDraftItemResponse(PurchaseOrderDraftItem item) {
@@ -279,8 +285,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
                 item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private PurchaseOrderRes toPurchaseOrderResponse(PurchaseOrder order, List<PurchaseOrderItem> items) {
@@ -297,8 +302,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
                 order.getTotalAmount(),
                 itemResponses,
                 order.getCreatedAt(),
-                order.getUpdatedAt()
-        );
+                order.getUpdatedAt());
     }
 
     private PurchaseOrderItemRes toPurchaseOrderItemResponse(PurchaseOrderItem item) {
@@ -308,8 +312,7 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
                 item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private String buildItemKey(PurchaseOrderDraftItem item) {
@@ -318,7 +321,8 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
 
     private String buildItemKey(Long inventoryItemId, Long fixedAssetTemplateId) {
         if (inventoryItemId != null && fixedAssetTemplateId != null) {
-            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් පමණක් අවසර ඇත");
         }
         if (inventoryItemId != null) {
             return "INV-" + inventoryItemId;
@@ -326,15 +330,18 @@ public class PurchaseOrderDraftServiceImpl implements PurchaseOrderDraftService 
         if (fixedAssetTemplateId != null) {
             return "FAT-" + fixedAssetTemplateId;
         }
-        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided",
+                "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් සැපයිය යුතුය");
     }
 
     private void applyItemSelection(PurchaseOrderDraftItem item, Long inventoryItemId, Long fixedAssetTemplateId) {
         if (inventoryItemId != null && fixedAssetTemplateId != null) {
-            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් පමණක් අවසර ඇත");
         }
         if (inventoryItemId == null && fixedAssetTemplateId == null) {
-            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් සැපයිය යුතුය");
         }
         item.setInventoryItemId(inventoryItemId);
         item.setFixedAssetTemplateId(fixedAssetTemplateId);

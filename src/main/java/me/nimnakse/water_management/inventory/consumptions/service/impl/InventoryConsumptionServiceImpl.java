@@ -50,13 +50,13 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     private final ExpenseAccountService expenseAccountService;
 
     public InventoryConsumptionServiceImpl(InventoryConsumptionRepository consumptionRepository,
-                                           InventoryTemplateRepository templateRepository,
-                                           ExpenseAccountRepository expenseAccountRepository,
-                                           ExpenseMainCategoryRepository mainCategoryRepository,
-                                           InventoryInitialStockRepository initialStockRepository,
-                                           GrnInvoiceItemRepository grnInvoiceItemRepository,
-                                           GrnInvoiceRepository grnInvoiceRepository,
-                                           OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
+            InventoryTemplateRepository templateRepository,
+            ExpenseAccountRepository expenseAccountRepository,
+            ExpenseMainCategoryRepository mainCategoryRepository,
+            InventoryInitialStockRepository initialStockRepository,
+            GrnInvoiceItemRepository grnInvoiceItemRepository,
+            GrnInvoiceRepository grnInvoiceRepository,
+            OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
         this.consumptionRepository = consumptionRepository;
         this.templateRepository = templateRepository;
         this.expenseAccountRepository = expenseAccountRepository;
@@ -86,7 +86,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     @Override
     public InventoryConsumptionRes update(Long id, InventoryConsumptionUpdateReq request) {
         InventoryConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory consumption not found",
+                        "ඉන්වෙන්ටරි පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         Long orgUnitId = consumption.getOrgUnitId() == null ? resolveOrgUnitId() : consumption.getOrgUnitId();
         restoreBatch(orgUnitId, consumption.getInventoryTemplateId(),
                 consumption.getBatchNo(), consumption.getQuantity());
@@ -104,7 +105,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     @Override
     public InventoryConsumptionRes getById(Long id) {
         InventoryConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory consumption not found",
+                        "ඉන්වෙන්ටරි පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(consumption);
     }
 
@@ -126,26 +128,28 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     @Override
     public List<InventoryConsumptionBatchRes> listAvailableBatches(Long inventoryTemplateId) {
         if (inventoryTemplateId == null) {
-            throw new BadRequestException("Inventory template id is required");
+            throw new BadRequestException("Inventory template id is required",
+                    "ඉන්වෙන්ටරි සැකිලි හැඳුනුම්පත අවශ්‍ය වේ");
         }
         validateTemplate(inventoryTemplateId);
         Long orgUnitId = resolveOrgUnitId();
-        List<InventoryConsumptionBatchRes> initialStockBatches = loadInitialStockBatches(orgUnitId, inventoryTemplateId);
+        List<InventoryConsumptionBatchRes> initialStockBatches = loadInitialStockBatches(orgUnitId,
+                inventoryTemplateId);
         List<InventoryConsumptionBatchRes> grnBatches = loadGrnBatches(orgUnitId, inventoryTemplateId);
         return List.copyOf(
                 List.of(initialStockBatches, grnBatches).stream()
                         .flatMap(List::stream)
                         .filter(batch -> batch.remainingQuantity() != null
                                 && batch.remainingQuantity().compareTo(BigDecimal.ZERO) > 0)
-                        .collect(Collectors.toList())
-        );
+                        .collect(Collectors.toList()));
     }
 
     @Transactional
     @Override
     public void delete(Long id) {
         InventoryConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory consumption not found",
+                        "ඉන්වෙන්ටරි පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         Long orgUnitId = consumption.getOrgUnitId() == null ? resolveOrgUnitId() : consumption.getOrgUnitId();
         restoreBatch(orgUnitId, consumption.getInventoryTemplateId(),
                 consumption.getBatchNo(), consumption.getQuantity());
@@ -154,14 +158,16 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
 
     private void validateTemplate(Long templateId) {
         if (!templateRepository.existsById(templateId)) {
-            throw new NotFoundException("Inventory template not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("One or more inventory templates were not found",
+                    "ඉන්වෙන්ටරි සැකිලි එකක් හෝ කිහිපයක් සොයාගත නොහැකි විය", ErrorCode.NOT_FOUND);
         }
     }
 
     private Long resolveExpenseAccountId(Long expenseAccountId) {
         if (expenseAccountId != null) {
             if (!expenseAccountRepository.existsById(expenseAccountId)) {
-                throw new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND);
+                throw new NotFoundException("Expense account not found", "වියදම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND);
             }
             return expenseAccountId;
         }
@@ -197,15 +203,15 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     }
 
     private void applyRequest(InventoryConsumption consumption,
-                              Long orgUnitId,
-                              Long inventoryTemplateId,
-                              Long expenseAccountId,
-                              BigDecimal quantity,
-                              BigDecimal totalAmount,
-                              java.time.LocalDate consumedAt,
-                              String batchNo,
-                              String referenceNo,
-                              String description) {
+            Long orgUnitId,
+            Long inventoryTemplateId,
+            Long expenseAccountId,
+            BigDecimal quantity,
+            BigDecimal totalAmount,
+            java.time.LocalDate consumedAt,
+            String batchNo,
+            String referenceNo,
+            String description) {
         consumption.setOrgUnitId(orgUnitId);
         consumption.setInventoryTemplateId(inventoryTemplateId);
         consumption.setExpenseAccountId(expenseAccountId);
@@ -226,12 +232,12 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                 consumption.getTotalAmount(),
                 consumption.getConsumedAt(),
                 consumption.getBatchNo(),
-                resolveBatchSource(consumption.getOrgUnitId(), consumption.getInventoryTemplateId(), consumption.getBatchNo()),
+                resolveBatchSource(consumption.getOrgUnitId(), consumption.getInventoryTemplateId(),
+                        consumption.getBatchNo()),
                 consumption.getReferenceNo(),
                 consumption.getDescription(),
                 consumption.getCreatedAt(),
-                consumption.getUpdatedAt()
-        );
+                consumption.getUpdatedAt());
     }
 
     private String resolveReferenceNo(String referenceNo, Long orgUnitId, String batchNo) {
@@ -282,7 +288,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     private Long resolveOrgUnitId() {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (orgUnitId == null) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
         return orgUnitId;
     }
@@ -299,7 +305,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
         if (initialStock != null) {
             BigDecimal remaining = resolveRemaining(initialStock.getRemainingQuantity(), initialStock.getQuantity());
             if (remaining.compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient remaining quantity for initial stock batch");
+                throw new BadRequestException("Insufficient remaining quantity for initial stock batch",
+                        "ආරම්භක තොග කාණ්ඩය සඳහා ඉතිරි ප්‍රමාණය ප්‍රමාණවත් නොවේ");
             }
             initialStock.setRemainingQuantity(remaining.subtract(quantity));
             initialStockRepository.save(initialStock);
@@ -309,13 +316,15 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
         if (grnItem != null) {
             BigDecimal remaining = resolveRemaining(grnItem.getRemainingQuantity(), grnItem.getQuantity());
             if (remaining.compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient remaining quantity for GRN batch");
+                throw new BadRequestException("Insufficient remaining quantity for GRN batch",
+                        "GRN කාණ්ඩය සඳහා ඉතිරි ප්‍රමාණය ප්‍රමාණවත් නොවේ");
             }
             grnItem.setRemainingQuantity(remaining.subtract(quantity));
             grnInvoiceItemRepository.save(grnItem);
             return;
         }
-        throw new BadRequestException("Batch not found for inventory template");
+        throw new BadRequestException("Batch not found for inventory template",
+                "ඉන්වෙන්ටරි සැකිල්ල සඳහා කාණ්ඩය සොයාගත නොහැක");
     }
 
     private void restoreBatch(Long orgUnitId, Long inventoryTemplateId, String batchNo, BigDecimal quantity) {
@@ -324,7 +333,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
             BigDecimal remaining = resolveRemaining(initialStock.getRemainingQuantity(), initialStock.getQuantity());
             BigDecimal restored = remaining.add(quantity);
             if (restored.compareTo(initialStock.getQuantity()) > 0) {
-                throw new BadRequestException("Restored quantity exceeds initial stock quantity");
+                throw new BadRequestException("Restored quantity exceeds initial stock quantity",
+                        "ප්‍රතිසාධනය කරන ලද ප්‍රමාණය ආරම්භක තොග ප්‍රමාණය ඉක්මවා යයි");
             }
             initialStock.setRemainingQuantity(restored);
             initialStockRepository.save(initialStock);
@@ -335,7 +345,8 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
             BigDecimal remaining = resolveRemaining(grnItem.getRemainingQuantity(), grnItem.getQuantity());
             BigDecimal restored = remaining.add(quantity);
             if (restored.compareTo(grnItem.getQuantity()) > 0) {
-                throw new BadRequestException("Restored quantity exceeds GRN quantity");
+                throw new BadRequestException("Restored quantity exceeds GRN quantity",
+                        "ප්‍රතිසාධනය කරන ලද ප්‍රමාණය GRN ප්‍රමාණය ඉක්මවා යයි");
             }
             grnItem.setRemainingQuantity(restored);
             grnInvoiceItemRepository.save(grnItem);
@@ -345,7 +356,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
     private InventoryInitialStock findInitialStock(Long orgUnitId, Long inventoryTemplateId, String batchNo) {
         if (orgUnitId != null) {
             return initialStockRepository.findByOrgUnitIdAndTemplateIdAndBatchNo(
-                            orgUnitId, inventoryTemplateId, normalizeBatchNo(batchNo))
+                    orgUnitId, inventoryTemplateId, normalizeBatchNo(batchNo))
                     .orElse(null);
         }
         return initialStockRepository.findByTemplateIdAndBatchNo(inventoryTemplateId, normalizeBatchNo(batchNo))
@@ -376,7 +387,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                 .map(GrnInvoice::getId)
                 .findFirst();
         return matchingGrnId.flatMap(
-                        id -> matches.stream().filter(item -> Objects.equals(item.getGrnId(), id)).findFirst())
+                id -> matches.stream().filter(item -> Objects.equals(item.getGrnId(), id)).findFirst())
                 .orElse(null);
     }
 
@@ -413,8 +424,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                             remaining,
                             remaining.multiply(unitCost),
                             unitCost,
-                            BatchSourceType.INITIAL_STOCK
-                    );
+                            BatchSourceType.INITIAL_STOCK);
                 })
                 .toList();
     }
@@ -444,8 +454,7 @@ public class InventoryConsumptionServiceImpl implements InventoryConsumptionServ
                             remaining,
                             remaining.multiply(unitCost),
                             unitCost,
-                            BatchSourceType.GRN
-                    );
+                            BatchSourceType.GRN);
                 })
                 .toList();
     }

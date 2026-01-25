@@ -22,7 +22,7 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
     private final LiabilityMainCategoryRepository mainCategoryRepository;
 
     public LiabilityAccountServiceImpl(LiabilityAccountRepository accountRepository,
-                                       LiabilityMainCategoryRepository mainCategoryRepository) {
+            LiabilityMainCategoryRepository mainCategoryRepository) {
         this.accountRepository = accountRepository;
         this.mainCategoryRepository = mainCategoryRepository;
     }
@@ -44,7 +44,8 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
     @Override
     public LiabilityAccountRes update(Long id, LiabilityAccountUpdateReq request) {
         LiabilityAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability account not found", "වගකීම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
         validateUniqueness(normalizedAccountNumber, id, request.mainCategoryId(), normalizedName);
@@ -58,7 +59,8 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
     @Override
     public LiabilityAccountRes getById(Long id) {
         LiabilityAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability account not found", "වගකීම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(account);
     }
 
@@ -80,9 +82,11 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
     @Override
     public void delete(Long id) {
         LiabilityAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability account not found", "වගකීම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(account.getIsSystem())) {
-            throw new BadRequestException("System liability accounts cannot be deleted");
+            throw new BadRequestException("System expense accounts cannot be deleted",
+                    "පද්ධති වියදම් ගිණුම් මකා දැමිය නොහැක");
         }
         accountRepository.delete(account);
     }
@@ -90,35 +94,40 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
     private void validateUniqueness(String accountNumber, Long id, Long mainCategoryId, String name) {
         if (id == null) {
             if (accountRepository.existsByAccountNumberIgnoreCase(accountNumber)) {
-                throw new BadRequestException("Liability account number already exists");
+                throw new BadRequestException("Liability account number already exists",
+                        "වගකීම් ගිණුම් අංකය දැනටමත් පවතී");
             }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCase(mainCategoryId, name)) {
-                throw new BadRequestException("Liability account name already exists for the main category");
+                throw new BadRequestException("Liability account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා වගකීම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         } else {
             if (accountRepository.existsByAccountNumberIgnoreCaseAndIdNot(accountNumber, id)) {
-                throw new BadRequestException("Liability account number already exists");
+                throw new BadRequestException("Liability account number already exists",
+                        "වගකීම් ගිණුම් අංකය දැනටමත් පවතී");
             }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCaseAndIdNot(mainCategoryId, name, id)) {
-                throw new BadRequestException("Liability account name already exists for the main category");
+                throw new BadRequestException("Liability account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා වගකීම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         }
     }
 
     private LiabilityMainCategory getMainCategory(Long id) {
         return mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability main category not found",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
     }
 
     private void applyRequest(LiabilityAccount account,
-                              LiabilityMainCategory mainCategory,
-                              String accountNumber,
-                              String name,
-                              String description,
-                              Boolean isDefault,
-                              String functionKey,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            LiabilityMainCategory mainCategory,
+            String accountNumber,
+            String name,
+            String description,
+            Boolean isDefault,
+            String functionKey,
+            Boolean isSystem,
+            Boolean isActive) {
         account.setMainCategory(mainCategory);
         account.setAccountNumber(accountNumber.trim());
         account.setName(name.trim());
@@ -150,8 +159,7 @@ public class LiabilityAccountServiceImpl implements LiabilityAccountService {
                 account.getIsSystem(),
                 account.getIsActive(),
                 account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+                account.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

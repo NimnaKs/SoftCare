@@ -20,7 +20,7 @@ public class SocietyServiceImpl implements SocietyService {
     private final ConnectionRepository connectionRepository;
 
     public SocietyServiceImpl(SocietyRepository societyRepository,
-                              ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository) {
         this.societyRepository = societyRepository;
         this.connectionRepository = connectionRepository;
     }
@@ -29,7 +29,7 @@ public class SocietyServiceImpl implements SocietyService {
     @Override
     public SocietyRes create(SocietyCreateReq request) {
         if (societyRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("Society already exists");
+            throw new BadRequestException("Society already exists", "සමිතිය දැනටමත් පවතී");
         }
         Society society = new Society();
         society.setName(request.name().trim());
@@ -40,9 +40,10 @@ public class SocietyServiceImpl implements SocietyService {
     @Override
     public SocietyRes update(Long id, SocietyUpdateReq request) {
         Society society = societyRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Society not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (societyRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("Society already exists");
+            throw new BadRequestException("Society already exists", "සමිතිය දැනටමත් පවතී");
         }
         society.setName(request.name().trim());
         return toResponse(societyRepository.save(society));
@@ -52,7 +53,8 @@ public class SocietyServiceImpl implements SocietyService {
     @Override
     public SocietyRes getById(Long id) {
         Society society = societyRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Society not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(society);
     }
 
@@ -68,9 +70,11 @@ public class SocietyServiceImpl implements SocietyService {
     @Override
     public void delete(Long id) {
         Society society = societyRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Society not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (connectionRepository.existsBySocietyId(id)) {
-            throw new BadRequestException("Society is linked to connections and cannot be deleted");
+            throw new BadRequestException("Society is linked to connections and cannot be deleted",
+                    "සමිතිය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
         }
         societyRepository.delete(society);
     }
@@ -80,7 +84,6 @@ public class SocietyServiceImpl implements SocietyService {
                 society.getId(),
                 society.getName(),
                 society.getCreatedAt(),
-                society.getUpdatedAt()
-        );
+                society.getUpdatedAt());
     }
 }

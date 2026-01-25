@@ -20,7 +20,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     private final OrganizationRepository organizationRepository;
 
     public AuthorizedOfficerServiceImpl(AuthorizedOfficerRepository authorizedOfficerRepository,
-                                        OrganizationRepository organizationRepository) {
+            OrganizationRepository organizationRepository) {
         this.authorizedOfficerRepository = authorizedOfficerRepository;
         this.organizationRepository = organizationRepository;
     }
@@ -29,7 +29,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     @Override
     public AuthorizedOfficerRes create(Long organizationId, AuthorizedOfficerCreateReq request) {
         if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
-            throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
         AuthorizedOfficer officer = new AuthorizedOfficer();
         officer.setOrganizationId(organizationId);
@@ -69,7 +69,7 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
     @Override
     public List<AuthorizedOfficerRes> getAll(Long organizationId) {
         if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
-            throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
         return authorizedOfficerRepository.findByOrganizationIdAndDeletedAtIsNull(organizationId).stream()
                 .map(this::toResponse)
@@ -91,9 +91,11 @@ public class AuthorizedOfficerServiceImpl implements AuthorizedOfficerService {
 
     private AuthorizedOfficer getOfficerForOrg(Long organizationId, Long officerId) {
         AuthorizedOfficer officer = authorizedOfficerRepository.findByIdAndDeletedAtIsNull(officerId)
-                .orElseThrow(() -> new NotFoundException("Authorized officer not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability account not found", "වගකීම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (!officer.getOrganizationId().equals(organizationId)) {
-            throw new NotFoundException("Authorized officer not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Authorized officer not found", "බලයලත් නිලධාරියා සොයාගත නොහැක",
+                    ErrorCode.NOT_FOUND);
         }
         return officer;
     }

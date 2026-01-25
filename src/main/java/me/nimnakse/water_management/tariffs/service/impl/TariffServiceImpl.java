@@ -20,7 +20,7 @@ public class TariffServiceImpl implements TariffService {
     private final ConnectionRepository connectionRepository;
 
     public TariffServiceImpl(TariffRepository tariffRepository,
-                             ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository) {
         this.tariffRepository = tariffRepository;
         this.connectionRepository = connectionRepository;
     }
@@ -29,7 +29,7 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public TariffRes create(TariffCreateReq request) {
         if (tariffRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("Tariff already exists");
+            throw new BadRequestException("Tariff already exists", "ගාස්තු ක්‍රමය දැනටමත් පවතී");
         }
         Tariff tariff = new Tariff();
         tariff.setName(request.name().trim());
@@ -41,9 +41,10 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public TariffRes update(Long id, TariffUpdateReq request) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (tariffRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("Tariff already exists");
+            throw new BadRequestException("Tariff already exists", "ගාස්තු ක්‍රමය දැනටමත් පවතී");
         }
         tariff.setName(request.name().trim());
         tariff.setDescription(trimToNull(request.description()));
@@ -54,7 +55,8 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public TariffRes getById(Long id) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(tariff);
     }
 
@@ -70,9 +72,11 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public void delete(Long id) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (connectionRepository.existsByTariffId(id)) {
-            throw new BadRequestException("Tariff is linked to connections and cannot be deleted");
+            throw new BadRequestException("Tariff is linked to connections and cannot be deleted",
+                    "ගාස්තු ක්‍රමය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
         }
         tariffRepository.delete(tariff);
     }
@@ -91,7 +95,6 @@ public class TariffServiceImpl implements TariffService {
                 tariff.getName(),
                 tariff.getDescription(),
                 tariff.getCreatedAt(),
-                tariff.getUpdatedAt()
-        );
+                tariff.getUpdatedAt());
     }
 }

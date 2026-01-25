@@ -4,12 +4,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public record ApiError(
-        String message,
+        String messageEn,
+        String messageSn,
         ErrorCode code,
         List<String> details,
-        OffsetDateTime timestamp
-) {
-    public static ApiError of(String message, ErrorCode code, List<String> details) {
-        return new ApiError(message, code, details, OffsetDateTime.now());
+        OffsetDateTime timestamp) {
+    public static ApiError of(String messageEn, String messageSn, ErrorCode code, List<String> details) {
+        return new ApiError(messageEn, messageSn, code, details, OffsetDateTime.now());
     }
 }

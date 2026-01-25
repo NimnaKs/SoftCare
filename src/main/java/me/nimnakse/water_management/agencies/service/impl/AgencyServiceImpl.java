@@ -56,7 +56,8 @@ public class AgencyServiceImpl implements AgencyService {
     @Override
     public AgencyRes update(Long id, AgencyUpdateReq request) {
         Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Agency not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිත ආයතනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
 
         validateUniqueness(request.mobileNumber(), request.nicNumber(), id);
         Organization organization = resolveOrganization(request.organizationId());
@@ -74,7 +75,8 @@ public class AgencyServiceImpl implements AgencyService {
     @Override
     public AgencyRes getById(Long id) {
         Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Agency not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිත ආයතනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(agency);
     }
 
@@ -102,7 +104,8 @@ public class AgencyServiceImpl implements AgencyService {
     @Override
     public void delete(Long id) {
         Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Agency not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිත ආයතනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         agency.setDeletedAt(Instant.now());
         agencyRepository.save(agency);
     }
@@ -125,24 +128,23 @@ public class AgencyServiceImpl implements AgencyService {
                 agency.getBillingMode(),
                 agency.getIsActive(),
                 agency.getCreatedAt(),
-                agency.getUpdatedAt()
-        );
+                agency.getUpdatedAt());
     }
 
     private void applyFields(Agency agency,
-                             String businessName,
-                             String mobileNumber,
-                             String nicNumber,
-                             String businessAddress,
-                             String brcNumber,
-                             String ownerName,
-                             String ownerNicNumber,
-                             String secondaryContactNo,
-                             BigDecimal serviceChargePercent,
-                             BigDecimal subscriptionFee,
-                             BigDecimal totalCharges,
-                             BillingMode billingMode,
-                             Boolean isActive) {
+            String businessName,
+            String mobileNumber,
+            String nicNumber,
+            String businessAddress,
+            String brcNumber,
+            String ownerName,
+            String ownerNicNumber,
+            String secondaryContactNo,
+            BigDecimal serviceChargePercent,
+            BigDecimal subscriptionFee,
+            BigDecimal totalCharges,
+            BillingMode billingMode,
+            Boolean isActive) {
         agency.setBusinessName(businessName);
         agency.setMobileNumber(mobileNumber);
         agency.setNicNumber(nicNumber);
@@ -151,7 +153,8 @@ public class AgencyServiceImpl implements AgencyService {
         agency.setOwnerName(ownerName);
         agency.setOwnerNicNumber(ownerNicNumber);
         agency.setSecondaryContactNo(secondaryContactNo);
-        agency.setServiceChargePercent(serviceChargePercent != null ? serviceChargePercent : DEFAULT_SERVICE_CHARGE_PERCENT);
+        agency.setServiceChargePercent(
+                serviceChargePercent != null ? serviceChargePercent : DEFAULT_SERVICE_CHARGE_PERCENT);
         agency.setSubscriptionFee(subscriptionFee != null ? subscriptionFee : DEFAULT_SUBSCRIPTION_FEE);
         agency.setTotalCharges(totalCharges != null ? totalCharges : DEFAULT_TOTAL_CHARGES);
         agency.setBillingMode(billingMode != null ? billingMode : BillingMode.PREPAID);
@@ -163,19 +166,20 @@ public class AgencyServiceImpl implements AgencyService {
                 ? agencyRepository.existsByMobileNumberAndDeletedAtIsNull(mobileNumber)
                 : agencyRepository.existsByMobileNumberAndIdNotAndDeletedAtIsNull(mobileNumber, currentId);
         if (mobileExists) {
-            throw new BadRequestException("Mobile number already exists");
+            throw new BadRequestException("Mobile number already exists", "ජංගම දුරකථන අංකය දැනටමත් පවතී");
         }
 
         boolean nicExists = currentId == null
                 ? agencyRepository.existsByNicNumberAndDeletedAtIsNull(nicNumber)
                 : agencyRepository.existsByNicNumberAndIdNotAndDeletedAtIsNull(nicNumber, currentId);
         if (nicExists) {
-            throw new BadRequestException("NIC number already exists");
+            throw new BadRequestException("NIC number already exists", "ජාතික හැඳුනුම්පත් අංකය දැනටමත් පවතී");
         }
     }
 
     private Organization resolveOrganization(Long organizationId) {
         return organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
-                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
     }
 }

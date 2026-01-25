@@ -22,7 +22,7 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     private final RevenueMainCategoryRepository mainCategoryRepository;
 
     public RevenueAccountServiceImpl(RevenueAccountRepository accountRepository,
-                                     RevenueMainCategoryRepository mainCategoryRepository) {
+            RevenueMainCategoryRepository mainCategoryRepository) {
         this.accountRepository = accountRepository;
         this.mainCategoryRepository = mainCategoryRepository;
     }
@@ -45,7 +45,8 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     @Override
     public RevenueAccountRes update(Long id, RevenueAccountUpdateReq request) {
         RevenueAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue account not found", "ආදායම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
         validateUniqueness(normalizedAccountNumber, id, request.mainCategoryId(), normalizedName);
@@ -60,7 +61,8 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     @Override
     public RevenueAccountRes getById(Long id) {
         RevenueAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue account not found", "ආදායම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(account);
     }
 
@@ -82,9 +84,11 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     @Override
     public void delete(Long id) {
         RevenueAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue account not found", "ආදායම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(account.getIsSystem())) {
-            throw new BadRequestException("Default revenue accounts cannot be deleted");
+            throw new BadRequestException("Default revenue accounts cannot be deleted",
+                    "පෙරනිමි ආදායම් ගිණුම් මකා දැමිය නොහැක");
         }
         accountRepository.delete(account);
     }
@@ -92,36 +96,41 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     private void validateUniqueness(String accountNumber, Long id, Long mainCategoryId, String name) {
         if (id == null) {
             if (accountRepository.existsByAccountNumberIgnoreCase(accountNumber)) {
-                throw new BadRequestException("Revenue account number already exists");
+                throw new BadRequestException("Revenue account number already exists",
+                        "ආදායම් ගිණුම් අංකය දැනටමත් පවතී");
             }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCase(mainCategoryId, name)) {
-                throw new BadRequestException("Revenue account name already exists for the main category");
+                throw new BadRequestException("Revenue account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා ආදායම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         } else {
             if (accountRepository.existsByAccountNumberIgnoreCaseAndIdNot(accountNumber, id)) {
-                throw new BadRequestException("Revenue account number already exists");
+                throw new BadRequestException("Revenue account number already exists",
+                        "ආදායම් ගිණුම් අංකය දැනටමත් පවතී");
             }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCaseAndIdNot(mainCategoryId, name, id)) {
-                throw new BadRequestException("Revenue account name already exists for the main category");
+                throw new BadRequestException("Revenue account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා ආදායම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         }
     }
 
     private RevenueMainCategory getMainCategory(Long id) {
         return mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue main category not found",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
     }
 
     private void applyRequest(RevenueAccount account,
-                              RevenueMainCategory mainCategory,
-                              String accountNumber,
-                              String name,
-                              String description,
-                              String referencePrefix,
-                              Boolean isDefault,
-                              String functionKey,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            RevenueMainCategory mainCategory,
+            String accountNumber,
+            String name,
+            String description,
+            String referencePrefix,
+            Boolean isDefault,
+            String functionKey,
+            Boolean isSystem,
+            Boolean isActive) {
         account.setMainCategory(mainCategory);
         account.setAccountNumber(accountNumber.trim());
         account.setName(name.trim());
@@ -155,8 +164,7 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
                 account.getIsSystem(),
                 account.getIsActive(),
                 account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+                account.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

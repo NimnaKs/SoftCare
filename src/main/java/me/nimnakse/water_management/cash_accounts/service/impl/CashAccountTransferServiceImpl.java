@@ -45,20 +45,25 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
     @Override
     public CashAccountTransferRes create(CashAccountTransferCreateReq request) {
         if (request.fromAccountId().equals(request.toAccountId())) {
-            throw new BadRequestException("Source and destination accounts must be different");
+            throw new BadRequestException("Source and destination accounts must be different",
+                    "ප්‍රභව සහ ගමනාන්ත ගිණුම් එකිනෙකට වෙනස් විය යුතුය");
         }
         MonetaryAccount fromAccount = accountRepository.findById(request.fromAccountId())
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         MonetaryAccount toAccount = accountRepository.findById(request.toAccountId())
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(fromAccount.getOrgUnitId());
         organizationAccessService.enforceOrgUnitAccess(toAccount.getOrgUnitId());
         if (!Boolean.TRUE.equals(fromAccount.getIsActive()) || !Boolean.TRUE.equals(toAccount.getIsActive())) {
-            throw new BadRequestException("Both cash accounts must be active to transfer funds");
+            throw new BadRequestException("Both cash accounts must be active to transfer funds",
+                    "අරමුදල් මාරු කිරීම සඳහා මුදල් ගිණුම් දෙකම සක්‍රිය විය යුතුය");
         }
         BigDecimal amount = request.amount();
         if (fromAccount.getCurrentBalance().compareTo(amount) < 0) {
-            throw new BadRequestException("Insufficient balance for the transfer");
+            throw new BadRequestException("Insufficient balance for the transfer",
+                    "මාරු කිරීම සඳහා ප්‍රමාණවත් ඉතිරියක් නොමැත");
         }
         fromAccount.setCurrentBalance(fromAccount.getCurrentBalance().subtract(amount));
         toAccount.setCurrentBalance(toAccount.getCurrentBalance().add(amount));
@@ -96,10 +101,12 @@ public class CashAccountTransferServiceImpl implements CashAccountTransferServic
             int page,
             int size) {
         if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
-            throw new BadRequestException("Start time must be before end time");
+            throw new BadRequestException("Start time must be before end time",
+                    "ආරම්භක වේලාව අවසාන වේලාවට පෙර විය යුතුය");
         }
         MonetaryAccount account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(account.getOrgUnitId());
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
         Page<MonetaryAccountTransfer> transfers = transferRepository.findStatementEntries(

@@ -22,7 +22,7 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     private final ExpenseAccountRepository accountRepository;
 
     public ExpenseMainCategoryServiceImpl(ExpenseMainCategoryRepository mainCategoryRepository,
-                                          ExpenseAccountRepository accountRepository) {
+            ExpenseAccountRepository accountRepository) {
         this.mainCategoryRepository = mainCategoryRepository;
         this.accountRepository = accountRepository;
     }
@@ -42,10 +42,11 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     @Override
     public ExpenseMainCategoryRes update(Long id, ExpenseMainCategoryUpdateReq request) {
         ExpenseMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense main category not found",
+                        "වියදම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
         validateUniqueness(id, normalizedName);
-        applyRequest(category, request.expenseType(),normalizedName, request.description(),
+        applyRequest(category, request.expenseType(), normalizedName, request.description(),
                 request.isSystem(), request.isActive());
         return toResponse(mainCategoryRepository.save(category));
     }
@@ -54,7 +55,8 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     @Override
     public ExpenseMainCategoryRes getById(Long id) {
         ExpenseMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense main category not found",
+                        "වියදම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
@@ -70,12 +72,15 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     @Override
     public void delete(Long id) {
         ExpenseMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense main category not found",
+                        "වියදම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
-            throw new BadRequestException("System expense main categories cannot be deleted");
+            throw new BadRequestException("System expense main categories cannot be deleted",
+                    "පද්ධති වියදම් ප්‍රධාන ප්‍රභේද මකා දැමිය නොහැක");
         }
         if (accountRepository.existsByMainCategoryId(id)) {
-            throw new BadRequestException("Expense accounts exist for this main category");
+            throw new BadRequestException("Expense account name already exists for the main category",
+                    "ප්‍රධාන ප්‍රභේදය සඳහා වියදම් ගිණුම් නාමය දැනටමත් පවතී");
         }
         mainCategoryRepository.delete(category);
     }
@@ -83,21 +88,23 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
     private void validateUniqueness(Long id, String name) {
         if (id == null) {
             if (mainCategoryRepository.existsByNameIgnoreCase(name)) {
-                throw new BadRequestException("Expense main category name already exists");
+                throw new BadRequestException("Expense main category name already exists",
+                        "වියදම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         } else {
             if (mainCategoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-                throw new BadRequestException("Expense main category name already exists");
+                throw new BadRequestException("Expense main category name already exists",
+                        "වියදම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         }
     }
 
     private void applyRequest(ExpenseMainCategory category,
-                              ExpenseType expenseType,
-                              String name,
-                              String description,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            ExpenseType expenseType,
+            String name,
+            String description,
+            Boolean isSystem,
+            Boolean isActive) {
         category.setExpenseType(expenseType);
         category.setName(name.trim());
         category.setDescription(trimToNull(description));
@@ -118,8 +125,7 @@ public class ExpenseMainCategoryServiceImpl implements ExpenseMainCategoryServic
                 category.getIsSystem(),
                 category.getIsActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

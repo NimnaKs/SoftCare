@@ -20,7 +20,7 @@ public class ClusterServiceImpl implements ClusterService {
     private final ConnectionRepository connectionRepository;
 
     public ClusterServiceImpl(ClusterRepository clusterRepository,
-                              ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository) {
         this.clusterRepository = clusterRepository;
         this.connectionRepository = connectionRepository;
     }
@@ -29,7 +29,7 @@ public class ClusterServiceImpl implements ClusterService {
     @Override
     public ClusterRes create(ClusterCreateReq request) {
         if (clusterRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("Cluster already exists");
+            throw new BadRequestException("Cluster already exists", "ක්ලස්ටරය දැනටමත් පවතී");
         }
         Cluster cluster = new Cluster();
         cluster.setName(request.name().trim());
@@ -40,9 +40,10 @@ public class ClusterServiceImpl implements ClusterService {
     @Override
     public ClusterRes update(Long id, ClusterUpdateReq request) {
         Cluster cluster = clusterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cluster not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (clusterRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("Cluster already exists");
+            throw new BadRequestException("GN Division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
         cluster.setName(request.name().trim());
         return toResponse(clusterRepository.save(cluster));
@@ -52,7 +53,8 @@ public class ClusterServiceImpl implements ClusterService {
     @Override
     public ClusterRes getById(Long id) {
         Cluster cluster = clusterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cluster not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(cluster);
     }
 
@@ -68,9 +70,11 @@ public class ClusterServiceImpl implements ClusterService {
     @Override
     public void delete(Long id) {
         Cluster cluster = clusterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cluster not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (connectionRepository.existsByClusterId(id)) {
-            throw new BadRequestException("Cluster is linked to connections and cannot be deleted");
+            throw new BadRequestException("Cluster is linked to connections and cannot be deleted",
+                    "ක්ලස්ටරය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
         }
         clusterRepository.delete(cluster);
     }
@@ -80,7 +84,6 @@ public class ClusterServiceImpl implements ClusterService {
                 cluster.getId(),
                 cluster.getName(),
                 cluster.getCreatedAt(),
-                cluster.getUpdatedAt()
-        );
+                cluster.getUpdatedAt());
     }
 }

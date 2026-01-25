@@ -4,7 +4,6 @@ import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
-import me.nimnakse.water_management.organization.repository.OrganizationRepository;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,19 +20,20 @@ public class OrganizationAccessService {
 
     public void enforceOrgUnitAccess(Long targetOrgUnitId) {
         if (targetOrgUnitId == null) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
 
         Long rootOrgUnitId = resolveOrgUnitId();
         if (rootOrgUnitId == null) {
-            return;
+            return; // System admin or internal call
         }
 
         OrgUnit target = orgUnitRepository.findById(targetOrgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND));
 
         if (!isWithinHierarchy(rootOrgUnitId, target)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -48,7 +48,8 @@ public class OrganizationAccessService {
                 return false;
             }
             current = orgUnitRepository.findById(parentId)
-                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය",
+                            ErrorCode.NOT_FOUND));
         }
         return false;
     }

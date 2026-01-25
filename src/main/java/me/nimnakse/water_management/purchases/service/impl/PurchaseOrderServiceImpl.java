@@ -93,10 +93,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrder order = getOrder(id);
         organizationAccessService.enforceOrgUnitAccess(order.getOrgUnitId());
         if (order.getStatus() != PurchaseOrderStatus.PENDING) {
-            throw new BadRequestException("Only pending purchase orders can be updated");
+            throw new BadRequestException("Only pending purchase orders can be updated",
+                    "යාවත්කාලීන කළ හැක්කේ පොරොත්තු මිලදී ගැනීමේ ඇණවුම් පමණි");
         }
         if (!supplierRepository.existsById(request.supplierId())) {
-            throw new NotFoundException("Supplier not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Supplier not found", "සැපයුම්කරු හමු නොවීය", ErrorCode.NOT_FOUND);
         }
         order.setSupplierId(request.supplierId());
         List<PurchaseOrderItem> items = purchaseOrderItemRepository.findByPurchaseOrderId(order.getId());
@@ -109,7 +110,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrder order = getOrder(id);
         organizationAccessService.enforceOrgUnitAccess(order.getOrgUnitId());
         if (order.getStatus() != PurchaseOrderStatus.PENDING) {
-            throw new BadRequestException("Only pending purchase orders can be rejected");
+            throw new BadRequestException("Only pending purchase orders can be rejected",
+                    "ප්‍රතික්ෂේප කළ හැක්කේ පොරොත්තු මිලදී ගැනීමේ ඇණවුම් පමණි");
         }
         order.setStatus(PurchaseOrderStatus.REJECTED);
         List<PurchaseOrderItem> items = purchaseOrderItemRepository.findByPurchaseOrderId(order.getId());
@@ -121,22 +123,25 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public GrnInvoiceRes convertToGrn(Long id, PurchaseOrderConvertGrnReq request) {
         PurchaseOrder order = getOrder(id);
         organizationAccessService.enforceOrgUnitAccess(order.getOrgUnitId());
-        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
-            throw new BadRequestException("Only pending purchase orders can be converted to GRN");
+        if (order.getStatus() == PurchaseOrderStatus.CONVERTED_TO_GRN) {
+            throw new BadRequestException("Purchase order already converted to GRN",
+                    "මිලදී ගැනීමේ ඇණවුම දැනටමත් GRN බවට පරිවර්තනය කර ඇත");
         }
         if (order.getSupplierId() == null) {
-            throw new BadRequestException("Supplier must be assigned before converting to GRN");
+            throw new BadRequestException("Supplier must be assigned before converting to GRN",
+                    "GRN බවට පරිවර්තනය කිරීමට පෙර සැපයුම්කරු පවරනු ලැබිය යුතුය");
         }
         String grnNo = request.grnNo().trim();
         if (grnInvoiceRepository.existsByGrnNo(grnNo)) {
-            throw new BadRequestException("GRN number already exists");
+            throw new BadRequestException("GRN number already exists", "GRN අංකය දැනටමත් පවතී");
         }
         List<PurchaseOrderItem> orderItems = purchaseOrderItemRepository.findByPurchaseOrderId(order.getId());
         Map<String, PurchaseOrderItem> orderItemMap = orderItems.stream()
                 .collect(Collectors.toMap(this::buildItemKey, Function.identity()));
         for (GrnInvoiceItemCreateReq itemReq : request.items()) {
             if (!orderItemMap.containsKey(buildItemKey(itemReq.inventoryItemId(), itemReq.fixedAssetTemplateId()))) {
-                throw new BadRequestException("Item not found in purchase order");
+                throw new BadRequestException("Item not found in purchase order",
+                        "මිලදී ගැනීමේ ඇණවුමේ අයිතමය හමු නොවීය");
             }
         }
         GrnInvoice invoice = new GrnInvoice();
@@ -162,7 +167,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     private PurchaseOrder getOrder(Long id) {
         return purchaseOrderRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Purchase order not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Purchase order not found", "මිලදී ගැනීමේ ඇණවුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
     }
 
     private BigDecimal calculateTotalAmount(List<GrnInvoiceItemCreateReq> items) {
@@ -249,7 +255,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     private String buildItemKey(Long inventoryItemId, Long fixedAssetTemplateId) {
         if (inventoryItemId != null && fixedAssetTemplateId != null) {
-            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් පමණක් අවසර දෙනු ලැබේ");
         }
         if (inventoryItemId != null) {
             return "INV-" + inventoryItemId;
@@ -257,15 +264,18 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         if (fixedAssetTemplateId != null) {
             return "FAT-" + fixedAssetTemplateId;
         }
-        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+        throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided",
+                "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත සැපයිය යුතුය");
     }
 
     private void applyItemSelection(GrnInvoiceItem item, Long inventoryItemId, Long fixedAssetTemplateId) {
         if (inventoryItemId != null && fixedAssetTemplateId != null) {
-            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed");
+            throw new BadRequestException("Only one of inventoryItemId or fixedAssetTemplateId is allowed",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත යන දෙකෙන් එකක් පමණක් අවසර දෙනු ලැබේ");
         }
         if (inventoryItemId == null && fixedAssetTemplateId == null) {
-            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided");
+            throw new BadRequestException("Either inventoryItemId or fixedAssetTemplateId must be provided",
+                    "ඉන්වෙන්ටරි අයිතම හැඳුනුම්පත හෝ ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත සැපයිය යුතුය");
         }
         item.setInventoryItemId(inventoryItemId);
         item.setFixedAssetTemplateId(fixedAssetTemplateId);

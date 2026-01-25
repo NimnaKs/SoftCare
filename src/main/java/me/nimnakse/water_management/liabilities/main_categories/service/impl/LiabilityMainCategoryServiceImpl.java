@@ -22,7 +22,7 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     private final LiabilityAccountRepository accountRepository;
 
     public LiabilityMainCategoryServiceImpl(LiabilityMainCategoryRepository mainCategoryRepository,
-                                            LiabilityAccountRepository accountRepository) {
+            LiabilityAccountRepository accountRepository) {
         this.mainCategoryRepository = mainCategoryRepository;
         this.accountRepository = accountRepository;
     }
@@ -42,7 +42,8 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     @Override
     public LiabilityMainCategoryRes update(Long id, LiabilityMainCategoryUpdateReq request) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability main category not found",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
         validateUniqueness(request.code(), id, normalizedName);
         applyRequest(category, request.liabilityType(), request.code(), normalizedName, request.description(),
@@ -54,7 +55,8 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     @Override
     public LiabilityMainCategoryRes getById(Long id) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability main category not found",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
@@ -70,12 +72,15 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     @Override
     public void delete(Long id) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Liability main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Liability main category not found",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
-            throw new BadRequestException("System liability main categories cannot be deleted");
+            throw new BadRequestException("System liability accounts cannot be deleted",
+                    "පද්ධති වගකීම් ගිණුම් මකා දැමිය නොහැක");
         }
         if (accountRepository.existsByMainCategoryId(id)) {
-            throw new BadRequestException("Liability accounts exist for this main category");
+            throw new BadRequestException("Liability account name already exists for the main category",
+                    "ප්‍රධාන ප්‍රභේදය සඳහා වගකීම් ගිණුම් නාමය දැනටමත් පවතී");
         }
         mainCategoryRepository.delete(category);
     }
@@ -83,28 +88,32 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     private void validateUniqueness(Integer code, Long id, String name) {
         if (id == null) {
             if (mainCategoryRepository.existsByCode(code)) {
-                throw new BadRequestException("Liability main category code already exists");
+                throw new BadRequestException("Liability main category code already exists",
+                        "වගකීම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
             }
             if (mainCategoryRepository.existsByNameIgnoreCase(name)) {
-                throw new BadRequestException("Liability main category name already exists");
+                throw new BadRequestException("Liability main category name already exists",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         } else {
             if (mainCategoryRepository.existsByCodeAndIdNot(code, id)) {
-                throw new BadRequestException("Liability main category code already exists");
+                throw new BadRequestException("Liability main category code already exists",
+                        "වගකීම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
             }
             if (mainCategoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-                throw new BadRequestException("Liability main category name already exists");
+                throw new BadRequestException("Liability main category name already exists",
+                        "වගකීම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         }
     }
 
     private void applyRequest(LiabilityMainCategory category,
-                              LiabilityType liabilityType,
-                              Integer code,
-                              String name,
-                              String description,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            LiabilityType liabilityType,
+            Integer code,
+            String name,
+            String description,
+            Boolean isSystem,
+            Boolean isActive) {
         category.setLiabilityType(liabilityType);
         category.setCode(code);
         category.setName(name.trim());
@@ -127,8 +136,7 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
                 category.getIsSystem(),
                 category.getIsActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

@@ -2,7 +2,6 @@ package me.nimnakse.water_management.purchases.vouchers.service.impl;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -81,16 +80,18 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
 
         List<GrnInvoice> grns = grnInvoiceRepository.findAllById(request.grnInvoiceIds());
         if (grns.size() != request.grnInvoiceIds().size()) {
-            throw new BadRequestException("Some GRN invoices not found");
+            throw new BadRequestException("Some GRN invoices not found", "සමහර GRN ඉන්වොයිසි හමු නොවීය");
         }
 
         for (GrnInvoice grn : grns) {
             if (!grn.getOrgUnitId().equals(request.orgUnitId())) {
-                throw new BadRequestException("GRN Invoice " + grn.getGrnNo() + " belongs to a different org unit");
+                throw new BadRequestException("GRN Invoice " + grn.getGrnNo() + " belongs to a different org unit",
+                        "GRN ඉන්වොයිසිය " + grn.getGrnNo() + " වෙනත් ආයතන ඒකකයකට අයත් වේ");
             }
             if (usedGrnIds.contains(grn.getId())) {
                 throw new BadRequestException(
-                        "GRN Invoice " + grn.getGrnNo() + " is already associated with a purchase voucher");
+                        "GRN Invoice " + grn.getGrnNo() + " is already associated with a purchase voucher",
+                        "GRN ඉන්වොයිසිය " + grn.getGrnNo() + " දැනටමත් මිලදී ගැනීමේ වවුචරයක් සමඟ සම්බන්ධ වී ඇත");
             }
         }
 
@@ -127,14 +128,17 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
         // Fund Source Validation and Balance Check
         me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount account = monetaryAccountRepository
                 .findById(request.fundSourceId())
-                .orElseThrow(() -> new NotFoundException("Fund source not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fund source not found", "අරමුදල් මූලාශ්‍රය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
 
         if (!account.getOrgUnitId().equals(draft.getOrgUnitId())) {
-            throw new BadRequestException("Fund source does not belong to the same organization unit");
+            throw new BadRequestException("Fund source does not belong to the same organization unit",
+                    "අරමුදල් මූලාශ්‍රය එකම ආයතන ඒකකයට අයත් නොවේ");
         }
 
         if (account.getCurrentBalance().compareTo(totalAmount) < 0) {
-            throw new BadRequestException("Insufficient balance in fund source");
+            throw new BadRequestException("Insufficient balance in fund source",
+                    "අරමුදල් මූලාශ්‍රයේ ප්‍රමාණවත් ශේෂයක් නොමැත");
         }
 
         // Deduct Balance
@@ -241,12 +245,13 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
 
     private PurchaseVoucherDraft getDraft(Long id) {
         return draftRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Purchase voucher draft not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Purchase voucher draft not found",
+                        "මිලදී ගැනීමේ වවුචර් කෙටුම්පත හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -295,6 +300,10 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
     }
 
     private PurchaseVoucherRes toVoucherResponse(PurchaseVoucher voucher, List<PurchaseVoucherItem> items) {
+        String fundSourceName = monetaryAccountRepository.findById(voucher.getFundSourceId())
+                .map(me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount::getAccountName)
+                .orElse(null);
+
         List<PurchaseVoucherItemRes> itemResponses = items.stream()
                 .map(item -> new PurchaseVoucherItemRes(item.getId(), item.getGrnInvoiceId(), item.getAmount()))
                 .toList();
@@ -306,6 +315,7 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
                 voucher.getTotalAmount(),
                 voucher.getPaymentDate(),
                 voucher.getFundSourceId(),
+                fundSourceName,
                 itemResponses,
                 voucher.getCreatedAt(),
                 voucher.getUpdatedAt());

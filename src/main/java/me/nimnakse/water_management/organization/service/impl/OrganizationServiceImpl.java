@@ -28,7 +28,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrgUnitRepository orgUnitRepository;
 
     public OrganizationServiceImpl(OrganizationRepository organizationRepository,
-                                   OrgUnitRepository orgUnitRepository) {
+            OrgUnitRepository orgUnitRepository) {
         this.organizationRepository = organizationRepository;
         this.orgUnitRepository = orgUnitRepository;
     }
@@ -37,12 +37,16 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Override
     public OrganizationRes create(OrganizationCreateReq request) {
         OrgUnit orgUnit = orgUnitRepository.findById(request.orgUnitId())
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය සොයාගත නොහැක",
+                                ErrorCode.NOT_FOUND));
         if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
-            throw new BadRequestException("Organizations can only be created for branch org units");
+            throw new BadRequestException("Organizations can only be created for branch org units",
+                    "ආයතන නිර්මාණය කළ හැක්කේ ශාඛා ආයතන ඒකක සඳහා පමණි");
         }
         if (organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(request.orgUnitId()).isPresent()) {
-            throw new BadRequestException("Organization already exists for this org unit");
+            throw new BadRequestException("Organization already exists for this org unit",
+                    "මෙම ආයතන ඒකකය සඳහා ආයතනයක් දැනටමත් පවතී");
         }
 
         Organization organization = new Organization();
@@ -61,17 +65,21 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Override
     public OrganizationRes update(Long id, OrganizationUpdateReq request) {
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Organization not found", "ආයතනය හමු නොවීය", ErrorCode.NOT_FOUND));
         if (!organization.getOrgUnitId().equals(request.orgUnitId())) {
             OrgUnit orgUnit = orgUnitRepository.findById(request.orgUnitId())
-                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
             if (orgUnit.getLevel() != OrgUnitLevel.BRANCH) {
-                throw new BadRequestException("Organizations can only be created for branch org units");
+                throw new BadRequestException("Organizations can only be created for branch org units",
+                        "ආයතන නිර්මාණය කළ හැක්කේ ශාඛා ආයතන ඒකක සඳහා පමණි");
             }
             organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(request.orgUnitId())
                     .filter(existing -> !existing.getId().equals(organization.getId()))
                     .ifPresent(existing -> {
-                        throw new BadRequestException("Organization already exists for this org unit");
+                        throw new BadRequestException("Organization already exists for this org unit",
+                                "මෙම ආයතන ඒකකය සඳහා ආයතනයක් දැනටමත් පවතී");
                     });
             organization.setOrgUnitId(request.orgUnitId());
         }
@@ -86,7 +94,8 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Override
     public OrganizationRes getById(Long id) {
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Organization not found", "ආයතනය හමු නොවීය", ErrorCode.NOT_FOUND));
         return toResponse(organization);
     }
 
@@ -109,23 +118,24 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Override
     public void delete(Long id) {
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Organization not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Notification contact not found",
+                        "දැනුම්දීම් සම්බන්ධතාව සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         organization.setDeletedAt(Instant.now());
     }
 
     private void applyOrganizationFields(Organization organization,
-                                         String nameEn,
-                                         String nameSi,
-                                         String nameTa,
-                                         String addressEn,
-                                         String addressSi,
-                                         String addressTa,
-                                         String postalCode,
-                                         String registrationNumber,
-                                         String email,
-                                         String mobileNumber,
-                                         String telephoneNumber,
-                                         String logoUrl) {
+            String nameEn,
+            String nameSi,
+            String nameTa,
+            String addressEn,
+            String addressSi,
+            String addressTa,
+            String postalCode,
+            String registrationNumber,
+            String email,
+            String mobileNumber,
+            String telephoneNumber,
+            String logoUrl) {
         organization.setNameEn(nameEn);
         organization.setNameSi(nameSi);
         organization.setNameTa(nameTa);
@@ -153,7 +163,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         var items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {

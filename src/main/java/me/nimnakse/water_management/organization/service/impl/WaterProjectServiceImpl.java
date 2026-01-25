@@ -38,7 +38,8 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Override
     public WaterProjectRes update(Long id, WaterProjectUpdateReq request) {
         WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         project.setName(request.name());
         project.setStatus(request.status());
         project.setDepartmentOrgName(request.departmentOrgName());
@@ -51,7 +52,8 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Override
     public WaterProjectRes getById(Long id) {
         WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         return toResponse(project);
     }
 
@@ -67,7 +69,8 @@ public class WaterProjectServiceImpl implements WaterProjectService {
     @Override
     public void delete(Long id) {
         WaterProject project = waterProjectRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new NotFoundException("Water project not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         project.setDeletedAt(Instant.now());
     }
 

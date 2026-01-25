@@ -30,7 +30,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     private final InventoryTemplateService inventoryTemplateService;
 
     public InventoryMasterCategoryServiceImpl(InventoryMasterCategoryRepository repository,
-                                              InventoryTemplateService inventoryTemplateService) {
+            InventoryTemplateService inventoryTemplateService) {
         this.repository = repository;
         this.inventoryTemplateService = inventoryTemplateService;
     }
@@ -42,7 +42,10 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         InventoryMasterCategory parent = loadParent(request.parentId());
         validateParentHierarchy(request.level(), parent);
         String normalizedName = normalizeName(request.name());
-        /*validateUniqueness(request.level(), normalizedName, request.parentId(), null);*/
+        /*
+         * validateUniqueness(request.level(), normalizedName, request.parentId(),
+         * null);
+         */
 
         InventoryMasterCategory category = new InventoryMasterCategory();
         applyRequest(category, parent, request.level(), normalizedName, request.specification01(),
@@ -63,10 +66,12 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     @Override
     public InventoryMasterCategoryRes update(Long id, InventoryMasterCategoryUpdateReq request) {
         InventoryMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory master category not found",
+                        "ඉන්වෙන්ටරි ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
 
         if (request.parentId() != null && request.parentId().equals(id)) {
-            throw new BadRequestException("Category cannot be its own parent");
+            throw new BadRequestException("Category cannot be its own parent",
+                    "ප්‍රභේදය එහිම දෙමාපිය ප්‍රභේදය විය නොහැක");
         }
 
         InventoryMasterCategory newParent = loadParent(request.parentId());
@@ -74,11 +79,14 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
         validateParentHierarchy(request.level(), newParent);
 
         String normalizedName = normalizeName(request.name());
-        /*validateUniqueness(request.level(), normalizedName, request.parentId(), id);*/
+        /*
+         * validateUniqueness(request.level(), normalizedName, request.parentId(), id);
+         */
 
         boolean hasChildren = repository.existsByParentId(id);
         if (Boolean.TRUE.equals(request.isLeaf()) && hasChildren) {
-            throw new BadRequestException("Cannot mark category as leaf while it has child categories");
+            throw new BadRequestException("Cannot mark category as leaf while it has child categories",
+                    "අනු ප්‍රභේද පවතින විට ප්‍රභේදයක් පත්‍ර ප්‍රභේදයක් ලෙස සලකුණු කළ නොහැක");
         }
 
         Long previousParentId = category.getParentId();
@@ -100,7 +108,8 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     @Override
     public InventoryMasterCategoryRes getById(Long id) {
         InventoryMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory master category not found",
+                        "ඉන්වෙන්ටරි ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
@@ -132,8 +141,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
                     unit,
                     category.getIsSystem(),
                     category.getIsActive(),
-                    new ArrayList<>()
-            ));
+                    new ArrayList<>()));
         }
 
         List<InventoryMasterCategoryTreeRes> roots = new ArrayList<>();
@@ -160,7 +168,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     @Override
     public PageResponse<InventoryMasterCategoryRes> getLevelTwoCategories(Long levelOneCategoryId, int page, int size) {
         InventoryMasterCategory parent = loadCategory(levelOneCategoryId);
-        validateLevel(parent, 1, "Level 1 category not found");
+        validateLevel(parent, 1, "Level 1 category not found", "මට්ටම 1 ප්‍රභේදය සොයාගත නොහැක");
         Pageable pageable = buildPageable(page, size);
         Page<InventoryMasterCategory> categories = repository.findByLevelAndParentId(2, parent.getId(), pageable);
         return toPageResponse(categories);
@@ -168,9 +176,10 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
 
     @Transactional(readOnly = true)
     @Override
-    public PageResponse<InventoryMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page, int size) {
+    public PageResponse<InventoryMasterCategoryRes> getLevelThreeCategories(Long levelTwoCategoryId, int page,
+            int size) {
         InventoryMasterCategory parent = loadCategory(levelTwoCategoryId);
-        validateLevel(parent, 2, "Level 2 category not found");
+        validateLevel(parent, 2, "Level 2 category not found", "මට්ටම 2 ප්‍රභේදය සොයාගත නොහැක");
         Pageable pageable = buildPageable(page, size);
         Page<InventoryMasterCategory> categories = repository.findByLevelAndParentId(3, parent.getId(), pageable);
         return toPageResponse(categories);
@@ -180,60 +189,75 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     @Override
     public void delete(Long id) {
         InventoryMasterCategory category = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory master category not found",
+                        "ඉන්වෙන්ටරි ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
-            throw new BadRequestException("System inventory master categories cannot be deleted");
+            throw new BadRequestException("System inventory master categories cannot be deleted",
+                    "පද්ධති ඉන්වෙන්ටරි ප්‍රධාන ප්‍රභේද මකා දැමිය නොහැක");
         }
         if (repository.existsByParentId(id)) {
-            throw new BadRequestException("Cannot delete category with child categories");
+            throw new BadRequestException("Cannot delete category with child categories",
+                    "අනු ප්‍රභේද පවතින ප්‍රභේද මකා දැමිය නොහැක");
         }
 
         repository.delete(category);
         updateParentLeafStatus(loadParent(category.getParentId()));
     }
 
-    /*private void validateUniqueness(Integer level, String name, Long parentId, Long id) {
-        boolean exists;
-        if (id == null) {
-            exists = repository.existsByLevelAndNameIgnoreCaseAndParentId(level, name, parentId);
-        } else {
-            exists = repository.existsByLevelAndNameIgnoreCaseAndParentIdAndIdNot(level, name, parentId, id);
-        }
-        if (exists) {
-            throw new BadRequestException("Inventory master category already exists for the given level and parent");
-        }
-    }*/
+    /*
+     * private void validateUniqueness(Integer level, String name, Long parentId,
+     * Long id) {
+     * boolean exists;
+     * if (id == null) {
+     * exists = repository.existsByLevelAndNameIgnoreCaseAndParentId(level, name,
+     * parentId);
+     * } else {
+     * exists = repository.existsByLevelAndNameIgnoreCaseAndParentIdAndIdNot(level,
+     * name, parentId, id);
+     * }
+     * if (exists) {
+     * throw new
+     * BadRequestException("Inventory master category already exists for the given level and parent"
+     * );
+     * }
+     * }
+     */
 
     private void validateLevelRange(Integer level) {
         if (level == null || level < 1 || level > 3) {
-            throw new BadRequestException("Inventory master category level must be between 1 and 3");
+            throw new BadRequestException("Inventory master category level must be between 1 and 3",
+                    "ප්‍රධාන ඉන්වෙන්ටරි ප්‍රභේද මට්ටම 1 සහ 3 අතර විය යුතුය");
         }
     }
 
     private void validateParentHierarchy(Integer level, InventoryMasterCategory parent) {
         if (level == 1 && parent != null) {
-            throw new BadRequestException("Level 1 category cannot have a parent");
+            throw new BadRequestException("Level 1 category cannot have a parent",
+                    "මට්ටම 1 ප්‍රභේදයට දෙමාපිය ප්‍රභේදයක් තිබිය නොහැක");
         }
         if (level == 2 && (parent == null || parent.getLevel() != 1)) {
-            throw new BadRequestException("Level 2 category must have a level 1 parent");
+            throw new BadRequestException("Level 2 category must have a level 1 parent",
+                    "මට්ටම 2 ප්‍රභේදයට මට්ටම 1 දෙමාපිය ප්‍රභේදයක් තිබිය යුතුය");
         }
         if (level == 3 && (parent == null || parent.getLevel() != 2)) {
-            throw new BadRequestException("Level 3 category must have a level 2 parent");
+            throw new BadRequestException("Level 3 category must have a level 2 parent",
+                    "මට්ටම 3 ප්‍රභේදයට මට්ටම 2 දෙමාපිය ප්‍රභේදයක් තිබිය යුතුය");
         }
         validateLevelAgainstParent(level, parent);
     }
 
     private void createInventoryTemplateIfNeeded(InventoryMasterCategory levelThreeCategory,
-                                                 InventoryMasterCategory levelTwoCategory) {
+            InventoryMasterCategory levelTwoCategory) {
         if (levelThreeCategory.getLevel() != 3 || levelTwoCategory == null) {
             return;
         }
         if (levelTwoCategory.getParentId() == null) {
-            throw new BadRequestException("Level 2 category must have a level 1 parent");
+            throw new BadRequestException("Level 2 category must have a level 1 parent",
+                    "මට්ටම 2 ප්‍රභේදයට මට්ටම 1 දෙමාපිය ප්‍රභේදයක් තිබිය යුතුය");
         }
 
         InventoryMasterCategory levelOneCategory = loadCategory(levelTwoCategory.getParentId());
-        validateLevel(levelOneCategory, 1, "Level 1 category not found");
+        validateLevel(levelOneCategory, 1, "Level 1 category not found", "මට්ටම 1 ප්‍රභේදය සොයාගත නොහැක");
 
         inventoryTemplateService.createIfMissing(
                 levelOneCategory.getId(),
@@ -246,12 +270,14 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
             return null;
         }
         return repository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Parent category not found", "දෙමාපිය ප්‍රභේදය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
     }
 
     private void validateLevelAgainstParent(Integer level, InventoryMasterCategory parent) {
         if (parent != null && level <= parent.getLevel()) {
-            throw new BadRequestException("Child category level must be greater than parent level");
+            throw new BadRequestException("Child category level must be greater than parent level",
+                    "අනු ප්‍රභේද මට්ටම දෙමාපිය මට්ටමට වඩා වැඩි විය යුතුය");
         }
     }
 
@@ -260,15 +286,15 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
     }
 
     private void applyRequest(InventoryMasterCategory category,
-                              InventoryMasterCategory parent,
-                              Integer level,
-                              String name,
-                              String specification01,
-                              String specification02,
-                              String unit,
-                              Boolean isLeaf,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            InventoryMasterCategory parent,
+            Integer level,
+            String name,
+            String specification01,
+            String specification02,
+            String unit,
+            Boolean isLeaf,
+            Boolean isSystem,
+            Boolean isActive) {
         category.setParentId(parent != null ? parent.getId() : null);
         category.setLevel(level);
         category.setName(name);
@@ -299,8 +325,7 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
                 category.getIsSystem(),
                 category.getIsActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 
     private void updateParentLeafStatus(InventoryMasterCategory parent) {
@@ -331,12 +356,14 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
 
     private InventoryMasterCategory loadCategory(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Inventory master category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory master category not found",
+                        "ඉන්වෙන්ටරි ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
     }
 
-    private void validateLevel(InventoryMasterCategory category, int expectedLevel, String notFoundMessage) {
+    private void validateLevel(InventoryMasterCategory category, int expectedLevel, String messageEn,
+            String messageSn) {
         if (category.getLevel() != expectedLevel) {
-            throw new BadRequestException(notFoundMessage);
+            throw new BadRequestException(messageEn, messageSn);
         }
     }
 
@@ -346,7 +373,6 @@ public class InventoryMasterCategoryServiceImpl implements InventoryMasterCatego
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.getNumber(),
-                page.getSize()
-        );
+                page.getSize());
     }
 }

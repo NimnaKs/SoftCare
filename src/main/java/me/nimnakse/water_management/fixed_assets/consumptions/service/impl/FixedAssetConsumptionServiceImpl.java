@@ -50,13 +50,13 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     private final ExpenseAccountService expenseAccountService;
 
     public FixedAssetConsumptionServiceImpl(FixedAssetConsumptionRepository consumptionRepository,
-                                            FixedAssetTemplateRepository templateRepository,
-                                            ExpenseAccountRepository expenseAccountRepository,
-                                            ExpenseMainCategoryRepository mainCategoryRepository,
-                                            FixedAssetInitialStockRepository initialStockRepository,
-                                            GrnInvoiceItemRepository grnInvoiceItemRepository,
-                                            GrnInvoiceRepository grnInvoiceRepository,
-                                            OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
+            FixedAssetTemplateRepository templateRepository,
+            ExpenseAccountRepository expenseAccountRepository,
+            ExpenseMainCategoryRepository mainCategoryRepository,
+            FixedAssetInitialStockRepository initialStockRepository,
+            GrnInvoiceItemRepository grnInvoiceItemRepository,
+            GrnInvoiceRepository grnInvoiceRepository,
+            OrganizationAccessService organizationAccessService, ExpenseAccountService expenseAccountService) {
         this.consumptionRepository = consumptionRepository;
         this.templateRepository = templateRepository;
         this.expenseAccountRepository = expenseAccountRepository;
@@ -86,7 +86,8 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     @Override
     public FixedAssetConsumptionRes update(Long id, FixedAssetConsumptionUpdateReq request) {
         FixedAssetConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found",
+                        "ස්ථාවර වත්කම් පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         Long orgUnitId = consumption.getOrgUnitId() == null ? resolveOrgUnitId() : consumption.getOrgUnitId();
         restoreBatch(orgUnitId, consumption.getFixedAssetTemplateId(),
                 consumption.getBatchNo(), consumption.getQuantity());
@@ -104,7 +105,8 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     @Override
     public FixedAssetConsumptionRes getById(Long id) {
         FixedAssetConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found",
+                        "ස්ථාවර වත්කම් පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(consumption);
     }
 
@@ -126,26 +128,28 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     @Override
     public List<FixedAssetConsumptionBatchRes> listAvailableBatches(Long fixedAssetTemplateId) {
         if (fixedAssetTemplateId == null) {
-            throw new BadRequestException("Fixed asset template id is required");
+            throw new BadRequestException("Fixed asset template id is required",
+                    "ස්ථාවර වත්කම් සැකිලි හැඳුනුම්පත අවශ්‍යයි");
         }
         validateTemplate(fixedAssetTemplateId);
         Long orgUnitId = resolveOrgUnitId();
-        List<FixedAssetConsumptionBatchRes> initialStockBatches = loadInitialStockBatches(orgUnitId, fixedAssetTemplateId);
+        List<FixedAssetConsumptionBatchRes> initialStockBatches = loadInitialStockBatches(orgUnitId,
+                fixedAssetTemplateId);
         List<FixedAssetConsumptionBatchRes> grnBatches = loadGrnBatches(orgUnitId, fixedAssetTemplateId);
         return List.copyOf(
                 List.of(initialStockBatches, grnBatches).stream()
                         .flatMap(List::stream)
                         .filter(batch -> batch.remainingQuantity() != null
                                 && batch.remainingQuantity().compareTo(BigDecimal.ZERO) > 0)
-                        .collect(Collectors.toList())
-        );
+                        .collect(Collectors.toList()));
     }
 
     @Transactional
     @Override
     public void delete(Long id) {
         FixedAssetConsumption consumption = consumptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset consumption not found",
+                        "ස්ථාවර වත්කම් පරිභෝජනය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         Long orgUnitId = consumption.getOrgUnitId() == null ? resolveOrgUnitId() : consumption.getOrgUnitId();
         restoreBatch(orgUnitId, consumption.getFixedAssetTemplateId(),
                 consumption.getBatchNo(), consumption.getQuantity());
@@ -154,14 +158,16 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
 
     private void validateTemplate(Long templateId) {
         if (!templateRepository.existsById(templateId)) {
-            throw new NotFoundException("Fixed asset template not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Fixed asset template not found", "ස්ථාවර වත්කම් සැකිල්ල සොයාගත නොහැක",
+                    ErrorCode.NOT_FOUND);
         }
     }
 
     private Long resolveExpenseAccountId(Long expenseAccountId) {
         if (expenseAccountId != null) {
             if (!expenseAccountRepository.existsById(expenseAccountId)) {
-                throw new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND);
+                throw new NotFoundException("Expense account not found", "වියදම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND);
             }
             return expenseAccountId;
         }
@@ -196,27 +202,16 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         return expenseAccountRepository.save(account);
     }
 
-    private String generateAccountNumber() {
-        String base = "CONSUMPTION-MATERIAL";
-        String candidate = base;
-        int counter = 1;
-        while (expenseAccountRepository.existsByAccountCodeIgnoreCase(candidate)) {
-            candidate = base + "-" + counter;
-            counter += 1;
-        }
-        return candidate.toUpperCase(Locale.ROOT);
-    }
-
     private void applyRequest(FixedAssetConsumption consumption,
-                              Long orgUnitId,
-                              Long fixedAssetTemplateId,
-                              Long expenseAccountId,
-                              BigDecimal quantity,
-                              BigDecimal totalAmount,
-                              java.time.LocalDate consumedAt,
-                              String batchNo,
-                              String referenceNo,
-                              String description) {
+            Long orgUnitId,
+            Long fixedAssetTemplateId,
+            Long expenseAccountId,
+            BigDecimal quantity,
+            BigDecimal totalAmount,
+            java.time.LocalDate consumedAt,
+            String batchNo,
+            String referenceNo,
+            String description) {
         consumption.setOrgUnitId(orgUnitId);
         consumption.setFixedAssetTemplateId(fixedAssetTemplateId);
         consumption.setExpenseAccountId(expenseAccountId);
@@ -237,12 +232,12 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                 consumption.getTotalAmount(),
                 consumption.getConsumedAt(),
                 consumption.getBatchNo(),
-                resolveBatchSource(consumption.getOrgUnitId(), consumption.getFixedAssetTemplateId(), consumption.getBatchNo()),
+                resolveBatchSource(consumption.getOrgUnitId(), consumption.getFixedAssetTemplateId(),
+                        consumption.getBatchNo()),
                 consumption.getReferenceNo(),
                 consumption.getDescription(),
                 consumption.getCreatedAt(),
-                consumption.getUpdatedAt()
-        );
+                consumption.getUpdatedAt());
     }
 
     private String resolveReferenceNo(String referenceNo, Long orgUnitId, String batchNo) {
@@ -293,7 +288,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     private Long resolveOrgUnitId() {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         if (orgUnitId == null) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Member not found", "සාමාජිකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
         return orgUnitId;
     }
@@ -310,7 +305,8 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         if (initialStock != null) {
             BigDecimal remaining = resolveRemaining(initialStock.getRemainingQuantity(), initialStock.getQuantity());
             if (remaining.compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient remaining quantity for initial stock batch");
+                throw new BadRequestException("Insufficient remaining quantity for initial stock batch",
+                        "ආරම්භක තොග කාණ්ඩය සඳහා ඉතිරි ප්‍රමාණය ප්‍රමාණවත් නොවේ");
             }
             initialStock.setRemainingQuantity(remaining.subtract(quantity));
             initialStockRepository.save(initialStock);
@@ -320,13 +316,15 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
         if (grnItem != null) {
             BigDecimal remaining = resolveRemaining(grnItem.getRemainingQuantity(), grnItem.getQuantity());
             if (remaining.compareTo(quantity) < 0) {
-                throw new BadRequestException("Insufficient remaining quantity for GRN batch");
+                throw new BadRequestException("Insufficient remaining quantity for GRN batch",
+                        "GRN කාණ්ඩය සඳහා ඉතිරි ප්‍රමාණය ප්‍රමාණවත් නොවේ");
             }
             grnItem.setRemainingQuantity(remaining.subtract(quantity));
             grnInvoiceItemRepository.save(grnItem);
             return;
         }
-        throw new BadRequestException("Batch not found for fixed asset template");
+        throw new BadRequestException("Batch not found for fixed asset template",
+                "ස්ථාවර වත්කම් සැකිල්ල සඳහා කාණ්ඩය සොයාගත නොහැක");
     }
 
     private void restoreBatch(Long orgUnitId, Long fixedAssetTemplateId, String batchNo, BigDecimal quantity) {
@@ -335,7 +333,8 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
             BigDecimal remaining = resolveRemaining(initialStock.getRemainingQuantity(), initialStock.getQuantity());
             BigDecimal restored = remaining.add(quantity);
             if (restored.compareTo(initialStock.getQuantity()) > 0) {
-                throw new BadRequestException("Restored quantity exceeds initial stock quantity");
+                throw new BadRequestException("Restored quantity exceeds initial stock quantity",
+                        "ප්‍රතිසාධනය කරන ලද ප්‍රමාණය ආරම්භක තොග ප්‍රමාණය ඉක්මවා යයි");
             }
             initialStock.setRemainingQuantity(restored);
             initialStockRepository.save(initialStock);
@@ -346,7 +345,8 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
             BigDecimal remaining = resolveRemaining(grnItem.getRemainingQuantity(), grnItem.getQuantity());
             BigDecimal restored = remaining.add(quantity);
             if (restored.compareTo(grnItem.getQuantity()) > 0) {
-                throw new BadRequestException("Restored quantity exceeds GRN quantity");
+                throw new BadRequestException("Restored quantity exceeds GRN quantity",
+                        "ප්‍රතිසාධනය කරන ලද ප්‍රමාණය GRN ප්‍රමාණය ඉක්මවා යයි");
             }
             grnItem.setRemainingQuantity(restored);
             grnInvoiceItemRepository.save(grnItem);
@@ -356,7 +356,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
     private FixedAssetInitialStock findInitialStock(Long orgUnitId, Long fixedAssetTemplateId, String batchNo) {
         if (orgUnitId != null) {
             return initialStockRepository.findByOrgUnitIdAndTemplateIdAndBatchNo(
-                            orgUnitId, fixedAssetTemplateId, normalizeBatchNo(batchNo))
+                    orgUnitId, fixedAssetTemplateId, normalizeBatchNo(batchNo))
                     .orElse(null);
         }
         return initialStockRepository.findByTemplateIdAndBatchNo(fixedAssetTemplateId, normalizeBatchNo(batchNo))
@@ -387,7 +387,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                 .map(GrnInvoice::getId)
                 .findFirst();
         return matchingGrnId.flatMap(
-                        id -> matches.stream().filter(item -> Objects.equals(item.getGrnId(), id)).findFirst())
+                id -> matches.stream().filter(item -> Objects.equals(item.getGrnId(), id)).findFirst())
                 .orElse(null);
     }
 
@@ -424,8 +424,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                             remaining,
                             remaining.multiply(unitCost),
                             unitCost,
-                            BatchSourceType.INITIAL_STOCK
-                    );
+                            BatchSourceType.INITIAL_STOCK);
                 })
                 .toList();
     }
@@ -455,8 +454,7 @@ public class FixedAssetConsumptionServiceImpl implements FixedAssetConsumptionSe
                             remaining,
                             remaining.multiply(unitCost),
                             unitCost,
-                            BatchSourceType.GRN
-                    );
+                            BatchSourceType.GRN);
                 })
                 .toList();
     }

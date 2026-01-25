@@ -36,7 +36,6 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     private static final int RESERVED_START = 400101;
     private static final int RESERVED_END = 400116;
 
-
     static {
         LEVEL_ORDER.put(OrgUnitLevel.NATIONAL, 0);
         LEVEL_ORDER.put(OrgUnitLevel.PROVINCE, 1);
@@ -49,7 +48,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     private final WaterProjectRepository waterProjectRepository;
 
     public OrgUnitServiceImpl(OrgUnitRepository orgUnitRepository,
-                              WaterProjectRepository waterProjectRepository) {
+            WaterProjectRepository waterProjectRepository) {
         this.orgUnitRepository = orgUnitRepository;
         this.waterProjectRepository = waterProjectRepository;
     }
@@ -59,7 +58,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     public OrgUnitRes create(OrgUnitCreateReq request) {
         validateParent(request.level(), request.parentId());
         if (request.waterProjectId() != null && !waterProjectRepository.existsById(request.waterProjectId())) {
-            throw new NotFoundException("Water project not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
 
         OrgUnit orgUnit = new OrgUnit();
@@ -81,7 +80,6 @@ public class OrgUnitServiceImpl implements OrgUnitService {
 
         }
 
-
         OrgUnit saved = orgUnitRepository.save(orgUnit);
         return toResponse(saved);
     }
@@ -95,7 +93,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         Map<Long, OrgUnitTreeRes> nodes = new LinkedHashMap<>();
         for (OrgUnit unit : units) {
             nodes.put(unit.getId(), new OrgUnitTreeRes(unit.getId(), unit.getName(), unit.getLevel(),
-                    unit.getParentId(), unit.getWaterProjectId(), unit.getOrganizationCode() ,
+                    unit.getParentId(), unit.getWaterProjectId(), unit.getOrganizationCode(),
                     new ArrayList<>()));
         }
 
@@ -115,7 +113,8 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     @Override
     public OrgUnitRes getById(Long id) {
         OrgUnit orgUnit = orgUnitRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(orgUnit);
     }
 
@@ -123,10 +122,11 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     @Override
     public OrgUnitRes update(Long id, OrgUnitUpdateReq request) {
         OrgUnit orgUnit = orgUnitRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         validateParent(request.level(), request.parentId());
         if (request.waterProjectId() != null && !waterProjectRepository.existsById(request.waterProjectId())) {
-            throw new NotFoundException("Water project not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Water project not found", "ජල ව්‍යාපෘතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
 
         orgUnit.setName(request.name());
@@ -148,7 +148,6 @@ public class OrgUnitServiceImpl implements OrgUnitService {
                 orgUnit.setOrganizationCode(request.organizationCode());
             }
         }
-
 
         OrgUnit saved = orgUnitRepository.save(orgUnit);
         return toResponse(saved);
@@ -201,34 +200,38 @@ public class OrgUnitServiceImpl implements OrgUnitService {
     private OrgUnitRes toResponse(OrgUnit orgUnit) {
         return new OrgUnitRes(orgUnit.getId(), orgUnit.getName(), orgUnit.getLevel(),
                 orgUnit.getParentId(), orgUnit.getWaterProjectId(),
-                (orgUnit.getOrganizationCode() != null)?orgUnit.getOrganizationCode():null
-        );
+                (orgUnit.getOrganizationCode() != null) ? orgUnit.getOrganizationCode() : null);
     }
 
     private void validateParent(OrgUnitLevel level, Long parentId) {
         if (level == OrgUnitLevel.NATIONAL && parentId != null) {
-            throw new BadRequestException("National level org unit cannot have a parent");
+            throw new BadRequestException("National level org unit cannot have a parent",
+                    "ජාතික මට්ටමේ ආයතන ඒකකයකට දෙමාපිය ඒකකයක් තිබිය නොහැක");
         }
         if (level != OrgUnitLevel.NATIONAL && parentId == null) {
-            throw new BadRequestException("Parent org unit is required");
+            throw new BadRequestException("Parent org unit is required", "දෙමාපිය ආයතන ඒකකය අවශ්‍ය වේ");
         }
         if (parentId == null) {
             return;
         }
         OrgUnit parent = orgUnitRepository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Parent org unit not found",
+                        "දෙමාපිය සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         int childLevel = LEVEL_ORDER.getOrDefault(level, MIN_LEVEL_INDEX);
         int parentLevel = LEVEL_ORDER.getOrDefault(parent.getLevel(), MIN_LEVEL_INDEX);
         if (parentLevel != childLevel - 1) {
-            throw new BadRequestException("Parent org unit level does not match hierarchy");
+            throw new BadRequestException("Parent org unit level does not match hierarchy",
+                    "දෙමාපිය ආයතන ඒකක මට්ටම ධූරාවලිය සමඟ නොගැලපේ");
         }
     }
 
     private OrgUnit assertParentLevel(Long parentId, OrgUnitLevel expectedLevel) {
         OrgUnit parent = orgUnitRepository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Parent org unit not found",
+                        "දෙමාපිය සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (parent.getLevel() != expectedLevel) {
-            throw new BadRequestException("Parent org unit level does not match hierarchy");
+            throw new BadRequestException("Parent org unit level does not match hierarchy",
+                    "දෙමාපිය ආයතන ඒකක මට්ටම ධූරාවලිය සමඟ නොගැලපේ");
         }
         return parent;
     }
@@ -237,7 +240,8 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         List<OrgUnitRes> items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {
@@ -255,8 +259,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
         // allow reserved range ONLY for manual input
         if (numeric < RESERVED_START) {
             throw new IllegalArgumentException(
-                    "Organization code must be >= " + RESERVED_START
-            );
+                    "Organization code must be >= " + RESERVED_START);
         }
 
         if (orgUnitRepository.existsByOrganizationCode(code)) {
@@ -266,8 +269,7 @@ public class OrgUnitServiceImpl implements OrgUnitService {
 
     private String generateOrganizationCode() {
 
-        String maxCodeStr =
-                orgUnitRepository.findMaxOrganizationCodeByLevel(OrgUnitLevel.BRANCH);
+        String maxCodeStr = orgUnitRepository.findMaxOrganizationCodeByLevel(OrgUnitLevel.BRANCH);
 
         int next = BRANCH_CODE_START;
 

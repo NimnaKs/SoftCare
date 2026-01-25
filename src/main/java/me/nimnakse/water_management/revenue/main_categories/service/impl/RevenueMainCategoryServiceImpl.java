@@ -22,7 +22,7 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     private final RevenueAccountRepository accountRepository;
 
     public RevenueMainCategoryServiceImpl(RevenueMainCategoryRepository mainCategoryRepository,
-                                          RevenueAccountRepository accountRepository) {
+            RevenueAccountRepository accountRepository) {
         this.mainCategoryRepository = mainCategoryRepository;
         this.accountRepository = accountRepository;
     }
@@ -42,7 +42,8 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     @Override
     public RevenueMainCategoryRes update(Long id, RevenueMainCategoryUpdateReq request) {
         RevenueMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue main category not found",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
         validateUniqueness(request.code(), id, normalizedName);
         applyRequest(category, request.customerType(), request.code(), normalizedName, request.description(),
@@ -54,7 +55,8 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     @Override
     public RevenueMainCategoryRes getById(Long id) {
         RevenueMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue main category not found",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
@@ -70,12 +72,15 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     @Override
     public void delete(Long id) {
         RevenueMainCategory category = mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Revenue main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Revenue main category not found",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
-            throw new BadRequestException("Default revenue main categories cannot be deleted");
+            throw new BadRequestException("Default revenue accounts cannot be deleted",
+                    "පෙරනිමි ආදායම් ගිණුම් මකා දැමිය නොහැක");
         }
         if (accountRepository.existsByMainCategoryId(id)) {
-            throw new BadRequestException("Revenue accounts exist for this main category");
+            throw new BadRequestException("Revenue account name already exists for the main category",
+                    "ප්‍රධාන ප්‍රභේදය සඳහා ආදායම් ගිණුම් නාමය දැනටමත් පවතී");
         }
         mainCategoryRepository.delete(category);
     }
@@ -83,28 +88,32 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
     private void validateUniqueness(Integer code, Long id, String name) {
         if (id == null) {
             if (mainCategoryRepository.existsByCode(code)) {
-                throw new BadRequestException("Revenue main category code already exists");
+                throw new BadRequestException("Revenue main category code already exists",
+                        "ආදායම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
             }
             if (mainCategoryRepository.existsByNameIgnoreCase(name)) {
-                throw new BadRequestException("Revenue main category name already exists");
+                throw new BadRequestException("Revenue main category name already exists",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         } else {
             if (mainCategoryRepository.existsByCodeAndIdNot(code, id)) {
-                throw new BadRequestException("Revenue main category code already exists");
+                throw new BadRequestException("Revenue main category code already exists",
+                        "ආදායම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
             }
             if (mainCategoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-                throw new BadRequestException("Revenue main category name already exists");
+                throw new BadRequestException("Revenue main category name already exists",
+                        "ආදායම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
             }
         }
     }
 
     private void applyRequest(RevenueMainCategory category,
-                              RevenueCustomerType customerType,
-                              Integer code,
-                              String name,
-                              String description,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            RevenueCustomerType customerType,
+            Integer code,
+            String name,
+            String description,
+            Boolean isSystem,
+            Boolean isActive) {
         category.setCustomerType(customerType);
         category.setCode(code);
         category.setName(name.trim());
@@ -127,8 +136,7 @@ public class RevenueMainCategoryServiceImpl implements RevenueMainCategoryServic
                 category.getIsSystem(),
                 category.getIsActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

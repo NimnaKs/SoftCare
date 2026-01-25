@@ -44,9 +44,9 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     private final SecureRandom random = new SecureRandom();
 
     public FixedAssetTemplateServiceImpl(FixedAssetTemplateRepository templateRepository,
-                                         FixedAssetTemplateImportRepository importRepository,
-                                         FixedAssetMasterCategoryRepository categoryRepository,
-                                         OrgUnitRepository orgUnitRepository) {
+            FixedAssetTemplateImportRepository importRepository,
+            FixedAssetMasterCategoryRepository categoryRepository,
+            OrgUnitRepository orgUnitRepository) {
         this.templateRepository = templateRepository;
         this.importRepository = importRepository;
         this.categoryRepository = categoryRepository;
@@ -56,9 +56,12 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     @Transactional
     @Override
     public FixedAssetTemplateRes create(FixedAssetTemplateCreateReq request) {
-        FixedAssetMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 fixed asset category not found");
-        FixedAssetMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 fixed asset category not found");
-        FixedAssetMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3, "Level 3 fixed asset category not found");
+        FixedAssetMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1,
+                "Level 1 fixed asset category not found", "මට්ටම 1 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
+        FixedAssetMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2,
+                "Level 2 fixed asset category not found", "මට්ටම 2 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
+        FixedAssetMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3,
+                "Level 3 fixed asset category not found", "මට්ටම 3 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
         validateHierarchy(levelOne, levelTwo, levelThree);
 
         String templateCode = resolveTemplateCode(request.templateCode(), null);
@@ -74,19 +77,22 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
         return toResponse(saved, Map.of(
                 levelOne.getId(), levelOne,
                 levelTwo.getId(), levelTwo,
-                levelThree.getId(), levelThree
-        ));
+                levelThree.getId(), levelThree));
     }
 
     @Transactional
     @Override
     public FixedAssetTemplateRes update(Long id, FixedAssetTemplateUpdateReq request) {
         FixedAssetTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල හමු නොවීය", ErrorCode.NOT_FOUND));
 
-        FixedAssetMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1, "Level 1 fixed asset category not found");
-        FixedAssetMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2, "Level 2 fixed asset category not found");
-        FixedAssetMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3, "Level 3 fixed asset category not found");
+        FixedAssetMasterCategory levelOne = loadCategory(request.levelOneCategoryId(), 1,
+                "Level 1 fixed asset category not found", "මට්ටම 1 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
+        FixedAssetMasterCategory levelTwo = loadCategory(request.levelTwoCategoryId(), 2,
+                "Level 2 fixed asset category not found", "මට්ටම 2 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
+        FixedAssetMasterCategory levelThree = loadCategory(request.levelThreeCategoryId(), 3,
+                "Level 3 fixed asset category not found", "මට්ටම 3 ස්ථාවර වත්කම් ප්‍රභේදය සොයාගත නොහැක");
         validateHierarchy(levelOne, levelTwo, levelThree);
 
         String templateCode = resolveTemplateCode(request.templateCode(), id);
@@ -101,15 +107,15 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
         return toResponse(saved, Map.of(
                 levelOne.getId(), levelOne,
                 levelTwo.getId(), levelTwo,
-                levelThree.getId(), levelThree
-        ));
+                levelThree.getId(), levelThree));
     }
 
     @Transactional(readOnly = true)
     @Override
     public FixedAssetTemplateRes getById(Long id) {
         FixedAssetTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල හමු නොවීය", ErrorCode.NOT_FOUND));
         return toResponse(template, loadCategoriesMap(List.of(template)));
     }
 
@@ -130,7 +136,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
         Page<FixedAssetTemplate> templates;
         if (orgUnitId != null) {
             orgUnitRepository.findById(orgUnitId)
-                    .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය",
+                            ErrorCode.NOT_FOUND));
             templates = templateRepository.findAvailableForOrgUnit(orgUnitId, pageable);
         } else {
             templates = templateRepository.findAll(pageable);
@@ -144,15 +151,15 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 templates.getTotalElements(),
                 templates.getTotalPages(),
                 templates.getNumber(),
-                templates.getSize()
-        );
+                templates.getSize());
     }
 
     @Transactional
     @Override
     public void delete(Long id) {
         FixedAssetTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Fixed asset template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල හමු නොවීය", ErrorCode.NOT_FOUND));
         templateRepository.delete(template);
     }
 
@@ -160,10 +167,12 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     @Override
     public List<FixedAssetTemplateRes> importTemplates(FixedAssetTemplateImportReq request) {
         OrgUnit orgUnit = orgUnitRepository.findById(request.orgUnitId())
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND));
 
         if (request.templateIds().isEmpty()) {
-            throw new BadRequestException("At least one template id must be provided");
+            throw new BadRequestException("At least one template id must be provided",
+                    "අවම වශයෙන් එක් සැකිලි හැඳුනුම්පතක්වත් සැපයිය යුතුය");
         }
 
         List<FixedAssetTemplate> templates = templateRepository.findByIdIn(request.templateIds());
@@ -172,7 +181,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 .filter(id -> !foundIds.contains(id))
                 .toList();
         if (!missing.isEmpty()) {
-            throw new NotFoundException("One or more fixed asset templates were not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("One or more fixed asset templates were not found",
+                    "ස්ථාවර වත්කම් සැකිලි එකක් හෝ කිහිපයක් සොයාගත නොහැකි විය", ErrorCode.NOT_FOUND);
         }
 
         for (FixedAssetTemplate template : templates) {
@@ -194,7 +204,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
     @Override
     public PageResponse<FixedAssetTemplateRes> getByOrgUnit(Long orgUnitId, int page, int size) {
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
-                .orElseThrow(() -> new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල සොයාගත නොහැක", ErrorCode.NOT_FOUND));
 
         Pageable pageable = buildPageable(page, size);
         Page<FixedAssetTemplate> templates = templateRepository.findImportedForOrgUnit(orgUnit.getId(), pageable);
@@ -207,11 +218,11 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 templates.getTotalElements(),
                 templates.getTotalPages(),
                 templates.getNumber(),
-                templates.getSize()
-        );
+                templates.getSize());
     }
 
-    private FixedAssetTemplateRes toResponse(FixedAssetTemplate template, Map<Long, FixedAssetMasterCategory> categories) {
+    private FixedAssetTemplateRes toResponse(FixedAssetTemplate template,
+            Map<Long, FixedAssetMasterCategory> categories) {
         FixedAssetMasterCategory levelOne = categories.get(template.getLevelOneCategoryId());
         FixedAssetMasterCategory levelTwo = categories.get(template.getLevelTwoCategoryId());
         FixedAssetMasterCategory levelThree = categories.get(template.getLevelThreeCategoryId());
@@ -228,18 +239,19 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 template.getLevelThreeCategoryId(),
                 levelThree != null ? levelThree.getName() : null,
                 template.getCreatedAt(),
-                template.getUpdatedAt()
-        );
+                template.getUpdatedAt());
     }
 
     private void validateHierarchy(FixedAssetMasterCategory levelOne,
-                                   FixedAssetMasterCategory levelTwo,
-                                   FixedAssetMasterCategory levelThree) {
+            FixedAssetMasterCategory levelTwo,
+            FixedAssetMasterCategory levelThree) {
         if (!Objects.equals(levelTwo.getParentId(), levelOne.getId())) {
-            throw new BadRequestException("Level 2 category must belong to the provided level 1 category");
+            throw new BadRequestException("Level 2 category must belong to the provided level 1 category",
+                    "මට්ටම 2 ප්‍රභේදය සපයන ලද මට්ටම 1 ප්‍රභේදයට අයත් විය යුතුය");
         }
         if (!Objects.equals(levelThree.getParentId(), levelTwo.getId())) {
-            throw new BadRequestException("Level 3 category must belong to the provided level 2 category");
+            throw new BadRequestException("Level 3 category must belong to the provided level 2 category",
+                    "මට්ටම 3 ප්‍රභේදය සපයන ලද මට්ටම 2 ප්‍රභේදයට අයත් විය යුතුය");
         }
     }
 
@@ -250,7 +262,7 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                     ? templateRepository.existsByTemplateCodeIgnoreCase(normalized)
                     : templateRepository.existsByTemplateCodeIgnoreCaseAndIdNot(normalized, id);
             if (exists) {
-                throw new BadRequestException("Template code already exists");
+                throw new BadRequestException("Template code already exists", "සැකිලි කේතය දැනටමත් පවතී");
             }
             return normalized;
         }
@@ -263,7 +275,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 return generated;
             }
         }
-        throw new BadRequestException("Unable to generate a unique template code");
+        throw new BadRequestException("Unable to generate a unique template code",
+                "අද්විතීය සැකිලි කේතයක් උත්පාදනය කිරීමට නොහැක");
     }
 
     private String generateRandomNumericCode(int length) {
@@ -281,7 +294,8 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 : templateRepository.existsByLevelOneCategoryIdAndLevelTwoCategoryIdAndLevelThreeCategoryIdAndIdNot(
                         levelOneId, levelTwoId, levelThreeId, id);
         if (exists) {
-            throw new BadRequestException("Template for the provided category combination already exists");
+            throw new BadRequestException("Template for the provided category combination already exists",
+                    "සපයන ලද ප්‍රභේද සංයෝජනය සඳහා සැකිල්ල දැනටමත් පවතී");
         }
     }
 
@@ -298,11 +312,11 @@ public class FixedAssetTemplateServiceImpl implements FixedAssetTemplateService 
                 .collect(Collectors.toMap(FixedAssetMasterCategory::getId, Function.identity()));
     }
 
-    private FixedAssetMasterCategory loadCategory(Long id, int expectedLevel, String notFoundMessage) {
+    private FixedAssetMasterCategory loadCategory(Long id, int expectedLevel, String messageEn, String messageSn) {
         FixedAssetMasterCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(notFoundMessage, ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(messageEn, messageSn, ErrorCode.NOT_FOUND));
         if (category.getLevel() == null || category.getLevel() != expectedLevel) {
-            throw new BadRequestException("Category level mismatch for template creation");
+            throw new BadRequestException(messageEn, messageSn);
         }
         return category;
     }

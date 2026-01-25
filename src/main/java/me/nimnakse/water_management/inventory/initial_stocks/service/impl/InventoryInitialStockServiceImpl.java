@@ -33,8 +33,8 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
     private final OrgUnitRepository orgUnitRepository;
 
     public InventoryInitialStockServiceImpl(InventoryInitialStockRepository initialStockRepository,
-                                            InventoryTemplateRepository templateRepository,
-                                            OrgUnitRepository orgUnitRepository) {
+            InventoryTemplateRepository templateRepository,
+            OrgUnitRepository orgUnitRepository) {
         this.initialStockRepository = initialStockRepository;
         this.templateRepository = templateRepository;
         this.orgUnitRepository = orgUnitRepository;
@@ -62,17 +62,20 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
     @Override
     public InventoryInitialStockRes update(Long id, InventoryInitialStockUpdateReq request) {
         InventoryInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found",
+                        "ආරම්භක ඉන්වෙන්ටරි තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         InventoryTemplate template = loadTemplate(request.templateId());
         if (!Objects.equals(stock.getOrgUnitId(), request.orgUnitId())
                 && initialStockRepository.existsByOrgUnitIdAndBatchNoAndIdNot(
-                request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
-            throw new BadRequestException("Initial inventory stock batch number already exists in the org unit");
+                        request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
+            throw new BadRequestException("Initial inventory stock batch number already exists in the org unit",
+                    "මෙම ආයතන ඒකකය සඳහා ආරම්භක ඉන්වෙන්ටරි තොග කාණ්ඩ අංකය දැනටමත් පවතී");
         }
         BigDecimal consumedQuantity = resolveConsumedQuantity(stock.getQuantity(), stock.getRemainingQuantity());
         if (request.quantity().compareTo(consumedQuantity) < 0) {
-            throw new BadRequestException("Initial inventory stock quantity cannot be less than consumed quantity");
+            throw new BadRequestException("Initial inventory stock quantity cannot be less than consumed quantity",
+                    "ආරම්භක ඉන්වෙන්ටරි තොග ප්‍රමාණය පරිභෝජනය කළ ප්‍රමාණයට වඩා අඩු විය නොහැක");
         }
         stock.setOrgUnitId(request.orgUnitId());
         stock.setTemplateId(template.getId());
@@ -86,7 +89,8 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
     @Override
     public InventoryInitialStockRes getById(Long id) {
         InventoryInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found",
+                        "ආරම්භක ඉන්වෙන්ටරි තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         InventoryTemplate template = loadTemplate(stock.getTemplateId());
         return toResponse(stock, template);
     }
@@ -118,19 +122,21 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
     @Override
     public void delete(Long id) {
         InventoryInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial inventory stock not found",
+                        "ආරම්භක ඉන්වෙන්ටරි තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         initialStockRepository.delete(stock);
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
     private InventoryTemplate loadTemplate(Long templateId) {
         return templateRepository.findById(templateId)
-                .orElseThrow(() -> new NotFoundException("Inventory template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Inventory template not found",
+                        "ඉන්වෙන්ටරි සැකිල්ල සොයාගත නොහැක", ErrorCode.NOT_FOUND));
     }
 
     private int resolveNextSequence(Long orgUnitId) {
@@ -138,7 +144,8 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
         int next = latest == null ? 1 : latest.getBatchSequence() + 1;
         String nextBatchNo = formatBatchNo(next);
         if (initialStockRepository.existsByOrgUnitIdAndBatchNo(orgUnitId, nextBatchNo)) {
-            throw new BadRequestException("Unable to generate a unique batch number");
+            throw new BadRequestException("Unable to generate a unique batch number",
+                    "අද්විතීය කාණ්ඩ අංකයක් උත්පාදනය කිරීමට නොහැක");
         }
         return next;
     }
@@ -175,7 +182,6 @@ public class InventoryInitialStockServiceImpl implements InventoryInitialStockSe
                 stock.getQuantity(),
                 stock.getUnitCost(),
                 stock.getCreatedAt(),
-                stock.getUpdatedAt()
-        );
+                stock.getUpdatedAt());
     }
 }

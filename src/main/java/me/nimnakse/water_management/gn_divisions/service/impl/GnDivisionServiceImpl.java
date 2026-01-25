@@ -20,7 +20,7 @@ public class GnDivisionServiceImpl implements GnDivisionService {
     private final ConnectionRepository connectionRepository;
 
     public GnDivisionServiceImpl(GnDivisionRepository gnDivisionRepository,
-                                 ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository) {
         this.gnDivisionRepository = gnDivisionRepository;
         this.connectionRepository = connectionRepository;
     }
@@ -29,7 +29,7 @@ public class GnDivisionServiceImpl implements GnDivisionService {
     @Override
     public GnDivisionRes create(GnDivisionCreateReq request) {
         if (gnDivisionRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("GN division already exists");
+            throw new BadRequestException("GN division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
         GnDivision division = new GnDivision();
         division.setName(request.name().trim());
@@ -40,9 +40,10 @@ public class GnDivisionServiceImpl implements GnDivisionService {
     @Override
     public GnDivisionRes update(Long id, GnDivisionUpdateReq request) {
         GnDivision division = gnDivisionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("GN division not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (gnDivisionRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("GN division already exists");
+            throw new BadRequestException("GN division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
         division.setName(request.name().trim());
         return toResponse(gnDivisionRepository.save(division));
@@ -52,7 +53,8 @@ public class GnDivisionServiceImpl implements GnDivisionService {
     @Override
     public GnDivisionRes getById(Long id) {
         GnDivision division = gnDivisionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("GN division not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(division);
     }
 
@@ -68,9 +70,11 @@ public class GnDivisionServiceImpl implements GnDivisionService {
     @Override
     public void delete(Long id) {
         GnDivision division = gnDivisionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("GN division not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (connectionRepository.existsByGnDivisionId(id)) {
-            throw new BadRequestException("GN division is linked to connections and cannot be deleted");
+            throw new BadRequestException("GN division is linked to connections and cannot be deleted",
+                    "ග්‍රාම නිලධාරී වසම සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         gnDivisionRepository.delete(division);
     }
@@ -80,7 +84,6 @@ public class GnDivisionServiceImpl implements GnDivisionService {
                 division.getId(),
                 division.getName(),
                 division.getCreatedAt(),
-                division.getUpdatedAt()
-        );
+                division.getUpdatedAt());
     }
 }

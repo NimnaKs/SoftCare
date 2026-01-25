@@ -29,8 +29,8 @@ public class CashAccountServiceImpl implements CashAccountService {
     private final OrganizationAccessService organizationAccessService;
 
     public CashAccountServiceImpl(MonetaryAccountRepository accountRepository,
-                                  OrgUnitRepository orgUnitRepository,
-                                  OrganizationAccessService organizationAccessService) {
+            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService organizationAccessService) {
         this.accountRepository = accountRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.organizationAccessService = organizationAccessService;
@@ -43,7 +43,8 @@ public class CashAccountServiceImpl implements CashAccountService {
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         String normalizedName = request.accountName().trim();
         if (accountRepository.existsByOrgUnitIdAndAccountNameIgnoreCase(request.orgUnitId(), normalizedName)) {
-            throw new BadRequestException("Account name already exists for the org unit");
+            throw new BadRequestException("Account name already exists for the org unit",
+                    "මෙම ආයතන ඒකකය සඳහා ගිණුම් නාමය දැනටමත් පවතී");
         }
         MonetaryAccount account = new MonetaryAccount();
         applyRequest(account, request.type(), request.bankAccountType(), normalizedName, request.accountNumber(),
@@ -60,13 +61,15 @@ public class CashAccountServiceImpl implements CashAccountService {
     @Override
     public CashAccountRes update(Long id, CashAccountUpdateReq request) {
         MonetaryAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         organizationAccessService.enforceOrgUnitAccess(request.orgUnitId());
         String normalizedName = request.accountName().trim();
         if (accountRepository.existsByOrgUnitIdAndAccountNameIgnoreCaseAndIdNot(
                 request.orgUnitId(), normalizedName, account.getId())) {
-            throw new BadRequestException("Account name already exists for the org unit");
+            throw new BadRequestException("Account name already exists for the org unit",
+                    "මෙම ආයතන ඒකකය සඳහා ගිණුම් නාමය දැනටමත් පවතී");
         }
         applyRequest(account, request.type(), request.bankAccountType(), normalizedName, request.accountNumber(),
                 request.bankName(), request.branchName(), request.branchCode(), request.branchContactNumber(),
@@ -82,7 +85,8 @@ public class CashAccountServiceImpl implements CashAccountService {
     @Override
     public CashAccountRes getById(Long id) {
         MonetaryAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(account.getOrgUnitId());
         return toResponse(account);
     }
@@ -102,35 +106,39 @@ public class CashAccountServiceImpl implements CashAccountService {
     @Override
     public void deactivate(Long id) {
         MonetaryAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(account.getOrgUnitId());
         account.setIsActive(Boolean.FALSE);
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
     private void applyRequest(MonetaryAccount account,
-                              MonetaryAccountType type,
-                              BankAccountType bankAccountType,
-                              String accountName,
-                              String accountNumber,
-                              String bankName,
-                              String branchName,
-                              String branchCode,
-                              String branchContactNumber,
-                              BigDecimal openingBalance,
-                              String description) {
+            MonetaryAccountType type,
+            BankAccountType bankAccountType,
+            String accountName,
+            String accountNumber,
+            String bankName,
+            String branchName,
+            String branchCode,
+            String branchContactNumber,
+            BigDecimal openingBalance,
+            String description) {
         if (type == MonetaryAccountType.BANK) {
             if (bankAccountType == null) {
-                throw new BadRequestException("Bank account type is required for bank accounts");
+                throw new BadRequestException("Bank account type is required for bank accounts",
+                        "බැංකු ගිණුම් සඳහා බැංකු ගිණුම් වර්ගය අවශ්‍ය වේ");
             }
             if (!StringUtils.hasText(accountNumber) || !StringUtils.hasText(bankName)
                     || !StringUtils.hasText(branchName)) {
-                throw new BadRequestException("Account number, bank name, and branch name are required for bank accounts");
+                throw new BadRequestException(
+                        "Account number, bank name, and branch name are required for bank accounts",
+                        "බැංකු ගිණුම් සඳහා ගිණුම් අංකය, බැංකු නම සහ ශාඛා නාමය අවශ්‍ය වේ");
             }
         }
         account.setType(type);
@@ -149,7 +157,8 @@ public class CashAccountServiceImpl implements CashAccountService {
         var items = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
-        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(items, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     private PageRequest pageRequest(int page, int size) {
@@ -173,8 +182,7 @@ public class CashAccountServiceImpl implements CashAccountService {
                 account.getDescription(),
                 account.getIsActive(),
                 account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+                account.getUpdatedAt());
     }
 
     private String trimToNull(String value) {

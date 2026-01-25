@@ -66,6 +66,7 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         private PaymentVoucher getVoucher(Long id) {
                 return voucherRepository.findById(id)
                                 .orElseThrow(() -> new NotFoundException("Payment voucher not found",
+                                                "ගෙවීම් වවුචරය සොයාගත නොහැක",
                                                 ErrorCode.NOT_FOUND));
         }
 

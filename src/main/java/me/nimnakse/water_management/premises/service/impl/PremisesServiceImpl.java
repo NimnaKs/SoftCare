@@ -23,8 +23,8 @@ public class PremisesServiceImpl implements PremisesService {
     private final ConnectionRepository connectionRepository;
 
     public PremisesServiceImpl(PremisesRepository premisesRepository,
-                               BillingZoneRepository billingZoneRepository,
-                               ConnectionRepository connectionRepository) {
+            BillingZoneRepository billingZoneRepository,
+            ConnectionRepository connectionRepository) {
         this.premisesRepository = premisesRepository;
         this.billingZoneRepository = billingZoneRepository;
         this.connectionRepository = connectionRepository;
@@ -36,7 +36,8 @@ public class PremisesServiceImpl implements PremisesService {
         validateBillingZone(request.billingZoneId());
         validateParent(request.billingZoneId(), request.parentId(), null);
         if (premisesRepository.existsByBillingZoneIdAndPremisesCode(request.billingZoneId(), request.premisesCode())) {
-            throw new BadRequestException("Premises code already exists in the billing zone");
+            throw new BadRequestException("Premises code already exists in the billing zone",
+                    "බිල්පත් කලාපය තුළ පරිශ්‍ර කේතය දැනටමත් පවතී");
         }
         Premises premises = new Premises();
         premises.setBillingZoneId(request.billingZoneId());
@@ -50,12 +51,14 @@ public class PremisesServiceImpl implements PremisesService {
     @Override
     public PremisesRes update(Long id, PremisesUpdateReq request) {
         Premises premises = premisesRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Premises not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Premises not found", "පරිශ්‍රය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         validateBillingZone(request.billingZoneId());
         validateParent(request.billingZoneId(), request.parentId(), id);
         if (premisesRepository.existsByBillingZoneIdAndPremisesCodeAndIdNot(
                 request.billingZoneId(), request.premisesCode(), id)) {
-            throw new BadRequestException("Premises code already exists in the billing zone");
+            throw new BadRequestException("Premises code already exists in the billing zone",
+                    "බිල්පත් කලාපය තුළ පරිශ්‍ර කේතය දැනටමත් පවතී");
         }
         premises.setBillingZoneId(request.billingZoneId());
         premises.setPremisesCode(request.premisesCode().trim());
@@ -68,7 +71,8 @@ public class PremisesServiceImpl implements PremisesService {
     @Override
     public PremisesRes getById(Long id) {
         Premises premises = premisesRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Premises not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Premises not found", "පරිශ්‍රය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(premises);
     }
 
@@ -89,19 +93,22 @@ public class PremisesServiceImpl implements PremisesService {
     @Override
     public void delete(Long id) {
         Premises premises = premisesRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Premises not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Premises not found", "පරිශ්‍රය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (connectionRepository.existsByPremisesId(id)) {
-            throw new BadRequestException("Premises is linked to a connection and cannot be deleted");
+            throw new BadRequestException("Premises is linked to a connection and cannot be deleted",
+                    "පරිශ්‍රය සම්බන්ධතාවයකට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         if (premisesRepository.existsByParentId(id)) {
-            throw new BadRequestException("Premises has child entries and cannot be deleted");
+            throw new BadRequestException("Premises has child entries and cannot be deleted",
+                    "අනු ඇතුළත් කිරීම් පවතින පරිශ්‍ර මකා දැමිය නොහැක");
         }
         premisesRepository.delete(premises);
     }
 
     private void validateBillingZone(Long billingZoneId) {
         if (billingZoneId == null || !billingZoneRepository.existsById(billingZoneId)) {
-            throw new NotFoundException("Billing zone not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -110,12 +117,15 @@ public class PremisesServiceImpl implements PremisesService {
             return;
         }
         if (currentId != null && currentId.equals(parentId)) {
-            throw new BadRequestException("Premises cannot reference itself as a parent");
+            throw new BadRequestException("Premises cannot reference itself as a parent",
+                    "පරිශ්‍රය එහිම දෙමාපිය පරිශ්‍රයක් ලෙස යොමු කළ නොහැක");
         }
         Premises parent = premisesRepository.findById(parentId)
-                .orElseThrow(() -> new NotFoundException("Parent premises not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Parent premises not found", "දෙමාපිය පරිශ්‍රය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (!parent.getBillingZoneId().equals(billingZoneId)) {
-            throw new BadRequestException("Parent premises must belong to the same billing zone");
+            throw new BadRequestException("Parent premises must belong to the same billing zone",
+                    "දෙමාපිය පරිශ්‍රය එකම බිල්පත් කලාපයට අයත් විය යුතුය");
         }
     }
 
@@ -127,7 +137,6 @@ public class PremisesServiceImpl implements PremisesService {
                 premises.getSortPath(),
                 premises.getParentId(),
                 premises.getCreatedAt(),
-                premises.getUpdatedAt()
-        );
+                premises.getUpdatedAt());
     }
 }

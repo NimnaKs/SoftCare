@@ -43,15 +43,15 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final OrganizationAccessService organizationAccessService;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
-                                 MemberRepository memberRepository,
-                                 PremisesRepository premisesRepository,
-                                 BillingZoneRepository billingZoneRepository,
-                                 TariffRepository tariffRepository,
-                                 GnDivisionRepository gnDivisionRepository,
-                                 ValveRepository valveRepository,
-                                 SocietyRepository societyRepository,
-                                 ClusterRepository clusterRepository,
-                                 OrganizationAccessService organizationAccessService) {
+            MemberRepository memberRepository,
+            PremisesRepository premisesRepository,
+            BillingZoneRepository billingZoneRepository,
+            TariffRepository tariffRepository,
+            GnDivisionRepository gnDivisionRepository,
+            ValveRepository valveRepository,
+            SocietyRepository societyRepository,
+            ClusterRepository clusterRepository,
+            OrganizationAccessService organizationAccessService) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.premisesRepository = premisesRepository;
@@ -68,7 +68,8 @@ public class ConnectionServiceImpl implements ConnectionService {
     @Override
     public ConnectionRes create(ConnectionCreateReq request) {
         Member member = memberRepository.findById(request.memberId())
-                .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Member not found", "සාමාජිකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         organizationAccessService.enforceOrgUnitAccess(member.getOrgUnitId());
         validatePremises(request.premisesId());
         validateBillingZone(request.billingZoneId());
@@ -78,7 +79,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         validateOptionalReference(request.societyId(), "Society", societyRepository::existsById);
         validateOptionalReference(request.clusterId(), "Cluster", clusterRepository::existsById);
         if (connectionRepository.existsByPremisesId(request.premisesId())) {
-            throw new BadRequestException("Premises already has an active connection");
+            throw new BadRequestException("Connection already exists", "සම්බන්ධතාවය දැනටමත් පවතී");
         }
         validateContactNumbers(request.mobileNumber(), request.secondaryNumber(), request.fixedLineNumber());
         Connection connection = new Connection();
@@ -107,31 +108,39 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Transactional(readOnly = true)
     @Override
-    public ConnectionSearchRes search(String membershipCode, String accountNumber, String nicNumber, String phoneNumber) {
+    public ConnectionSearchRes search(String membershipCode, String accountNumber, String nicNumber,
+            String phoneNumber) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         Member member = null;
         if (accountNumber != null && !accountNumber.isBlank()) {
             Connection connection = connectionRepository.findByAccountNumber(accountNumber)
-                    .orElseThrow(() -> new NotFoundException("Connection not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Connection not found", "සම්බන්ධතාවය සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
             member = memberRepository.findById(connection.getMemberId())
-                    .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Member not found", "සාමාජිකයා සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
             enforceOrganizationScope(member.getOrgUnitId());
         } else if (membershipCode != null && !membershipCode.isBlank()) {
             member = findByMembershipCode(membershipCode, orgUnitId)
-                    .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Member not found", "සාමාජිකයා සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
         } else if (nicNumber != null && !nicNumber.isBlank()) {
             NicUtils.NicParseResult result = NicUtils.parse(nicNumber)
-                    .orElseThrow(() -> new BadRequestException("Invalid NIC format"));
+                    .orElseThrow(() -> new BadRequestException("Invalid NIC format",
+                            "වැරදි ජාතික හැඳුනුම්පත් අංක ආකෘතියකි"));
             member = findByNicNew(result.newNic(), orgUnitId)
                     .orElseGet(() -> findByNicOldStartingWith(result.numericKey(), orgUnitId).stream()
                             .findFirst()
-                            .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND)));
+                            .orElseThrow(() -> new NotFoundException("Cash account not found",
+                                    "මුදල් ගිණුම සොයාගත නොහැක", ErrorCode.NOT_FOUND)));
         } else if (phoneNumber != null && !phoneNumber.isBlank()) {
             member = findByMobileNumber(phoneNumber, orgUnitId).stream()
                     .findFirst()
-                    .orElseThrow(() -> new NotFoundException("Member not found", ErrorCode.NOT_FOUND));
+                    .orElseThrow(() -> new NotFoundException("Member not found", "සාමාජිකයා සොයාගත නොහැක",
+                            ErrorCode.NOT_FOUND));
         } else {
-            throw new BadRequestException("Provide membership ID, account number, NIC, or phone number");
+            throw new BadRequestException("Provide membership ID, NIC, or phone number",
+                    "සාමාජික හැඳුනුම්පත, NIC හෝ දුරකථන අංකය ලබා දෙන්න");
         }
 
         List<ConnectionRes> connections = connectionRepository.findByMemberId(member.getId()).stream()
@@ -143,13 +152,16 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     private void validateContactNumbers(String mobileNumber, String secondary, String fixed) {
         if (!ValidationUtils.isValidSriLankaMobile(mobileNumber)) {
-            throw new BadRequestException("Mobile number must be a 10-digit number starting with 07");
+            throw new BadRequestException("Mobile number must be a 10-digit number starting with 07",
+                    "ජංගම දුරකථන අංකය 07 න් ආරම්භ වන ඉලක්කම් 10 ක අංකයක් විය යුතුය");
         }
         if (secondary != null && !secondary.isBlank() && !ValidationUtils.isValidSriLankaPhone(secondary)) {
-            throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number");
+            throw new BadRequestException("Secondary contact number must be a 10-digit Sri Lankan phone number",
+                    "ද්විතීයික සම්බන්ධතා අංකය ඉලක්කම් 10 ක ශ්‍රී ලංකා දුරකථන අංකයක් විය යුතුය");
         }
         if (fixed != null && !fixed.isBlank() && !ValidationUtils.isValidSriLankaPhone(fixed)) {
-            throw new BadRequestException("Fixed line number must be a 10-digit Sri Lankan phone number");
+            throw new BadRequestException("Fixed line number must be a 10-digit Sri Lankan phone number",
+                    "ස්ථාවර දුරකථන අංකය ඉලක්කම් 10 ක ශ්‍රී ලංකා දුරකථන අංකයක් විය යුතුය");
         }
     }
 
@@ -199,8 +211,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 connection.getFixedLineNumber(),
                 connection.getTariffId(),
                 connection.getCreatedAt(),
-                connection.getUpdatedAt()
-        );
+                connection.getUpdatedAt());
     }
 
     private MemberSummaryRes toMemberSummary(Member member) {
@@ -215,31 +226,30 @@ public class ConnectionServiceImpl implements ConnectionService {
                 member.getRegistrationNumber(),
                 member.getNicOld(),
                 member.getNicNew(),
-                member.getMobileNumber()
-        );
+                member.getMobileNumber());
     }
 
     private void validatePremises(Long premisesId) {
         if (premisesId == null || !premisesRepository.existsById(premisesId)) {
-            throw new NotFoundException("Premises not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Premises not found", "පරිශ්‍රය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
     private void validateBillingZone(Long billingZoneId) {
         if (billingZoneId == null || !billingZoneRepository.existsById(billingZoneId)) {
-            throw new NotFoundException("Billing zone not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
     private void validateTariff(Long tariffId) {
         if (tariffId == null || !tariffRepository.existsById(tariffId)) {
-            throw new NotFoundException("Tariff not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 
     private void validateOptionalReference(Long id, String name, java.util.function.Predicate<Long> existsById) {
         if (id != null && !existsById.test(id)) {
-            throw new NotFoundException(name + " not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException(name + " not found", "සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
     }
 

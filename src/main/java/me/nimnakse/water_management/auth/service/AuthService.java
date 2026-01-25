@@ -25,10 +25,10 @@ public class AuthService {
     private final long accessTokenValidityMs;
 
     public AuthService(AuthenticationManager authenticationManager,
-                       CustomUserDetailsService userDetailsService,
-                       JwtService jwtService,
-                       OrganizationRepository organizationRepository,
-                       @Value("${security.jwt.access-token-validity-ms}") long accessTokenValidityMs) {
+            CustomUserDetailsService userDetailsService,
+            JwtService jwtService,
+            OrganizationRepository organizationRepository,
+            @Value("${security.jwt.access-token-validity-ms}") long accessTokenValidityMs) {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.jwtService = jwtService;
@@ -38,8 +38,7 @@ public class AuthService {
 
     public AuthRes login(String username, String password) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password)
-        );
+                new UsernamePasswordAuthenticationToken(username, password));
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         Long organizationId = resolveOrganizationId(principal);
         String accessToken = jwtService.generateAccessToken(principal, organizationId);
@@ -50,7 +49,7 @@ public class AuthService {
     public AuthRes refresh(String refreshToken) {
         Claims claims = jwtService.parseClaims(refreshToken);
         if (!jwtService.isRefreshToken(claims)) {
-            throw new BadRequestException("Invalid refresh token");
+            throw new BadRequestException("Invalid refresh token", "වලංගු නොවන නැවුම් කිරීමේ ටෝකනය");
         }
         UserDetails userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
         UserPrincipal principal = (UserPrincipal) userDetails;
@@ -67,7 +66,8 @@ public class AuthService {
 
         OrgUnit orgUnit = principal.getUser().getOrgUnit();
         if (orgUnit == null) {
-            throw new BadRequestException("Branch user must be assigned to an org unit");
+            throw new BadRequestException("Branch user must be assigned to an org unit",
+                    "ශාඛා පරිශීලකයෙකු ආයතන ඒකකයකට අනුයුක්ත කළ යුතුය");
         }
 
         return orgUnit.getId();

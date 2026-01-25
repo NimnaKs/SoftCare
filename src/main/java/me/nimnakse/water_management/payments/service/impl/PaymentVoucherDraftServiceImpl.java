@@ -95,7 +95,8 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         for (PaymentVoucherDraftItemUpdateReq itemReq : request.items()) {
             PaymentVoucherDraftItem item = byExpenseAccount.get(itemReq.expenseAccountId());
             if (item == null) {
-                throw new BadRequestException("Draft item not found for expense account " + itemReq.expenseAccountId());
+                throw new BadRequestException("Draft item not found for expense account " + itemReq.expenseAccountId(),
+                        "වියදම් ගිණුම සඳහා කෙටුම්පත් අයිතමය හමු නොවීය " + itemReq.expenseAccountId());
             }
             item.setDescription(trimToNull(itemReq.description()));
             item.setTotalAmount(itemReq.totalAmount());
@@ -112,7 +113,8 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         List<PaymentVoucherDraftItem> items = draftItemRepository.findByDraftId(draft.getId());
         boolean missingAmount = items.stream().anyMatch(item -> item.getTotalAmount() == null);
         if (missingAmount) {
-            throw new BadRequestException("All draft items must have amounts before accepting");
+            throw new BadRequestException("All draft items must have amounts before accepting",
+                    "පිළිගැනීමට පෙර සියලුම කෙටුම්පත් අයිතම සඳහා මුදලක් තිබිය යුතුය");
         }
         return toDraftResponse(draft, items);
     }
@@ -135,22 +137,26 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         // Validate Fund Source and Balance
         me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount account = monetaryAccountRepository
                 .findById(request.fundSourceId())
-                .orElseThrow(() -> new NotFoundException("Fund source not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fund source not found", "අරමුදල් මූලාශ්‍රය හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
 
         if (!account.getOrgUnitId().equals(draft.getOrgUnitId())) {
-            throw new BadRequestException("Fund source does not belong to the same organization unit");
+            throw new BadRequestException("Fund source does not belong to the same organization unit",
+                    "අරමුදල් මූලාශ්‍රය එකම ආයතන ඒකකයට අයත් නොවේ");
         }
 
         List<PaymentVoucherDraftItem> draftItems = draftItemRepository.findByDraftId(draft.getId());
         boolean missingAmount = draftItems.stream().anyMatch(item -> item.getTotalAmount() == null);
         if (missingAmount) {
-            throw new BadRequestException("All draft items must have amounts before converting to payment vouchers");
+            throw new BadRequestException("All draft items must have amounts before converting to payment vouchers",
+                    "ගෙවීම් වවුචර බවට පරිවර්තනය කිරීමට පෙර සියලුම කෙටුම්පත් අයිතම සඳහා මුදලක් තිබිය යුතුය");
         }
 
         BigDecimal totalAmount = calculateTotalAmount(draftItems);
 
         if (account.getCurrentBalance().compareTo(totalAmount) < 0) {
-            throw new BadRequestException("Insufficient balance in fund source");
+            throw new BadRequestException("Insufficient balance in fund source",
+                    "අරමුදල් මූලාශ්‍රයේ ප්‍රමාණවත් ශේෂයක් නොමැත");
         }
 
         // Deduct Balance
@@ -211,12 +217,13 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
 
     private PaymentVoucherDraft getDraft(Long id) {
         return draftRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Payment voucher draft not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Payment voucher draft not found",
+                        "ගෙවීම් වවුචර කෙටුම්පත හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
@@ -227,7 +234,8 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         }
         boolean hasDuplicates = counts.values().stream().anyMatch(count -> count > 1);
         if (hasDuplicates) {
-            throw new BadRequestException("Duplicate expense accounts are not allowed in drafts");
+            throw new BadRequestException("Duplicate expense accounts are not allowed in drafts",
+                    "කෙටුම්පත් වල අනුපිටපත් වියදම් ගිණුම් වලට ඉඩ නොදේ");
         }
     }
 

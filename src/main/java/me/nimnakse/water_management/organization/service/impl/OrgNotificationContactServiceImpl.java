@@ -20,7 +20,7 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
     private final OrganizationRepository organizationRepository;
 
     public OrgNotificationContactServiceImpl(OrgNotificationContactRepository contactRepository,
-                                             OrganizationRepository organizationRepository) {
+            OrganizationRepository organizationRepository) {
         this.contactRepository = contactRepository;
         this.organizationRepository = organizationRepository;
     }
@@ -29,7 +29,7 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
     @Override
     public OrgNotificationContactRes create(Long organizationId, OrgNotificationContactCreateReq request) {
         if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
-            throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
 
         OrgNotificationContact contact = new OrgNotificationContact();
@@ -45,7 +45,7 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
     @Transactional
     @Override
     public OrgNotificationContactRes update(Long organizationId, Long contactId,
-                                            OrgNotificationContactUpdateReq request) {
+            OrgNotificationContactUpdateReq request) {
         OrgNotificationContact contact = getContactForOrg(organizationId, contactId);
         contact.setName(request.name());
         contact.setMobileNumber(request.mobileNumber());
@@ -64,7 +64,7 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
     @Override
     public List<OrgNotificationContactRes> getAll(Long organizationId) {
         if (!organizationRepository.existsByIdAndDeletedAtIsNull(organizationId)) {
-            throw new NotFoundException("Organization not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
         return contactRepository.findByOrganizationIdAndDeletedAtIsNull(organizationId).stream()
                 .map(this::toResponse)
@@ -85,9 +85,11 @@ public class OrgNotificationContactServiceImpl implements OrgNotificationContact
 
     private OrgNotificationContact getContactForOrg(Long organizationId, Long contactId) {
         OrgNotificationContact contact = contactRepository.findByIdAndDeletedAtIsNull(contactId)
-                .orElseThrow(() -> new NotFoundException("Notification contact not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Authorized officer not found",
+                        "බලයලත් නිලධාරියා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (!contact.getOrganizationId().equals(organizationId)) {
-            throw new NotFoundException("Notification contact not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Notification contact not found", "දැනුම්දීම් සම්බන්ධතාව සොයාගත නොහැක",
+                    ErrorCode.NOT_FOUND);
         }
         return contact;
     }

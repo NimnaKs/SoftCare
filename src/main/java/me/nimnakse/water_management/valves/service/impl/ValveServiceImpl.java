@@ -20,7 +20,7 @@ public class ValveServiceImpl implements ValveService {
     private final ConnectionRepository connectionRepository;
 
     public ValveServiceImpl(ValveRepository valveRepository,
-                            ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository) {
         this.valveRepository = valveRepository;
         this.connectionRepository = connectionRepository;
     }
@@ -29,7 +29,7 @@ public class ValveServiceImpl implements ValveService {
     @Override
     public ValveRes create(ValveCreateReq request) {
         if (valveRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("Valve already exists");
+            throw new BadRequestException("Valve already exists", "වෑල්වය දැනටමත් පවතී");
         }
         Valve valve = new Valve();
         valve.setName(request.name().trim());
@@ -40,9 +40,10 @@ public class ValveServiceImpl implements ValveService {
     @Override
     public ValveRes update(Long id, ValveUpdateReq request) {
         Valve valve = valveRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Valve not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Valve not found", "වෑල්වය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (valveRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("Valve already exists");
+            throw new BadRequestException("Valve already exists", "වෑල්වය දැනටමත් පවතී");
         }
         valve.setName(request.name().trim());
         return toResponse(valveRepository.save(valve));
@@ -52,7 +53,8 @@ public class ValveServiceImpl implements ValveService {
     @Override
     public ValveRes getById(Long id) {
         Valve valve = valveRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Valve not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Valve not found", "වෑල්වය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         return toResponse(valve);
     }
 
@@ -68,9 +70,11 @@ public class ValveServiceImpl implements ValveService {
     @Override
     public void delete(Long id) {
         Valve valve = valveRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Valve not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Valve not found", "වෑල්වය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         if (connectionRepository.existsByValveId(id)) {
-            throw new BadRequestException("Valve is linked to connections and cannot be deleted");
+            throw new BadRequestException("Tariff is linked to connections and cannot be deleted",
+                    "ගාස්තු ක්‍රමය සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         valveRepository.delete(valve);
     }
@@ -80,7 +84,6 @@ public class ValveServiceImpl implements ValveService {
                 valve.getId(),
                 valve.getName(),
                 valve.getCreatedAt(),
-                valve.getUpdatedAt()
-        );
+                valve.getUpdatedAt());
     }
 }

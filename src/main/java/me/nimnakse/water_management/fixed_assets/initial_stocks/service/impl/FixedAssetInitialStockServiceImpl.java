@@ -33,8 +33,8 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     private final OrgUnitRepository orgUnitRepository;
 
     public FixedAssetInitialStockServiceImpl(FixedAssetInitialStockRepository initialStockRepository,
-                                             FixedAssetTemplateRepository templateRepository,
-                                             OrgUnitRepository orgUnitRepository) {
+            FixedAssetTemplateRepository templateRepository,
+            OrgUnitRepository orgUnitRepository) {
         this.initialStockRepository = initialStockRepository;
         this.templateRepository = templateRepository;
         this.orgUnitRepository = orgUnitRepository;
@@ -62,17 +62,20 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     @Override
     public FixedAssetInitialStockRes update(Long id, FixedAssetInitialStockUpdateReq request) {
         FixedAssetInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
+                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         validateOrgUnit(request.orgUnitId());
         FixedAssetTemplate template = loadTemplate(request.templateId());
         if (!Objects.equals(stock.getOrgUnitId(), request.orgUnitId())
                 && initialStockRepository.existsByOrgUnitIdAndBatchNoAndIdNot(
-                request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
-            throw new BadRequestException("Initial fixed asset stock batch number already exists in the org unit");
+                        request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
+            throw new BadRequestException("Initial fixed asset stock batch number already exists in the org unit",
+                    "මෙම ආයතන ඒකකය සඳහා ආරම්භක ස්ථාවර වත්කම් තොග කාණ්ඩ අංකය දැනටමත් පවතී");
         }
         BigDecimal consumedQuantity = resolveConsumedQuantity(stock.getQuantity(), stock.getRemainingQuantity());
         if (request.quantity().compareTo(consumedQuantity) < 0) {
-            throw new BadRequestException("Initial fixed asset stock quantity cannot be less than consumed quantity");
+            throw new BadRequestException("Initial fixed asset stock quantity cannot be less than consumed quantity",
+                    "ආරම්භක ස්ථාවර වත්කම් තොග ප්‍රමාණය පරිභෝජනය කළ ප්‍රමාණයට වඩා අඩු විය නොහැක");
         }
         stock.setOrgUnitId(request.orgUnitId());
         stock.setTemplateId(template.getId());
@@ -86,7 +89,8 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     @Override
     public FixedAssetInitialStockRes getById(Long id) {
         FixedAssetInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
+                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         FixedAssetTemplate template = loadTemplate(stock.getTemplateId());
         return toResponse(stock, template);
     }
@@ -118,19 +122,21 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     @Override
     public void delete(Long id) {
         FixedAssetInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
+                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
         initialStockRepository.delete(stock);
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
         }
     }
 
     private FixedAssetTemplate loadTemplate(Long templateId) {
         return templateRepository.findById(templateId)
-                .orElseThrow(() -> new NotFoundException("Fixed asset template not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
+                        "ස්ථාවර වත්කම් සැකිල්ල හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private int resolveNextSequence(Long orgUnitId) {
@@ -138,7 +144,8 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
         int next = latest == null ? 1 : latest.getBatchSequence() + 1;
         String nextBatchNo = formatBatchNo(next);
         if (initialStockRepository.existsByOrgUnitIdAndBatchNo(orgUnitId, nextBatchNo)) {
-            throw new BadRequestException("Unable to generate a unique batch number");
+            throw new BadRequestException("Unable to generate a unique batch number",
+                    "අද්විතීය කාණ්ඩ අංකයක් උත්පාදනය කිරීමට නොහැක");
         }
         return next;
     }
@@ -175,7 +182,6 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
                 stock.getQuantity(),
                 stock.getUnitCost(),
                 stock.getCreatedAt(),
-                stock.getUpdatedAt()
-        );
+                stock.getUpdatedAt());
     }
 }

@@ -50,7 +50,8 @@ public class MonetaryTransactionServiceImpl implements MonetaryTransactionServic
     public MonetaryAccountStatementRes getStatement(Long accountId, Instant startAt, Instant endAt, int page,
             int size) {
         MonetaryAccount account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
 
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "transactionDate"));
         Page<MonetaryTransaction> transactions;

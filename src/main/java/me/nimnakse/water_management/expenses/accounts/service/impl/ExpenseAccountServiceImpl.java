@@ -23,7 +23,7 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     private final ExpenseMainCategoryRepository mainCategoryRepository;
 
     public ExpenseAccountServiceImpl(ExpenseAccountRepository accountRepository,
-                                     ExpenseMainCategoryRepository mainCategoryRepository) {
+            ExpenseMainCategoryRepository mainCategoryRepository) {
         this.accountRepository = accountRepository;
         this.mainCategoryRepository = mainCategoryRepository;
     }
@@ -45,7 +45,8 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     @Override
     public ExpenseAccountRes update(Long id, ExpenseAccountUpdateReq request) {
         ExpenseAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense account not found", "වියදම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
         validateUniqueness(id, request.mainCategoryId(), normalizedName);
         ExpenseMainCategory mainCategory = getMainCategory(request.mainCategoryId());
@@ -58,7 +59,8 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     @Override
     public ExpenseAccountRes getById(Long id) {
         ExpenseAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense account not found", "වියදම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         return toResponse(account);
     }
 
@@ -80,9 +82,11 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     @Override
     public void delete(Long id) {
         ExpenseAccount account = accountRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense account not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Expense account not found", "වියදම් ගිණුම සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(account.getIsSystem())) {
-            throw new BadRequestException("System expense accounts cannot be deleted");
+            throw new BadRequestException("System expense accounts cannot be deleted",
+                    "පද්ධති වියදම් ගිණුම් මකා දැමිය නොහැක");
         }
         accountRepository.delete(account);
     }
@@ -90,27 +94,30 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     private void validateUniqueness(Long id, Long mainCategoryId, String name) {
         if (id == null) {
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCase(mainCategoryId, name)) {
-                throw new BadRequestException("Expense account name already exists for the main category");
+                throw new BadRequestException("Expense account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා වියදම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         } else {
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCaseAndIdNot(mainCategoryId, name, id)) {
-                throw new BadRequestException("Expense account name already exists for the main category");
+                throw new BadRequestException("Expense account name already exists for the main category",
+                        "ප්‍රධාන ප්‍රභේදය සඳහා වියදම් ගිණුම් නාමය දැනටමත් පවතී");
             }
         }
     }
 
     private ExpenseMainCategory getMainCategory(Long id) {
         return mainCategoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Expense main category not found", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Address line not found", "ලිපිනය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
     }
 
     private void applyRequest(ExpenseAccount account,
-                              ExpenseMainCategory mainCategory,
-                              String name,
-                              String description,
-                              Boolean isDefault,
-                              Boolean isSystem,
-                              Boolean isActive) {
+            ExpenseMainCategory mainCategory,
+            String name,
+            String description,
+            Boolean isDefault,
+            Boolean isSystem,
+            Boolean isActive) {
         account.setMainCategory(mainCategory);
         account.setName(name.trim());
         account.setDescription(trimToNull(description));
@@ -139,8 +146,7 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
                 account.getIsSystem(),
                 account.getIsActive(),
                 account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+                account.getUpdatedAt());
     }
 
     private String trimToNull(String value) {
