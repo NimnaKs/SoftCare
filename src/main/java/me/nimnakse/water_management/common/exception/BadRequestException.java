@@ -10,6 +10,12 @@ public class BadRequestException extends RuntimeException {
         this.errorCode = ErrorCode.VALIDATION_ERROR;
     }
 
+    public BadRequestException(String messageEn, String messageSn, ErrorCode errorCode) {
+        super(messageEn);
+        this.messageSn = messageSn;
+        this.errorCode = errorCode;
+    }
+
     public String getMessageSn() {
         return messageSn;
     }

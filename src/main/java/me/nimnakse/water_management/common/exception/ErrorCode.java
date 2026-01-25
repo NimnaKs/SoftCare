@@ -6,5 +6,6 @@ public enum ErrorCode {
     ROLE_NOT_FOUND,
     USER_NOT_FOUND,
     DB_UNAVAILABLE,
-    INTERNAL_ERROR
+    INTERNAL_ERROR,
+    ORG_DEACTIVATED
 }
