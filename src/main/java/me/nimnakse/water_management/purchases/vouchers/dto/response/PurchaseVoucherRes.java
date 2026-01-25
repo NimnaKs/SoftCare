@@ -6,14 +6,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record PurchaseVoucherRes(
-                Long id,
-                Long orgUnitId,
-                String voucherNo,
-                Long draftId,
-                BigDecimal totalAmount,
-                LocalDate paymentDate,
-                Long fundSourceId,
-                List<PurchaseVoucherItemRes> items,
-                Instant createdAt,
-                Instant updatedAt) {
+        Long id,
+        Long orgUnitId,
+        String voucherNo,
+        Long draftId,
+        BigDecimal totalAmount,
+        LocalDate paymentDate,
+        Long fundSourceId,
+        String fundSourceName,
+        List<PurchaseVoucherItemRes> items,
+        Instant createdAt,
+        Instant updatedAt) {
 }

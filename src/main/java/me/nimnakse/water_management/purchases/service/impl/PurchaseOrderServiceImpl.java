@@ -27,6 +27,7 @@ import me.nimnakse.water_management.purchases.repository.GrnInvoiceRepository;
 import me.nimnakse.water_management.purchases.repository.PurchaseOrderItemRepository;
 import me.nimnakse.water_management.purchases.repository.PurchaseOrderRepository;
 import me.nimnakse.water_management.purchases.service.PurchaseOrderService;
+import me.nimnakse.water_management.purchases.automation.service.GrnToPurchaseVoucherAutomationService;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.suppliers.repository.SupplierRepository;
 import org.springframework.data.domain.Page;
@@ -43,19 +44,22 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final GrnInvoiceRepository grnInvoiceRepository;
     private final GrnInvoiceItemRepository grnInvoiceItemRepository;
     private final OrganizationAccessService organizationAccessService;
+    private final GrnToPurchaseVoucherAutomationService automationService;
 
     public PurchaseOrderServiceImpl(PurchaseOrderRepository purchaseOrderRepository,
-                                    PurchaseOrderItemRepository purchaseOrderItemRepository,
-                                    SupplierRepository supplierRepository,
-                                    GrnInvoiceRepository grnInvoiceRepository,
-                                    GrnInvoiceItemRepository grnInvoiceItemRepository,
-                                    OrganizationAccessService organizationAccessService) {
+            PurchaseOrderItemRepository purchaseOrderItemRepository,
+            SupplierRepository supplierRepository,
+            GrnInvoiceRepository grnInvoiceRepository,
+            GrnInvoiceItemRepository grnInvoiceItemRepository,
+            OrganizationAccessService organizationAccessService,
+            GrnToPurchaseVoucherAutomationService automationService) {
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.purchaseOrderItemRepository = purchaseOrderItemRepository;
         this.supplierRepository = supplierRepository;
         this.grnInvoiceRepository = grnInvoiceRepository;
         this.grnInvoiceItemRepository = grnInvoiceItemRepository;
         this.organizationAccessService = organizationAccessService;
+        this.automationService = automationService;
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +83,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .map(order -> toPurchaseOrderResponse(order,
                         purchaseOrderItemRepository.findByPurchaseOrderId(order.getId())))
                 .toList();
-        return new PageResponse<>(items, orders.getTotalElements(), orders.getTotalPages(), orders.getNumber(), orders.getSize());
+        return new PageResponse<>(items, orders.getTotalElements(), orders.getTotalPages(), orders.getNumber(),
+                orders.getSize());
     }
 
     @Transactional
@@ -148,6 +153,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .toList();
         grnInvoiceItemRepository.saveAll(grnItems);
         order.setStatus(PurchaseOrderStatus.CONVERTED_TO_GRN);
+
+        // Automate Purchase Voucher Draft Creation
+        automationService.autoCreatePurchaseVoucherDraft(savedInvoice);
+
         return toGrnResponse(savedInvoice, grnItems);
     }
 
@@ -192,8 +201,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 order.getTotalAmount(),
                 itemResponses,
                 order.getCreatedAt(),
-                order.getUpdatedAt()
-        );
+                order.getUpdatedAt());
     }
 
     private PurchaseOrderItemRes toPurchaseOrderItemResponse(PurchaseOrderItem item) {
@@ -203,8 +211,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 item.getFixedAssetTemplateId(),
                 item.getQuantity(),
                 item.getUnitCost(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private GrnInvoiceRes toGrnResponse(GrnInvoice invoice, List<GrnInvoiceItem> items) {
@@ -222,8 +229,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 invoice.getStatus(),
                 itemResponses,
                 invoice.getCreatedAt(),
-                invoice.getUpdatedAt()
-        );
+                invoice.getUpdatedAt());
     }
 
     private GrnInvoiceItemRes toGrnItemResponse(GrnInvoiceItem item) {
@@ -234,8 +240,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 item.getBatchNo(),
                 item.getQuantity(),
                 item.getUnitCost(),
-                item.getTotalAmount()
-        );
+                item.getTotalAmount());
     }
 
     private String buildItemKey(PurchaseOrderItem item) {
