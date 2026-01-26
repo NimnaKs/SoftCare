@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +37,9 @@ public class TariffController {
     }
 
     @GetMapping
-    @Operation(summary = "List tariffs", description = "Lists tariffs.")
-    public ResponseEntity<ApiResponse<List<TariffRes>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(tariffService.list()));
+    @Operation(summary = "List tariffs", description = "Lists tariffs, optionally filtered by org unit.")
+    public ResponseEntity<ApiResponse<List<TariffRes>>> list(@RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(tariffService.list(orgUnitId)));
     }
 
     @GetMapping("/{id}")
@@ -50,7 +51,7 @@ public class TariffController {
     @PutMapping("/{id}")
     @Operation(summary = "Update tariff", description = "Updates a tariff.")
     public ResponseEntity<ApiResponse<TariffRes>> update(@PathVariable Long id,
-                                                         @Valid @RequestBody TariffUpdateReq request) {
+            @Valid @RequestBody TariffUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(tariffService.update(id, request)));
     }
 

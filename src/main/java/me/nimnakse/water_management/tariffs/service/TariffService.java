@@ -12,7 +12,7 @@ public interface TariffService {
 
     TariffRes getById(Long id);
 
-    List<TariffRes> list();
+    List<TariffRes> list(Long orgUnitId);
 
     void delete(Long id);
 }

@@ -12,7 +12,7 @@ public interface ClusterService {
 
     ClusterRes getById(Long id);
 
-    List<ClusterRes> list();
+    List<ClusterRes> list(Long orgUnitId);
 
     void delete(Long id);
 }

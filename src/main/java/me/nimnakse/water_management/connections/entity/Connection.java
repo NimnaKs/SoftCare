@@ -10,6 +10,9 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "connections")
 public class Connection extends BaseEntity {
+    @Column(name = "org_unit_id", nullable = false)
+    private Long orgUnitId;
+
     @Column(name = "member_id", nullable = false)
     private Long memberId;
 

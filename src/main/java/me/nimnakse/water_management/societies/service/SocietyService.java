@@ -12,7 +12,7 @@ public interface SocietyService {
 
     SocietyRes getById(Long id);
 
-    List<SocietyRes> list();
+    List<SocietyRes> list(Long orgUnitId);
 
     void delete(Long id);
 }

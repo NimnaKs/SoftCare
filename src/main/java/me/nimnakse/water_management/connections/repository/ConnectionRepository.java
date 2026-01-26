@@ -6,11 +6,17 @@ import me.nimnakse.water_management.connections.entity.Connection;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ConnectionRepository extends JpaRepository<Connection, Long> {
+    List<Connection> findByOrgUnitId(Long orgUnitId);
+
     Optional<Connection> findByAccountNumber(String accountNumber);
 
     List<Connection> findByMemberId(Long memberId);
 
-    List<Connection> findByMobileNumber(String mobileNumber);
+    Optional<Connection> findByOrgUnitIdAndAccountNumber(Long orgUnitId, String accountNumber);
+
+    List<Connection> findByOrgUnitIdAndMemberId(Long orgUnitId, Long memberId);
+
+    List<Connection> findByOrgUnitIdAndMobileNumber(Long orgUnitId, String mobileNumber);
 
     boolean existsByBillingZoneId(Long billingZoneId);
 

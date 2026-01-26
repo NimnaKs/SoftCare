@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +37,9 @@ public class ValveController {
     }
 
     @GetMapping
-    @Operation(summary = "List valves", description = "Lists valves.")
-    public ResponseEntity<ApiResponse<List<ValveRes>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(valveService.list()));
+    @Operation(summary = "List valves", description = "Lists valves, optionally filtered by org unit.")
+    public ResponseEntity<ApiResponse<List<ValveRes>>> list(@RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(valveService.list(orgUnitId)));
     }
 
     @GetMapping("/{id}")
@@ -50,7 +51,7 @@ public class ValveController {
     @PutMapping("/{id}")
     @Operation(summary = "Update valve", description = "Updates a valve.")
     public ResponseEntity<ApiResponse<ValveRes>> update(@PathVariable Long id,
-                                                        @Valid @RequestBody ValveUpdateReq request) {
+            @Valid @RequestBody ValveUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(valveService.update(id, request)));
     }
 

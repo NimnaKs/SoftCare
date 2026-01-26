@@ -5,7 +5,8 @@ import java.time.Instant;
 public record SocietyRes(
         Long id,
         String name,
+        Long orgUnitId,
+        Long clusterId,
         Instant createdAt,
-        Instant updatedAt
-) {
+        Instant updatedAt) {
 }

@@ -18,20 +18,28 @@ import org.springframework.transaction.annotation.Transactional;
 public class GnDivisionServiceImpl implements GnDivisionService {
     private final GnDivisionRepository gnDivisionRepository;
     private final ConnectionRepository connectionRepository;
+    private final me.nimnakse.water_management.security.OrganizationAccessService accessService;
 
     public GnDivisionServiceImpl(GnDivisionRepository gnDivisionRepository,
-            ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository,
+            me.nimnakse.water_management.security.OrganizationAccessService accessService) {
         this.gnDivisionRepository = gnDivisionRepository;
         this.connectionRepository = connectionRepository;
+        this.accessService = accessService;
     }
 
     @Transactional
     @Override
     public GnDivisionRes create(GnDivisionCreateReq request) {
-        if (gnDivisionRepository.existsByNameIgnoreCase(request.name())) {
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : accessService.resolveOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (gnDivisionRepository.existsByOrgUnitIdAndNameIgnoreCase(orgUnitId, request.name())) {
             throw new BadRequestException("GN division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
         GnDivision division = new GnDivision();
+        division.setOrgUnitId(orgUnitId);
+        division.setClusterId(request.clusterId());
         division.setName(request.name().trim());
         return toResponse(gnDivisionRepository.save(division));
     }
@@ -42,9 +50,15 @@ public class GnDivisionServiceImpl implements GnDivisionService {
         GnDivision division = gnDivisionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
-        if (gnDivisionRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : division.getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (gnDivisionRepository.existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(orgUnitId, request.name(), id)) {
             throw new BadRequestException("GN division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
+        division.setOrgUnitId(orgUnitId);
+        division.setClusterId(request.clusterId());
         division.setName(request.name().trim());
         return toResponse(gnDivisionRepository.save(division));
     }
@@ -55,12 +69,20 @@ public class GnDivisionServiceImpl implements GnDivisionService {
         GnDivision division = gnDivisionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(division.getOrgUnitId());
         return toResponse(division);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public List<GnDivisionRes> list() {
+    public List<GnDivisionRes> list(Long orgUnitId) {
+        Long resolvedOrgUnitId = orgUnitId != null ? orgUnitId : accessService.resolveOrgUnitId();
+        if (resolvedOrgUnitId != null) {
+            accessService.enforceOrgUnitAccess(resolvedOrgUnitId);
+            return gnDivisionRepository.findByOrgUnitId(resolvedOrgUnitId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return gnDivisionRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -72,6 +94,7 @@ public class GnDivisionServiceImpl implements GnDivisionService {
         GnDivision division = gnDivisionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("GN division not found", "ග්‍රාම නිලධාරී වසම සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(division.getOrgUnitId());
         if (connectionRepository.existsByGnDivisionId(id)) {
             throw new BadRequestException("GN division is linked to connections and cannot be deleted",
                     "ග්‍රාම නිලධාරී වසම සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
@@ -83,6 +106,8 @@ public class GnDivisionServiceImpl implements GnDivisionService {
         return new GnDivisionRes(
                 division.getId(),
                 division.getName(),
+                division.getOrgUnitId(),
+                division.getClusterId(),
                 division.getCreatedAt(),
                 division.getUpdatedAt());
     }

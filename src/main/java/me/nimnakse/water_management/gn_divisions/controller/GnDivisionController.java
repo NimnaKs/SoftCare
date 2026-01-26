@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +37,9 @@ public class GnDivisionController {
     }
 
     @GetMapping
-    @Operation(summary = "List GN divisions", description = "Lists GN divisions.")
-    public ResponseEntity<ApiResponse<List<GnDivisionRes>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(gnDivisionService.list()));
+    @Operation(summary = "List GN divisions", description = "Lists GN divisions, optionally filtered by org unit.")
+    public ResponseEntity<ApiResponse<List<GnDivisionRes>>> list(@RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(gnDivisionService.list(orgUnitId)));
     }
 
     @GetMapping("/{id}")
@@ -50,7 +51,7 @@ public class GnDivisionController {
     @PutMapping("/{id}")
     @Operation(summary = "Update GN division", description = "Updates a GN division.")
     public ResponseEntity<ApiResponse<GnDivisionRes>> update(@PathVariable Long id,
-                                                             @Valid @RequestBody GnDivisionUpdateReq request) {
+            @Valid @RequestBody GnDivisionUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(gnDivisionService.update(id, request)));
     }
 

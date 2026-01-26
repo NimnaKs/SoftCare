@@ -5,6 +5,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.societies.dto.request.SocietyCreateReq;
 import me.nimnakse.water_management.societies.dto.request.SocietyUpdateReq;
 import me.nimnakse.water_management.societies.dto.response.SocietyRes;
@@ -18,20 +19,28 @@ import org.springframework.transaction.annotation.Transactional;
 public class SocietyServiceImpl implements SocietyService {
     private final SocietyRepository societyRepository;
     private final ConnectionRepository connectionRepository;
+    private final OrganizationAccessService accessService;
 
     public SocietyServiceImpl(SocietyRepository societyRepository,
-            ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository,
+            OrganizationAccessService accessService) {
         this.societyRepository = societyRepository;
         this.connectionRepository = connectionRepository;
+        this.accessService = accessService;
     }
 
     @Transactional
     @Override
     public SocietyRes create(SocietyCreateReq request) {
-        if (societyRepository.existsByNameIgnoreCase(request.name())) {
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : accessService.resolveOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (societyRepository.existsByOrgUnitIdAndNameIgnoreCase(orgUnitId, request.name())) {
             throw new BadRequestException("Society already exists", "සමිතිය දැනටමත් පවතී");
         }
         Society society = new Society();
+        society.setOrgUnitId(orgUnitId);
+        society.setClusterId(request.clusterId());
         society.setName(request.name().trim());
         return toResponse(societyRepository.save(society));
     }
@@ -42,9 +51,15 @@ public class SocietyServiceImpl implements SocietyService {
         Society society = societyRepository.findById(id)
                 .orElseThrow(
                         () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
-        if (societyRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : society.getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (societyRepository.existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(orgUnitId, request.name(), id)) {
             throw new BadRequestException("Society already exists", "සමිතිය දැනටමත් පවතී");
         }
+        society.setOrgUnitId(orgUnitId);
+        society.setClusterId(request.clusterId());
         society.setName(request.name().trim());
         return toResponse(societyRepository.save(society));
     }
@@ -55,12 +70,20 @@ public class SocietyServiceImpl implements SocietyService {
         Society society = societyRepository.findById(id)
                 .orElseThrow(
                         () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(society.getOrgUnitId());
         return toResponse(society);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public List<SocietyRes> list() {
+    public List<SocietyRes> list(Long orgUnitId) {
+        Long resolvedOrgUnitId = orgUnitId != null ? orgUnitId : accessService.resolveOrgUnitId();
+        if (resolvedOrgUnitId != null) {
+            accessService.enforceOrgUnitAccess(resolvedOrgUnitId);
+            return societyRepository.findByOrgUnitId(resolvedOrgUnitId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return societyRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -72,9 +95,10 @@ public class SocietyServiceImpl implements SocietyService {
         Society society = societyRepository.findById(id)
                 .orElseThrow(
                         () -> new NotFoundException("Society not found", "සමිතිය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(society.getOrgUnitId());
         if (connectionRepository.existsBySocietyId(id)) {
             throw new BadRequestException("Society is linked to connections and cannot be deleted",
-                    "සමිතිය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
+                    "සමිතිය සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         societyRepository.delete(society);
     }
@@ -83,6 +107,8 @@ public class SocietyServiceImpl implements SocietyService {
         return new SocietyRes(
                 society.getId(),
                 society.getName(),
+                society.getOrgUnitId(),
+                society.getClusterId(),
                 society.getCreatedAt(),
                 society.getUpdatedAt());
     }

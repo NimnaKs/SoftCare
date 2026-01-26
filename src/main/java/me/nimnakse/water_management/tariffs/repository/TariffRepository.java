@@ -4,7 +4,9 @@ import me.nimnakse.water_management.tariffs.entity.Tariff;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TariffRepository extends JpaRepository<Tariff, Long> {
-    boolean existsByNameIgnoreCase(String name);
+    java.util.List<Tariff> findByOrgUnitId(Long orgUnitId);
 
-    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    boolean existsByOrgUnitIdAndNameIgnoreCase(Long orgUnitId, String name);
+
+    boolean existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(Long orgUnitId, String name, Long id);
 }

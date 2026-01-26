@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +37,9 @@ public class SocietyController {
     }
 
     @GetMapping
-    @Operation(summary = "List societies", description = "Lists societies.")
-    public ResponseEntity<ApiResponse<List<SocietyRes>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(societyService.list()));
+    @Operation(summary = "List societies", description = "Lists societies, optionally filtered by org unit.")
+    public ResponseEntity<ApiResponse<List<SocietyRes>>> list(@RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(societyService.list(orgUnitId)));
     }
 
     @GetMapping("/{id}")
@@ -50,7 +51,7 @@ public class SocietyController {
     @PutMapping("/{id}")
     @Operation(summary = "Update society", description = "Updates a society.")
     public ResponseEntity<ApiResponse<SocietyRes>> update(@PathVariable Long id,
-                                                          @Valid @RequestBody SocietyUpdateReq request) {
+            @Valid @RequestBody SocietyUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(societyService.update(id, request)));
     }
 

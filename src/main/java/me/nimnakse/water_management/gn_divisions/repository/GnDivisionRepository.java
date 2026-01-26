@@ -4,7 +4,9 @@ import me.nimnakse.water_management.gn_divisions.entity.GnDivision;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GnDivisionRepository extends JpaRepository<GnDivision, Long> {
-    boolean existsByNameIgnoreCase(String name);
+    java.util.List<GnDivision> findByOrgUnitId(Long orgUnitId);
 
-    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    boolean existsByOrgUnitIdAndNameIgnoreCase(Long orgUnitId, String name);
+
+    boolean existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(Long orgUnitId, String name, Long id);
 }

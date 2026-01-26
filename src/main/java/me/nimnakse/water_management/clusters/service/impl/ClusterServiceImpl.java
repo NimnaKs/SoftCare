@@ -11,6 +11,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,20 +19,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClusterServiceImpl implements ClusterService {
     private final ClusterRepository clusterRepository;
     private final ConnectionRepository connectionRepository;
+    private final OrganizationAccessService accessService;
 
     public ClusterServiceImpl(ClusterRepository clusterRepository,
-            ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository,
+            OrganizationAccessService accessService) {
         this.clusterRepository = clusterRepository;
         this.connectionRepository = connectionRepository;
+        this.accessService = accessService;
     }
 
     @Transactional
     @Override
     public ClusterRes create(ClusterCreateReq request) {
-        if (clusterRepository.existsByNameIgnoreCase(request.name())) {
-            throw new BadRequestException("Cluster already exists", "ක්ලස්ටරය දැනටමත් පවතී");
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : accessService.resolveOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (clusterRepository.existsByOrgUnitIdAndNameIgnoreCase(orgUnitId, request.name())) {
+            throw new BadRequestException("Cluster already exists", "කලාපය දැනටමත් පවතී");
         }
         Cluster cluster = new Cluster();
+        cluster.setOrgUnitId(orgUnitId);
         cluster.setName(request.name().trim());
         return toResponse(clusterRepository.save(cluster));
     }
@@ -41,10 +49,15 @@ public class ClusterServiceImpl implements ClusterService {
     public ClusterRes update(Long id, ClusterUpdateReq request) {
         Cluster cluster = clusterRepository.findById(id)
                 .orElseThrow(
-                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
-        if (clusterRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
-            throw new BadRequestException("GN Division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
+                        () -> new NotFoundException("Cluster not found", "කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : cluster.getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (clusterRepository.existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(orgUnitId, request.name(), id)) {
+            throw new BadRequestException("Cluster already exists", "කලාපය දැනටමත් පවතී");
         }
+        cluster.setOrgUnitId(orgUnitId);
         cluster.setName(request.name().trim());
         return toResponse(clusterRepository.save(cluster));
     }
@@ -54,13 +67,21 @@ public class ClusterServiceImpl implements ClusterService {
     public ClusterRes getById(Long id) {
         Cluster cluster = clusterRepository.findById(id)
                 .orElseThrow(
-                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                        () -> new NotFoundException("Cluster not found", "කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(cluster.getOrgUnitId());
         return toResponse(cluster);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public List<ClusterRes> list() {
+    public List<ClusterRes> list(Long orgUnitId) {
+        Long resolvedOrgUnitId = orgUnitId != null ? orgUnitId : accessService.resolveOrgUnitId();
+        if (resolvedOrgUnitId != null) {
+            accessService.enforceOrgUnitAccess(resolvedOrgUnitId);
+            return clusterRepository.findByOrgUnitId(resolvedOrgUnitId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return clusterRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -71,10 +92,11 @@ public class ClusterServiceImpl implements ClusterService {
     public void delete(Long id) {
         Cluster cluster = clusterRepository.findById(id)
                 .orElseThrow(
-                        () -> new NotFoundException("Cluster not found", "ක්ලස්ටරය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                        () -> new NotFoundException("Cluster not found", "කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(cluster.getOrgUnitId());
         if (connectionRepository.existsByClusterId(id)) {
             throw new BadRequestException("Cluster is linked to connections and cannot be deleted",
-                    "ක්ලස්ටරය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
+                    "කලාපය සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         clusterRepository.delete(cluster);
     }
@@ -83,6 +105,7 @@ public class ClusterServiceImpl implements ClusterService {
         return new ClusterRes(
                 cluster.getId(),
                 cluster.getName(),
+                cluster.getOrgUnitId(),
                 cluster.getCreatedAt(),
                 cluster.getUpdatedAt());
     }

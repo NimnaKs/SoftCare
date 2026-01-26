@@ -14,38 +14,41 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
-import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BillingZoneServiceImpl implements BillingZoneService {
     private final BillingZoneRepository billingZoneRepository;
-    private final OrgUnitRepository orgUnitRepository;
+    private final OrganizationAccessService accessService;
     private final ConnectionRepository connectionRepository;
 
     public BillingZoneServiceImpl(BillingZoneRepository billingZoneRepository,
-            OrgUnitRepository orgUnitRepository,
+            OrganizationAccessService accessService,
             ConnectionRepository connectionRepository) {
         this.billingZoneRepository = billingZoneRepository;
-        this.orgUnitRepository = orgUnitRepository;
+        this.accessService = accessService;
         this.connectionRepository = connectionRepository;
     }
 
     @Transactional
     @Override
     public BillingZoneRes create(BillingZoneCreateReq request) {
-        validateOrgUnit(request.orgUnitId());
-        if (billingZoneRepository.existsByOrgUnitIdAndZoneNameIgnoreCase(request.orgUnitId(), request.zoneName())) {
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : accessService.resolveOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (billingZoneRepository.existsByOrgUnitIdAndZoneNameIgnoreCase(orgUnitId, request.zoneName())) {
             throw new BadRequestException("Billing zone already exists in the org unit",
                     "සංවිධාන ඒකකයේ බිල්පත් කලාපය දැනටමත් පවතී");
         }
         BillingZone zone = new BillingZone();
-        zone.setOrgUnitId(request.orgUnitId());
+        zone.setOrgUnitId(orgUnitId);
+        zone.setClusterId(request.clusterId());
         zone.setZoneName(request.zoneName().trim());
         zone.setDescription(trimToNull(request.description()));
-        zone.setZoneCode(generateZoneCode(request.orgUnitId()));
-        zone.setSequenceNumber(resolveSequenceNumber(request.orgUnitId(), request.sequenceNumber()));
+        zone.setZoneCode(generateZoneCode(orgUnitId));
+        zone.setSequenceNumber(resolveSequenceNumber(orgUnitId, request.sequenceNumber()));
         return toResponse(billingZoneRepository.save(zone));
     }
 
@@ -55,13 +58,16 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         BillingZone zone = billingZoneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
-        validateOrgUnit(request.orgUnitId());
-        if (billingZoneRepository.existsByOrgUnitIdAndZoneNameIgnoreCaseAndIdNot(
-                request.orgUnitId(), request.zoneName(), id)) {
+
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : zone.getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (billingZoneRepository.existsByOrgUnitIdAndZoneNameIgnoreCaseAndIdNot(orgUnitId, request.zoneName(), id)) {
             throw new BadRequestException("Billing zone already exists in the org unit",
                     "සංවිධාන ඒකකයේ බිල්පත් කලාපය දැනටමත් පවතී");
         }
-        zone.setOrgUnitId(request.orgUnitId());
+        zone.setOrgUnitId(orgUnitId);
+        zone.setClusterId(request.clusterId());
         zone.setZoneName(request.zoneName().trim());
         zone.setDescription(trimToNull(request.description()));
         zone.setSequenceNumber(validateSequenceNumber(request.sequenceNumber()));
@@ -74,15 +80,21 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         BillingZone zone = billingZoneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(zone.getOrgUnitId());
         return toResponse(zone);
     }
 
     @Transactional(readOnly = true)
     @Override
     public List<BillingZoneRes> list(Long orgUnitId) {
-        List<BillingZone> zones = orgUnitId == null
-                ? billingZoneRepository.findAll()
-                : billingZoneRepository.findByOrgUnitIdOrderBySequenceNumberAsc(orgUnitId);
+        Long resolvedOrgUnitId = orgUnitId != null ? orgUnitId : accessService.resolveOrgUnitId();
+        List<BillingZone> zones;
+        if (resolvedOrgUnitId != null) {
+            accessService.enforceOrgUnitAccess(resolvedOrgUnitId);
+            zones = billingZoneRepository.findByOrgUnitIdOrderBySequenceNumberAsc(resolvedOrgUnitId);
+        } else {
+            zones = billingZoneRepository.findAll();
+        }
         return zones.stream()
                 .sorted(Comparator.comparing(BillingZone::getOrgUnitId)
                         .thenComparing(BillingZone::getSequenceNumber))
@@ -96,17 +108,12 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         BillingZone zone = billingZoneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(zone.getOrgUnitId());
         if (connectionRepository.existsByBillingZoneId(id)) {
             throw new BadRequestException("Billing zone is linked to connections and cannot be deleted",
                     "බිල්පත් කලාපය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති අතර මකා දැමිය නොහැක");
         }
         billingZoneRepository.delete(zone);
-    }
-
-    private void validateOrgUnit(Long orgUnitId) {
-        if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", "සංවිධාන ඒකකය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
-        }
     }
 
     private int resolveSequenceNumber(Long orgUnitId, Integer requestSequence) {
@@ -153,6 +160,7 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         return new BillingZoneRes(
                 zone.getId(),
                 zone.getOrgUnitId(),
+                zone.getClusterId(),
                 zone.getZoneName(),
                 zone.getDescription(),
                 zone.getZoneCode(),

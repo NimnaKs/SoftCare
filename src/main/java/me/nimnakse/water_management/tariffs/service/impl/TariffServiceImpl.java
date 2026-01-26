@@ -5,6 +5,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.tariffs.dto.request.TariffCreateReq;
 import me.nimnakse.water_management.tariffs.dto.request.TariffUpdateReq;
 import me.nimnakse.water_management.tariffs.dto.response.TariffRes;
@@ -18,22 +19,29 @@ import org.springframework.transaction.annotation.Transactional;
 public class TariffServiceImpl implements TariffService {
     private final TariffRepository tariffRepository;
     private final ConnectionRepository connectionRepository;
+    private final OrganizationAccessService accessService;
 
     public TariffServiceImpl(TariffRepository tariffRepository,
-            ConnectionRepository connectionRepository) {
+            ConnectionRepository connectionRepository,
+            OrganizationAccessService accessService) {
         this.tariffRepository = tariffRepository;
         this.connectionRepository = connectionRepository;
+        this.accessService = accessService;
     }
 
     @Transactional
     @Override
     public TariffRes create(TariffCreateReq request) {
-        if (tariffRepository.existsByNameIgnoreCase(request.name())) {
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : accessService.resolveOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (tariffRepository.existsByOrgUnitIdAndNameIgnoreCase(orgUnitId, request.name())) {
             throw new BadRequestException("Tariff already exists", "ගාස්තු ක්‍රමය දැනටමත් පවතී");
         }
         Tariff tariff = new Tariff();
+        tariff.setOrgUnitId(orgUnitId);
         tariff.setName(request.name().trim());
-        tariff.setDescription(trimToNull(request.description()));
+        tariff.setDescription(request.description() != null ? request.description().trim() : null);
         return toResponse(tariffRepository.save(tariff));
     }
 
@@ -41,13 +49,19 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public TariffRes update(Long id, TariffUpdateReq request) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
-                        ErrorCode.NOT_FOUND));
-        if (tariffRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+                .orElseThrow(
+                        () -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                                ErrorCode.NOT_FOUND));
+
+        Long orgUnitId = request.orgUnitId() != null ? request.orgUnitId() : tariff.getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+
+        if (tariffRepository.existsByOrgUnitIdAndNameIgnoreCaseAndIdNot(orgUnitId, request.name(), id)) {
             throw new BadRequestException("Tariff already exists", "ගාස්තු ක්‍රමය දැනටමත් පවතී");
         }
+        tariff.setOrgUnitId(orgUnitId);
         tariff.setName(request.name().trim());
-        tariff.setDescription(trimToNull(request.description()));
+        tariff.setDescription(request.description() != null ? request.description().trim() : null);
         return toResponse(tariffRepository.save(tariff));
     }
 
@@ -55,14 +69,23 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public TariffRes getById(Long id) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
-                        ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                                ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(tariff.getOrgUnitId());
         return toResponse(tariff);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public List<TariffRes> list() {
+    public List<TariffRes> list(Long orgUnitId) {
+        Long resolvedOrgUnitId = orgUnitId != null ? orgUnitId : accessService.resolveOrgUnitId();
+        if (resolvedOrgUnitId != null) {
+            accessService.enforceOrgUnitAccess(resolvedOrgUnitId);
+            return tariffRepository.findByOrgUnitId(resolvedOrgUnitId).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return tariffRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -72,21 +95,15 @@ public class TariffServiceImpl implements TariffService {
     @Override
     public void delete(Long id) {
         Tariff tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
-                        ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Tariff not found", "ගාස්තු ක්‍රමය සොයාගත නොහැක",
+                                ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(tariff.getOrgUnitId());
         if (connectionRepository.existsByTariffId(id)) {
             throw new BadRequestException("Tariff is linked to connections and cannot be deleted",
-                    "ගාස්තු ක්‍රමය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති බැවින් මකා දැමිය නොහැක");
+                    "ගාස්තු ක්‍රමය සම්බන්ධතාවලට සම්බන්ධ කර ඇති බැවින් මකා දැමිය නොහැක");
         }
         tariffRepository.delete(tariff);
-    }
-
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private TariffRes toResponse(Tariff tariff) {
@@ -94,6 +111,7 @@ public class TariffServiceImpl implements TariffService {
                 tariff.getId(),
                 tariff.getName(),
                 tariff.getDescription(),
+                tariff.getOrgUnitId(),
                 tariff.getCreatedAt(),
                 tariff.getUpdatedAt());
     }

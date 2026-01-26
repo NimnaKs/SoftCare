@@ -12,7 +12,7 @@ public interface GnDivisionService {
 
     GnDivisionRes getById(Long id);
 
-    List<GnDivisionRes> list();
+    List<GnDivisionRes> list(Long orgUnitId);
 
     void delete(Long id);
 }

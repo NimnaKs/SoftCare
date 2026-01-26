@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +37,9 @@ public class ClusterController {
     }
 
     @GetMapping
-    @Operation(summary = "List clusters", description = "Lists clusters.")
-    public ResponseEntity<ApiResponse<List<ClusterRes>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(clusterService.list()));
+    @Operation(summary = "List clusters", description = "Lists clusters, optionally filtered by org unit.")
+    public ResponseEntity<ApiResponse<List<ClusterRes>>> list(@RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(clusterService.list(orgUnitId)));
     }
 
     @GetMapping("/{id}")
@@ -50,7 +51,7 @@ public class ClusterController {
     @PutMapping("/{id}")
     @Operation(summary = "Update cluster", description = "Updates a cluster.")
     public ResponseEntity<ApiResponse<ClusterRes>> update(@PathVariable Long id,
-                                                          @Valid @RequestBody ClusterUpdateReq request) {
+            @Valid @RequestBody ClusterUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(clusterService.update(id, request)));
     }
 

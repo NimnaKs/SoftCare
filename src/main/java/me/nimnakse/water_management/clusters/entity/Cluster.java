@@ -8,8 +8,19 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "clusters")
 public class Cluster extends BaseEntity {
+    @Column(name = "org_unit_id", nullable = false)
+    private Long orgUnitId;
+
     @Column(nullable = false)
     private String name;
+
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
+    }
 
     public String getName() {
         return name;

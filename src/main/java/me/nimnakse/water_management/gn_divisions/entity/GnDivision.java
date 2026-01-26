@@ -8,8 +8,30 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "gn_divisions")
 public class GnDivision extends BaseEntity {
+    @Column(name = "org_unit_id", nullable = false)
+    private Long orgUnitId;
+
+    @Column(name = "cluster_id")
+    private Long clusterId;
+
     @Column(nullable = false)
     private String name;
+
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
+    }
+
+    public Long getClusterId() {
+        return clusterId;
+    }
+
+    public void setClusterId(Long clusterId) {
+        this.clusterId = clusterId;
+    }
 
     public String getName() {
         return name;

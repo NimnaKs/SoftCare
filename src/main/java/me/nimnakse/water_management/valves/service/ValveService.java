@@ -12,7 +12,7 @@ public interface ValveService {
 
     ValveRes getById(Long id);
 
-    List<ValveRes> list();
+    List<ValveRes> list(Long orgUnitId);
 
     void delete(Long id);
 }

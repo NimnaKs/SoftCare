@@ -4,9 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record BillingZoneCreateReq(
-        @NotNull Long orgUnitId,
-        @NotBlank String zoneName,
-        String description,
-        Integer sequenceNumber
-) {
+                @NotNull Long orgUnitId,
+                Long clusterId,
+                @NotBlank String zoneName,
+                String description,
+                Integer sequenceNumber) {
 }
