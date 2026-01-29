@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/expense-main-categories/**",
                                 "/expense-accounts/**",
                                 "/liability-main-categories/**",
-                                "/liability-accounts/**"
+                                "/liability-accounts/**",
+                                "/org-units/**"
                         ).hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                         .requestMatchers(
                                 HttpMethod.POST,
