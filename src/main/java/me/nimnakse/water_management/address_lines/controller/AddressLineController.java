@@ -11,19 +11,12 @@ import me.nimnakse.water_management.address_lines.dto.response.AddressLineRes;
 import me.nimnakse.water_management.address_lines.service.AddressLineService;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/address-lines")
 @Tag(name = "Address Lines", description = "Address line management operations")
+@CrossOrigin
 public class AddressLineController {
     private final AddressLineService addressLineService;
 
