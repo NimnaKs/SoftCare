@@ -10,6 +10,7 @@ import me.nimnakse.water_management.gn_divisions.dto.request.GnDivisionUpdateReq
 import me.nimnakse.water_management.gn_divisions.dto.response.GnDivisionRes;
 import me.nimnakse.water_management.gn_divisions.service.GnDivisionService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/gn-divisions")
 @Tag(name = "GN Divisions", description = "GN division management operations")
+@CrossOrigin
 public class GnDivisionController {
     private final GnDivisionService gnDivisionService;
 

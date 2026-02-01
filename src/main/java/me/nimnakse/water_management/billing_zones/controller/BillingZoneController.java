@@ -10,6 +10,7 @@ import me.nimnakse.water_management.billing_zones.dto.response.BillingZoneRes;
 import me.nimnakse.water_management.billing_zones.service.BillingZoneService;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/billing-zones")
 @Tag(name = "Billing Zones", description = "Billing zone management operations")
+@CrossOrigin
 public class BillingZoneController {
     private final BillingZoneService billingZoneService;
 
@@ -51,7 +53,7 @@ public class BillingZoneController {
     @PutMapping("/{id}")
     @Operation(summary = "Update billing zone", description = "Updates a billing zone by identifier.")
     public ResponseEntity<ApiResponse<BillingZoneRes>> update(@PathVariable Long id,
-                                                              @Valid @RequestBody BillingZoneUpdateReq request) {
+            @Valid @RequestBody BillingZoneUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(billingZoneService.update(id, request)));
     }
 

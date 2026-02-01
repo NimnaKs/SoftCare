@@ -10,6 +10,7 @@ import me.nimnakse.water_management.valves.dto.request.ValveUpdateReq;
 import me.nimnakse.water_management.valves.dto.response.ValveRes;
 import me.nimnakse.water_management.valves.service.ValveService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/valves")
 @Tag(name = "Valves", description = "Valve management operations")
+@CrossOrigin
 public class ValveController {
     private final ValveService valveService;
 

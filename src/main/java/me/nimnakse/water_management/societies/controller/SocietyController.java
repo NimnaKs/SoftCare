@@ -10,6 +10,7 @@ import me.nimnakse.water_management.societies.dto.request.SocietyUpdateReq;
 import me.nimnakse.water_management.societies.dto.response.SocietyRes;
 import me.nimnakse.water_management.societies.service.SocietyService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/societies")
 @Tag(name = "Societies", description = "Society management operations")
+@CrossOrigin
 public class SocietyController {
     private final SocietyService societyService;
 

@@ -10,6 +10,7 @@ import me.nimnakse.water_management.clusters.dto.response.ClusterRes;
 import me.nimnakse.water_management.clusters.service.ClusterService;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/clusters")
 @Tag(name = "Clusters", description = "Cluster management operations")
+@CrossOrigin
 public class ClusterController {
     private final ClusterService clusterService;
 
