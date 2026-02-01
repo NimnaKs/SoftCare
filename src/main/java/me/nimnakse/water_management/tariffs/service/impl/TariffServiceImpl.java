@@ -113,7 +113,8 @@ public class TariffServiceImpl implements TariffService {
             for (TariffLateFeeReq FeeReq : lateFees) {
                 TariffLateFee fee = new TariffLateFee();
                 fee.setTariff(tariff);
-                fee.setBillType(FeeReq.billType());
+                fee.setApplyNormalBill(FeeReq.applyNormalBill());
+                fee.setApplyRedBill(FeeReq.applyRedBill());
                 fee.setChargingMethod(FeeReq.chargingMethod());
                 fee.setName(FeeReq.name());
                 fee.setOverduePeriod(FeeReq.overduePeriod());
@@ -173,8 +174,9 @@ public class TariffServiceImpl implements TariffService {
                 .collect(Collectors.toList());
 
         List<TariffLateFeeRes> lateFeeResponses = tariff.getLateFees().stream()
-                .map(f -> new TariffLateFeeRes(f.getId(), f.getBillType(), f.getChargingMethod(), f.getName(),
-                        f.getOverduePeriod(), f.getLimitExceeded(), f.getFixedAmount(), f.getPercentage()))
+                .map(f -> new TariffLateFeeRes(f.getId(), f.isApplyNormalBill(), f.isApplyRedBill(),
+                        f.getChargingMethod(), f.getName(), f.getOverduePeriod(), f.getLimitExceeded(),
+                        f.getFixedAmount(), f.getPercentage()))
                 .collect(Collectors.toList());
 
         return new TariffRes(

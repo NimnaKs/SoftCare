@@ -20,8 +20,11 @@ public class TariffLateFee extends BaseEntity {
     @JoinColumn(name = "tariff_id", nullable = false)
     private Tariff tariff;
 
-    @Column(name = "bill_type")
-    private String billType; // Normal Bill, Red Bill
+    @Column(name = "apply_normal_bill")
+    private boolean applyNormalBill;
+
+    @Column(name = "apply_red_bill")
+    private boolean applyRedBill;
 
     @Column(name = "charging_method")
     private String chargingMethod; // Fixed Amount, Percentage
