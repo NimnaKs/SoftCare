@@ -83,7 +83,8 @@ public class SecurityConfig {
                                                                 "/gn-divisions/**",
                                                                 "/valves/**",
                                                                 "/billing-zones/**",
-                                                                "/clusters/**")
+                                                                "/clusters/**",
+                                                                "/address-lines/**")
                                                 .hasAuthority("APP_SCOPE_BRANCH_APP")
                                                 .requestMatchers(
                                                                 "/roles/**",
