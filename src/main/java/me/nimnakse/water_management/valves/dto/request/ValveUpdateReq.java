@@ -4,6 +4,5 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ValveUpdateReq(
         @NotBlank String name,
-        Long orgUnitId,
-        Long clusterId) {
+        Long orgUnitId) {
 }

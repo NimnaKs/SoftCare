@@ -40,7 +40,6 @@ public class ValveServiceImpl implements ValveService {
         }
         Valve valve = new Valve();
         valve.setOrgUnitId(orgUnitId);
-        valve.setClusterId(request.clusterId());
         valve.setName(request.name().trim());
         return toResponse(valveRepository.save(valve));
     }
@@ -58,7 +57,6 @@ public class ValveServiceImpl implements ValveService {
             throw new BadRequestException("Valve already exists", "කපාටය දැනටමත් පවතී");
         }
         valve.setOrgUnitId(orgUnitId);
-        valve.setClusterId(request.clusterId());
         valve.setName(request.name().trim());
         return toResponse(valveRepository.save(valve));
     }
@@ -105,7 +103,6 @@ public class ValveServiceImpl implements ValveService {
                 valve.getId(),
                 valve.getName(),
                 valve.getOrgUnitId(),
-                valve.getClusterId(),
                 valve.getCreatedAt(),
                 valve.getUpdatedAt());
     }

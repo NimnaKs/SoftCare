@@ -6,7 +6,6 @@ public record ValveRes(
         Long id,
         String name,
         Long orgUnitId,
-        Long clusterId,
         Instant createdAt,
         Instant updatedAt) {
 }

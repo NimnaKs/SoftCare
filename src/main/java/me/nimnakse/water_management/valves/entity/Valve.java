@@ -11,9 +11,6 @@ public class Valve extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
-    @Column(name = "cluster_id")
-    private Long clusterId;
-
     @Column(nullable = false)
     private String name;
 
@@ -23,14 +20,6 @@ public class Valve extends BaseEntity {
 
     public void setOrgUnitId(Long orgUnitId) {
         this.orgUnitId = orgUnitId;
-    }
-
-    public Long getClusterId() {
-        return clusterId;
-    }
-
-    public void setClusterId(Long clusterId) {
-        this.clusterId = clusterId;
     }
 
     public String getName() {
