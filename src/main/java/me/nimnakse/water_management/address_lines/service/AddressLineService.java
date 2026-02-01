@@ -17,6 +17,8 @@ public interface AddressLineService {
 
     List<AddressLineHierarchyRes> getHierarchies();
 
+    List<AddressLineRes> getAll();
+
     AddressLineRes update(Long id, AddressLineUpdateReq request);
 
     void delete(Long id);

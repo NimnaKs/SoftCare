@@ -30,6 +30,12 @@ public class AddressLineController {
         return ResponseEntity.ok(ApiResponse.success(addressLineService.create(request)));
     }
 
+    @GetMapping
+    @Operation(summary = "List address lines", description = "Returns all address lines for the organization unit.")
+    public ResponseEntity<ApiResponse<List<AddressLineRes>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.success(addressLineService.getAll()));
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Search address lines", description = "Searches address lines by query.")
     public ResponseEntity<ApiResponse<List<AddressLineRes>>> search(@RequestParam String query) {
@@ -57,7 +63,7 @@ public class AddressLineController {
     @PutMapping("/{id}")
     @Operation(summary = "Update address line", description = "Updates an address line entry.")
     public ResponseEntity<ApiResponse<AddressLineRes>> update(@PathVariable Long id,
-                                                             @Valid @RequestBody AddressLineUpdateReq request) {
+            @Valid @RequestBody AddressLineUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(addressLineService.update(id, request)));
     }
 

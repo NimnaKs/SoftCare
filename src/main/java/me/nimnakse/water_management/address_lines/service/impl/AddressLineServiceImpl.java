@@ -118,6 +118,18 @@ public class AddressLineServiceImpl implements AddressLineService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<AddressLineRes> getAll() {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        List<AddressLine> lines = orgUnitId == null
+                ? addressLineRepository.findAll()
+                : addressLineRepository.findByOrgUnitId(orgUnitId);
+        return lines.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     @Override
     public AddressLineRes update(Long id, AddressLineUpdateReq request) {
