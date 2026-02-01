@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneCreateReq;
+import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneReorderReq;
 import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneUpdateReq;
 import me.nimnakse.water_management.billing_zones.dto.response.BillingZoneRes;
 import me.nimnakse.water_management.billing_zones.entity.BillingZone;
@@ -93,6 +94,9 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         } else {
             zones = billingZoneRepository.findAll();
         }
+        if (resolvedOrgUnitId != null) {
+            return zones.stream().map(this::toResponse).toList();
+        }
         return zones.stream()
                 .sorted(Comparator.comparing(BillingZone::getOrgUnitId)
                         .thenComparing(BillingZone::getSequenceNumber))
@@ -112,6 +116,48 @@ public class BillingZoneServiceImpl implements BillingZoneService {
                     "බිල්පත් කලාපය සම්බන්ධතා සමඟ සම්බන්ධ වී ඇති අතර මකා දැමිය නොහැක");
         }
         billingZoneRepository.delete(zone);
+    }
+
+    @Transactional
+    @Override
+    public List<BillingZoneRes> reorder(BillingZoneReorderReq request) {
+        if (request.zoneIdOrder() == null || request.zoneIdOrder().isEmpty()) {
+            throw new BadRequestException("Order list cannot be empty", "පිළිවෙල ලැයිස්තුව හිස් විය නොහැක");
+        }
+
+        List<BillingZone> zones = billingZoneRepository.findAllById(request.zoneIdOrder());
+        if (zones.size() != request.zoneIdOrder().size()) {
+            throw new NotFoundException("Some billing zones were not found", "සමහර බිල්පත් කලාප සොයාගත නොහැක",
+                    ErrorCode.NOT_FOUND);
+        }
+
+        // Validate all belong to the same org unit (optional but recommended)
+        Long orgUnitId = zones.get(0).getOrgUnitId();
+        accessService.enforceOrgUnitAccess(orgUnitId);
+        for (BillingZone z : zones) {
+            if (!z.getOrgUnitId().equals(orgUnitId)) {
+                throw new BadRequestException("All zones must belong to the same organization unit",
+                        "සියලුම කලාප එකම සංවිධාන ඒකකයකට අයත් විය යුතුය");
+            }
+        }
+
+        // Map for quick lookup
+        java.util.Map<Long, BillingZone> zoneMap = zones.stream()
+                .collect(Collectors.toMap(BillingZone::getId, z -> z));
+
+        // Update sequence numbers based on the provided order
+        for (int i = 0; i < request.zoneIdOrder().size(); i++) {
+            Long id = request.zoneIdOrder().get(i);
+            BillingZone zone = zoneMap.get(id);
+            zone.setSequenceNumber(i + 1);
+        }
+
+        billingZoneRepository.saveAll(zones);
+
+        return zones.stream()
+                .sorted(Comparator.comparing(BillingZone::getSequenceNumber))
+                .map(this::toResponse)
+                .toList();
     }
 
     private int resolveSequenceNumber(Long orgUnitId, Integer requestSequence) {
@@ -136,14 +182,24 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         Set<String> used = billingZoneRepository.findByOrgUnitId(orgUnitId).stream()
                 .map(BillingZone::getZoneCode)
                 .collect(Collectors.toSet());
-        for (char letter = 'A'; letter <= 'Z'; letter++) {
-            String candidate = String.valueOf(letter);
+
+        int index = 0;
+        while (true) {
+            String candidate = convertToLetter(index++);
             if (!used.contains(candidate)) {
                 return candidate;
             }
         }
-        throw new BadRequestException("All billing zone codes are already assigned",
-                "සියලුම බිල්පත් කලාප කේත දැනටමත් පවරා ඇත");
+    }
+
+    private String convertToLetter(int index) {
+        StringBuilder sb = new StringBuilder();
+        int n = index;
+        while (n >= 0) {
+            sb.insert(0, (char) ('A' + (n % 26)));
+            n = (n / 26) - 1;
+        }
+        return sb.toString();
     }
 
     private String trimToNull(String value) {

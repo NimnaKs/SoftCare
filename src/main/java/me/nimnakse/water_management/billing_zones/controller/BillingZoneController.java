@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneCreateReq;
+import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneReorderReq;
 import me.nimnakse.water_management.billing_zones.dto.request.BillingZoneUpdateReq;
 import me.nimnakse.water_management.billing_zones.dto.response.BillingZoneRes;
 import me.nimnakse.water_management.billing_zones.service.BillingZoneService;
@@ -62,5 +63,12 @@ public class BillingZoneController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         billingZoneService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Billing zone deleted", null));
+    }
+
+    @PutMapping("/reorder")
+    @Operation(summary = "Reorder billing zones", description = "Updates sequence numbers for a list of billing zones.")
+    public ResponseEntity<ApiResponse<List<BillingZoneRes>>> reorder(
+            @Valid @RequestBody BillingZoneReorderReq request) {
+        return ResponseEntity.ok(ApiResponse.success(billingZoneService.reorder(request)));
     }
 }
