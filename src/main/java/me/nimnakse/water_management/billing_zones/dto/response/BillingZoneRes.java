@@ -5,7 +5,6 @@ import java.time.Instant;
 public record BillingZoneRes(
                 Long id,
                 Long orgUnitId,
-                Long clusterId,
                 String zoneName,
                 String description,
                 String zoneCode,

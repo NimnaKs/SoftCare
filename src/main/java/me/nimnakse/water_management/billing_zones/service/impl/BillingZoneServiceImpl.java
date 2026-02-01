@@ -44,7 +44,6 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         }
         BillingZone zone = new BillingZone();
         zone.setOrgUnitId(orgUnitId);
-        zone.setClusterId(request.clusterId());
         zone.setZoneName(request.zoneName().trim());
         zone.setDescription(trimToNull(request.description()));
         zone.setZoneCode(generateZoneCode(orgUnitId));
@@ -67,7 +66,6 @@ public class BillingZoneServiceImpl implements BillingZoneService {
                     "සංවිධාන ඒකකයේ බිල්පත් කලාපය දැනටමත් පවතී");
         }
         zone.setOrgUnitId(orgUnitId);
-        zone.setClusterId(request.clusterId());
         zone.setZoneName(request.zoneName().trim());
         zone.setDescription(trimToNull(request.description()));
         zone.setSequenceNumber(validateSequenceNumber(request.sequenceNumber()));
@@ -160,7 +158,6 @@ public class BillingZoneServiceImpl implements BillingZoneService {
         return new BillingZoneRes(
                 zone.getId(),
                 zone.getOrgUnitId(),
-                zone.getClusterId(),
                 zone.getZoneName(),
                 zone.getDescription(),
                 zone.getZoneCode(),
