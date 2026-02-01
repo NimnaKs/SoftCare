@@ -84,7 +84,8 @@ public class SecurityConfig {
                                                                 "/valves/**",
                                                                 "/billing-zones/**",
                                                                 "/clusters/**",
-                                                                "/address-lines/**")
+                                                                "/address-lines/**",
+                                                        "/tariffs/**")
                                                 .hasAuthority("APP_SCOPE_BRANCH_APP")
                                                 .requestMatchers(
                                                                 "/roles/**",
