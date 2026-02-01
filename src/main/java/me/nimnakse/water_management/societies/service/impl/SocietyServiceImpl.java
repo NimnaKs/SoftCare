@@ -40,7 +40,6 @@ public class SocietyServiceImpl implements SocietyService {
         }
         Society society = new Society();
         society.setOrgUnitId(orgUnitId);
-        society.setClusterId(request.clusterId());
         society.setName(request.name().trim());
         return toResponse(societyRepository.save(society));
     }
@@ -59,7 +58,6 @@ public class SocietyServiceImpl implements SocietyService {
             throw new BadRequestException("Society already exists", "සමිතිය දැනටමත් පවතී");
         }
         society.setOrgUnitId(orgUnitId);
-        society.setClusterId(request.clusterId());
         society.setName(request.name().trim());
         return toResponse(societyRepository.save(society));
     }
@@ -108,7 +106,6 @@ public class SocietyServiceImpl implements SocietyService {
                 society.getId(),
                 society.getName(),
                 society.getOrgUnitId(),
-                society.getClusterId(),
                 society.getCreatedAt(),
                 society.getUpdatedAt());
     }

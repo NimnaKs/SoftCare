@@ -3,7 +3,6 @@ package me.nimnakse.water_management.societies.dto.request;
 import jakarta.validation.constraints.NotBlank;
 
 public record SocietyCreateReq(
-        @NotBlank String name,
-        Long orgUnitId,
-        Long clusterId) {
+                @NotBlank String name,
+                Long orgUnitId) {
 }
