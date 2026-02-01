@@ -6,7 +6,6 @@ public record GnDivisionRes(
         Long id,
         String name,
         Long orgUnitId,
-        Long clusterId,
         Instant createdAt,
         Instant updatedAt) {
 }

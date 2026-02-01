@@ -39,7 +39,6 @@ public class GnDivisionServiceImpl implements GnDivisionService {
         }
         GnDivision division = new GnDivision();
         division.setOrgUnitId(orgUnitId);
-        division.setClusterId(request.clusterId());
         division.setName(request.name().trim());
         return toResponse(gnDivisionRepository.save(division));
     }
@@ -58,7 +57,6 @@ public class GnDivisionServiceImpl implements GnDivisionService {
             throw new BadRequestException("GN division already exists", "ග්‍රාම නිලධාරී වසම දැනටමත් පවතී");
         }
         division.setOrgUnitId(orgUnitId);
-        division.setClusterId(request.clusterId());
         division.setName(request.name().trim());
         return toResponse(gnDivisionRepository.save(division));
     }
@@ -107,7 +105,6 @@ public class GnDivisionServiceImpl implements GnDivisionService {
                 division.getId(),
                 division.getName(),
                 division.getOrgUnitId(),
-                division.getClusterId(),
                 division.getCreatedAt(),
                 division.getUpdatedAt());
     }
