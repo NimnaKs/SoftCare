@@ -8,6 +8,8 @@ import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.tariffs.dto.request.TariffCreateReq;
 import me.nimnakse.water_management.tariffs.dto.request.TariffUpdateReq;
 import me.nimnakse.water_management.tariffs.dto.response.TariffRes;
+import me.nimnakse.water_management.tariffs.entity.MeterStatus;
+import me.nimnakse.water_management.tariffs.service.MeterStatusService;
 import me.nimnakse.water_management.tariffs.service.TariffService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,9 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Tariffs", description = "Tariff management operations")
 public class TariffController {
     private final TariffService tariffService;
+    private final MeterStatusService meterStatusService;
 
-    public TariffController(TariffService tariffService) {
+    public TariffController(TariffService tariffService, MeterStatusService meterStatusService) {
         this.tariffService = tariffService;
+        this.meterStatusService = meterStatusService;
     }
 
     @PostMapping
@@ -60,5 +64,12 @@ public class TariffController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         tariffService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Tariff deleted", null));
+    }
+
+    @GetMapping("/meter-statuses")
+    @Operation(summary = "List meter statuses", description = "Returns default meter status workflow mapping.")
+    public ResponseEntity<ApiResponse<List<MeterStatus>>> getMeterStatuses(
+            @RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(meterStatusService.listByOrgUnitId(orgUnitId)));
     }
 }

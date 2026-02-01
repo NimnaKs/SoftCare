@@ -1,10 +1,19 @@
 package me.nimnakse.water_management.tariffs.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 import me.nimnakse.water_management.common.entity.BaseEntity;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "tariffs")
 public class Tariff extends BaseEntity {
@@ -17,27 +26,28 @@ public class Tariff extends BaseEntity {
     @Column(name = "description")
     private String description;
 
-    public Long getOrgUnitId() {
-        return orgUnitId;
-    }
+    @Column(name = "new_connection_fee")
+    private Double newConnectionFee;
 
-    public void setOrgUnitId(Long orgUnitId) {
-        this.orgUnitId = orgUnitId;
-    }
+    @Column(name = "reconnection_fee")
+    private Double reconnectionFee;
 
-    public String getName() {
-        return name;
-    }
+    @Column(name = "reconnection_credit_limit")
+    private Double reconnectionCreditLimit;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @Column(name = "meter_digits")
+    private Integer meterDigits;
 
-    public String getDescription() {
-        return description;
-    }
+    @Column(name = "avg_monthly_max_consumption")
+    private Double avgMonthlyMaxConsumption;
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    @Column(name = "charging_method")
+    private String chargingMethod; // e.g., "Gap"
+
+    @OneToMany(mappedBy = "tariff", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("fromUnit ASC")
+    private List<TariffSlab> slabs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "tariff", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TariffLateFee> lateFees = new ArrayList<>();
 }
