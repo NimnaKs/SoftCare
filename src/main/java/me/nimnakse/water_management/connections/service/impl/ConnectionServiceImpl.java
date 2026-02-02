@@ -83,6 +83,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
         validateContactNumbers(request.mobileNumber(), request.secondaryNumber(), request.fixedLineNumber());
         Connection connection = new Connection();
+        connection.setOrgUnitId(member.getOrgUnitId());
         connection.setMemberId(member.getId());
         connection.setPremisesId(request.premisesId());
         connection.setBillingZoneId(request.billingZoneId());
@@ -190,6 +191,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private ConnectionRes toResponse(Connection connection) {
         return new ConnectionRes(
                 connection.getId(),
+                connection.getOrgUnitId(),
                 connection.getMemberId(),
                 connection.getPremisesId(),
                 connection.getBillingZoneId(),

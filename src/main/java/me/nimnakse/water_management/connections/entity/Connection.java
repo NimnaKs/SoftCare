@@ -74,6 +74,14 @@ public class Connection extends BaseEntity {
     @Column(name = "tariff_id", nullable = false)
     private Long tariffId;
 
+    public Long getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
+    }
+
     public Long getMemberId() {
         return memberId;
     }
