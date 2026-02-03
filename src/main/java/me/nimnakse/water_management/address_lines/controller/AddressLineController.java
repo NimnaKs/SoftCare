@@ -60,6 +60,14 @@ public class AddressLineController {
         return ResponseEntity.ok(ApiResponse.success(addressLineService.getHierarchies()));
     }
 
+    @GetMapping("/level/{level}")
+    @Operation(summary = "Get address lines by level", description = "Returns address lines for a specific level, optionally filtered by parent.")
+    public ResponseEntity<ApiResponse<List<AddressLineRes>>> getByLevel(
+            @PathVariable Integer level,
+            @RequestParam(required = false) Long parentId) {
+        return ResponseEntity.ok(ApiResponse.success(addressLineService.getByLevel(level, parentId)));
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Update address line", description = "Updates an address line entry.")
     public ResponseEntity<ApiResponse<AddressLineRes>> update(@PathVariable Long id,

@@ -7,42 +7,45 @@ import me.nimnakse.water_management.address_lines.entity.AddressLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AddressLineRepository extends JpaRepository<AddressLine, Long> {
-    boolean existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
-            Integer level,
-            String name,
-            Long parentLine1Id,
-            Long parentLine2Id,
-            Long parentLine3Id,
-            Long orgUnitId
-    );
+        boolean existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitId(
+                        Integer level,
+                        String name,
+                        Long parentLine1Id,
+                        Long parentLine2Id,
+                        Long parentLine3Id,
+                        Long orgUnitId);
 
-    boolean existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdAndIdNot(
-            Integer level,
-            String name,
-            Long parentLine1Id,
-            Long parentLine2Id,
-            Long parentLine3Id,
-            Long orgUnitId,
-            Long id
-    );
+        boolean existsByLevelAndNameIgnoreCaseAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdAndIdNot(
+                        Integer level,
+                        String name,
+                        Long parentLine1Id,
+                        Long parentLine2Id,
+                        Long parentLine3Id,
+                        Long orgUnitId,
+                        Long id);
 
-    Optional<AddressLine> findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdOrderByInternalCodeDesc(
-            Integer level,
-            Long parentLine1Id,
-            Long parentLine2Id,
-            Long parentLine3Id,
-            Long orgUnitId
-    );
+        Optional<AddressLine> findTopByLevelAndParentLine1IdAndParentLine2IdAndParentLine3IdAndOrgUnitIdOrderByInternalCodeDesc(
+                        Integer level,
+                        Long parentLine1Id,
+                        Long parentLine2Id,
+                        Long parentLine3Id,
+                        Long orgUnitId);
 
-    List<AddressLine> findByNameContainingIgnoreCase(String name);
+        List<AddressLine> findByNameContainingIgnoreCase(String name);
 
-    List<AddressLine> findByOrgUnitId(Long orgUnitId);
+        List<AddressLine> findByOrgUnitId(Long orgUnitId);
 
-    List<AddressLine> findByOrgUnitIdAndNameContainingIgnoreCase(Long orgUnitId, String name);
+        List<AddressLine> findByOrgUnitIdAndNameContainingIgnoreCase(Long orgUnitId, String name);
 
-    Optional<AddressLine> findByIdAndOrgUnitId(Long id, Long orgUnitId);
+        Optional<AddressLine> findByIdAndOrgUnitId(Long id, Long orgUnitId);
 
-    boolean existsByParentLine1IdOrParentLine2IdOrParentLine3Id(Long parentLine1Id,
-                                                                Long parentLine2Id,
-                                                                Long parentLine3Id);
+        boolean existsByParentLine1IdOrParentLine2IdOrParentLine3Id(Long parentLine1Id,
+                        Long parentLine2Id,
+                        Long parentLine3Id);
+
+        List<AddressLine> findByLevelAndOrgUnitId(Integer level, Long orgUnitId);
+
+        List<AddressLine> findByLevelAndParentLine1IdAndOrgUnitId(Integer level, Long parentLine1Id, Long orgUnitId);
+
+        List<AddressLine> findByLevelAndParentLine2IdAndOrgUnitId(Integer level, Long parentLine2Id, Long orgUnitId);
 }

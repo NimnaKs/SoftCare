@@ -22,4 +22,6 @@ public interface AddressLineService {
     AddressLineRes update(Long id, AddressLineUpdateReq request);
 
     void delete(Long id);
+
+    List<AddressLineRes> getByLevel(Integer level, Long parentId);
 }

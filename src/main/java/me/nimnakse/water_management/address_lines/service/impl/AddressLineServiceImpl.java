@@ -366,4 +366,55 @@ public class AddressLineServiceImpl implements AddressLineService {
     private AddressLineRes toResponseOrNull(AddressLine line) {
         return line == null ? null : toResponse(line);
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<AddressLineRes> getByLevel(Integer level, Long parentId) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        if (orgUnitId == null) {
+            // Admin can see everything? Or should we block? Assuming admin context or
+            // specific
+            // generic lookup not supported without orgUnitId context effectively.
+            // For now, let's assume filtering by orgUnitId is mandatory for levels
+            // generally
+            // or return empty if no org context (which shouldn't happen for logged in
+            // users).
+            return List.of();
+        }
+
+        List<AddressLine> lines;
+        if (level == 1) {
+            lines = addressLineRepository.findByLevelAndOrgUnitId(1, orgUnitId);
+        } else if (level == 2) {
+            if (parentId == null) {
+                throw new BadRequestException("Parent ID required for level 2",
+                        "2 වන මට්ටම සඳහා දෙමාපිය අංකය අවශ්‍ය වේ");
+            }
+            lines = addressLineRepository.findByLevelAndParentLine1IdAndOrgUnitId(2, parentId, orgUnitId);
+        } else if (level == 3) {
+            if (parentId == null) {
+                throw new BadRequestException("Parent ID required for level 3",
+                        "3 වන මට්ටම සඳහා දෙමාපිය අංකය අවශ්‍ය වේ");
+            }
+            lines = addressLineRepository.findByLevelAndParentLine2IdAndOrgUnitId(3, parentId, orgUnitId);
+        } else {
+            // For level 4 or invalid
+            if (level == 4) {
+                // Assuming level 4 also exists and follows pattern if needed, but repo method
+                // wasn't explicitly added for level 4 yet
+                // based on previous repo edit. Let's check repository edit content.
+                // I added findByLevelAndParentLine2IdAndOrgUnitId.
+                // Wait, level 4 needs parentLine3Id. I should add that to repo too if level 4
+                // is supported.
+                // The user asked for "level 1, level 2 and level 3 address getters".
+                // I will stick to 1-3 for now as requested, or return empty/error.
+                return List.of();
+            }
+            throw new BadRequestException("Invalid level", "අවලංගු මට්ටමකි");
+        }
+
+        return lines.stream()
+                .map(this::toResponse)
+                .toList();
+    }
 }
