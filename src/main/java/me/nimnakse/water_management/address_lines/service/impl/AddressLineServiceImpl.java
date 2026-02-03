@@ -397,19 +397,13 @@ public class AddressLineServiceImpl implements AddressLineService {
                         "3 වන මට්ටම සඳහා දෙමාපිය අංකය අවශ්‍ය වේ");
             }
             lines = addressLineRepository.findByLevelAndParentLine2IdAndOrgUnitId(3, parentId, orgUnitId);
-        } else {
-            // For level 4 or invalid
-            if (level == 4) {
-                // Assuming level 4 also exists and follows pattern if needed, but repo method
-                // wasn't explicitly added for level 4 yet
-                // based on previous repo edit. Let's check repository edit content.
-                // I added findByLevelAndParentLine2IdAndOrgUnitId.
-                // Wait, level 4 needs parentLine3Id. I should add that to repo too if level 4
-                // is supported.
-                // The user asked for "level 1, level 2 and level 3 address getters".
-                // I will stick to 1-3 for now as requested, or return empty/error.
-                return List.of();
+        } else if (level == 4) {
+            if (parentId == null) {
+                throw new BadRequestException("Parent ID required for level 4",
+                        "4 වන මට්ටම සඳහා දෙමාපිය අංකය අවශ්‍ය වේ");
             }
+            lines = addressLineRepository.findByLevelAndParentLine3IdAndOrgUnitId(4, parentId, orgUnitId);
+        } else {
             throw new BadRequestException("Invalid level", "අවලංගු මට්ටමකි");
         }
 

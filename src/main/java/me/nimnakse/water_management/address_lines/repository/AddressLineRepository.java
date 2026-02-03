@@ -48,4 +48,6 @@ public interface AddressLineRepository extends JpaRepository<AddressLine, Long> 
         List<AddressLine> findByLevelAndParentLine1IdAndOrgUnitId(Integer level, Long parentLine1Id, Long orgUnitId);
 
         List<AddressLine> findByLevelAndParentLine2IdAndOrgUnitId(Integer level, Long parentLine2Id, Long orgUnitId);
+
+        List<AddressLine> findByLevelAndParentLine3IdAndOrgUnitId(Integer level, Long parentLine3Id, Long orgUnitId);
 }
