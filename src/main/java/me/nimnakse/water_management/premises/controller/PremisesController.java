@@ -10,6 +10,7 @@ import me.nimnakse.water_management.premises.dto.request.PremisesUpdateReq;
 import me.nimnakse.water_management.premises.dto.response.PremisesRes;
 import me.nimnakse.water_management.premises.service.PremisesService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/premises")
 @Tag(name = "Premises", description = "Premises management operations")
+@CrossOrigin
 public class PremisesController {
     private final PremisesService premisesService;
 
@@ -51,7 +53,7 @@ public class PremisesController {
     @PutMapping("/{id}")
     @Operation(summary = "Update premises", description = "Updates a premises record.")
     public ResponseEntity<ApiResponse<PremisesRes>> update(@PathVariable Long id,
-                                                           @Valid @RequestBody PremisesUpdateReq request) {
+            @Valid @RequestBody PremisesUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(premisesService.update(id, request)));
     }
 
