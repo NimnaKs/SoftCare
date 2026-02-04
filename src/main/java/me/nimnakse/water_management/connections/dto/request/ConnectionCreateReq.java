@@ -9,7 +9,6 @@ public record ConnectionCreateReq(
                 @NotNull Long memberId,
                 @NotNull Long premisesId,
                 @NotNull Long billingZoneId,
-                @NotBlank String accountNumber,
                 Long line1Id,
                 Long line2Id,
                 Long line3Id,

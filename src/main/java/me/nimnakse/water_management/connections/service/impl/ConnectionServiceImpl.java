@@ -87,7 +87,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         connection.setMemberId(member.getId());
         connection.setPremisesId(request.premisesId());
         connection.setBillingZoneId(request.billingZoneId());
-        connection.setAccountNumber(request.accountNumber());
+        connection.setAccountNumber(generateAccountNumber(member));
         connection.setStatus(ConnectionStatus.PENDING);
         connection.setLine1Id(request.line1Id());
         connection.setLine2Id(request.line2Id());
@@ -214,6 +214,33 @@ public class ConnectionServiceImpl implements ConnectionService {
                 connection.getTariffId(),
                 connection.getCreatedAt(),
                 connection.getUpdatedAt());
+    }
+
+    private String generateAccountNumber(Member member) {
+        String prefix = member.getMembershipCode();
+        int maxSuffix = 0;
+
+        for (Connection existing : connectionRepository.findByMemberId(member.getId())) {
+            String accountNumber = existing.getAccountNumber();
+            if (accountNumber == null) {
+                continue;
+            }
+            String expectedPrefix = prefix + "-";
+            if (!accountNumber.startsWith(expectedPrefix)) {
+                continue;
+            }
+            String suffix = accountNumber.substring(expectedPrefix.length());
+            if (!suffix.matches("\\d+")) {
+                continue;
+            }
+            int value = Integer.parseInt(suffix);
+            if (value > maxSuffix) {
+                maxSuffix = value;
+            }
+        }
+
+        int nextSuffix = maxSuffix + 1;
+        return String.format("%s-%02d", prefix, nextSuffix);
     }
 
     private MemberSummaryRes toMemberSummary(Member member) {
