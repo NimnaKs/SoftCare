@@ -3,6 +3,7 @@ package me.nimnakse.water_management.premises.service;
 import java.util.List;
 import me.nimnakse.water_management.premises.dto.request.PremisesCreateReq;
 import me.nimnakse.water_management.premises.dto.request.PremisesUpdateReq;
+import me.nimnakse.water_management.premises.dto.response.PremisesNextAvailableRes;
 import me.nimnakse.water_management.premises.dto.response.PremisesRes;
 
 public interface PremisesService {
@@ -13,6 +14,8 @@ public interface PremisesService {
     PremisesRes getById(Long id);
 
     List<PremisesRes> list(Long billingZoneId);
+
+    PremisesNextAvailableRes nextAvailable(Long billingZoneId, Long parentId);
 
     void delete(Long id);
 }

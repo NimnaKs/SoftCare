@@ -12,4 +12,8 @@ public interface PremisesRepository extends JpaRepository<Premises, Long> {
     boolean existsByParentId(Long parentId);
 
     List<Premises> findByBillingZoneIdOrderBySortPathAsc(Long billingZoneId);
+
+    List<Premises> findByBillingZoneIdAndParentId(Long billingZoneId, Long parentId);
+
+    List<Premises> findByBillingZoneIdAndParentIdIsNull(Long billingZoneId);
 }

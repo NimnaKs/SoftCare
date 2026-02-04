@@ -7,6 +7,7 @@ import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.premises.dto.request.PremisesCreateReq;
 import me.nimnakse.water_management.premises.dto.request.PremisesUpdateReq;
+import me.nimnakse.water_management.premises.dto.response.PremisesNextAvailableRes;
 import me.nimnakse.water_management.premises.dto.response.PremisesRes;
 import me.nimnakse.water_management.premises.service.PremisesService;
 import org.springframework.http.ResponseEntity;
@@ -44,20 +45,29 @@ public class PremisesController {
         return ResponseEntity.ok(ApiResponse.success(premisesService.list(billingZoneId)));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/next-available")
+    @Operation(summary = "Get next available premises code",
+            description = "Returns the next available premises code and sort path for a billing zone.")
+    public ResponseEntity<ApiResponse<PremisesNextAvailableRes>> nextAvailable(
+            @RequestParam Long billingZoneId,
+            @RequestParam(required = false) Long parentId) {
+        return ResponseEntity.ok(ApiResponse.success(premisesService.nextAvailable(billingZoneId, parentId)));
+    }
+
+    @GetMapping("/{id:\\d+}")
     @Operation(summary = "Get premises", description = "Fetches a premises by identifier.")
     public ResponseEntity<ApiResponse<PremisesRes>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(premisesService.getById(id)));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     @Operation(summary = "Update premises", description = "Updates a premises record.")
     public ResponseEntity<ApiResponse<PremisesRes>> update(@PathVariable Long id,
             @Valid @RequestBody PremisesUpdateReq request) {
         return ResponseEntity.ok(ApiResponse.success(premisesService.update(id, request)));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     @Operation(summary = "Delete premises", description = "Deletes a premises record.")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         premisesService.delete(id);

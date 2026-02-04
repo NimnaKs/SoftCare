@@ -1,7 +1,10 @@
 package me.nimnakse.water_management.premises.service.impl;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import me.nimnakse.water_management.billing_zones.entity.BillingZone;
 import me.nimnakse.water_management.billing_zones.repository.BillingZoneRepository;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -9,6 +12,7 @@ import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
 import me.nimnakse.water_management.premises.dto.request.PremisesCreateReq;
 import me.nimnakse.water_management.premises.dto.request.PremisesUpdateReq;
+import me.nimnakse.water_management.premises.dto.response.PremisesNextAvailableRes;
 import me.nimnakse.water_management.premises.dto.response.PremisesRes;
 import me.nimnakse.water_management.premises.entity.Premises;
 import me.nimnakse.water_management.premises.repository.PremisesRepository;
@@ -89,6 +93,24 @@ public class PremisesServiceImpl implements PremisesService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PremisesNextAvailableRes nextAvailable(Long billingZoneId, Long parentId) {
+        BillingZone zone = loadBillingZone(billingZoneId);
+        Premises parent = loadParentForNextAvailable(billingZoneId, parentId);
+        List<Premises> siblings = parentId == null
+                ? premisesRepository.findByBillingZoneIdAndParentIdIsNull(billingZoneId)
+                : premisesRepository.findByBillingZoneIdAndParentId(billingZoneId, parentId);
+
+        NextSegment nextSegment = resolveNextSegment(siblings, parentId == null ? 3 : 4);
+        String sortPath = parent == null
+                ? nextSegment.segment()
+                : parent.getSortPath() + "." + nextSegment.segment();
+        String premisesCode = buildPremisesCode(zone.getZoneCode(), parent, nextSegment.index());
+
+        return new PremisesNextAvailableRes(billingZoneId, parentId, premisesCode, sortPath);
+    }
+
     @Transactional
     @Override
     public void delete(Long id) {
@@ -110,6 +132,29 @@ public class PremisesServiceImpl implements PremisesService {
         if (billingZoneId == null || !billingZoneRepository.existsById(billingZoneId)) {
             throw new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
         }
+    }
+
+    private BillingZone loadBillingZone(Long billingZoneId) {
+        if (billingZoneId == null) {
+            throw new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක", ErrorCode.NOT_FOUND);
+        }
+        return billingZoneRepository.findById(billingZoneId)
+                .orElseThrow(() -> new NotFoundException("Billing zone not found", "බිල්පත් කලාපය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
+    }
+
+    private Premises loadParentForNextAvailable(Long billingZoneId, Long parentId) {
+        if (parentId == null) {
+            return null;
+        }
+        Premises parent = premisesRepository.findById(parentId)
+                .orElseThrow(() -> new NotFoundException("Parent premises not found", "දෙමව් පරිශ්‍රය සොයාගත නොහැක",
+                        ErrorCode.NOT_FOUND));
+        if (!parent.getBillingZoneId().equals(billingZoneId)) {
+            throw new BadRequestException("Parent premises must belong to the same billing zone",
+                    "දෙමව් පරිශ්‍රය එකම බිල්පත් කලාපයට අයත් විය යුතුය");
+        }
+        return parent;
     }
 
     private void validateParent(Long billingZoneId, Long parentId, Long currentId) {
@@ -138,5 +183,54 @@ public class PremisesServiceImpl implements PremisesService {
                 premises.getParentId(),
                 premises.getCreatedAt(),
                 premises.getUpdatedAt());
+    }
+
+    private String buildPremisesCode(String zoneCode, Premises parent, int nextIndex) {
+        if (parent == null) {
+            return zoneCode + nextIndex;
+        }
+        return parent.getPremisesCode() + "." + nextIndex;
+    }
+
+    private NextSegment resolveNextSegment(List<Premises> siblings, int defaultWidth) {
+        Set<Integer> used = new HashSet<>();
+        int maxWidth = 0;
+        for (Premises sibling : siblings) {
+            String sortPath = sibling.getSortPath();
+            if (sortPath == null || sortPath.isBlank()) {
+                continue;
+            }
+            String segment = lastSegment(sortPath);
+            if (segment.isEmpty()) {
+                continue;
+            }
+            maxWidth = Math.max(maxWidth, segment.length());
+            try {
+                int value = Integer.parseInt(segment);
+                if (value > 0) {
+                    used.add(value);
+                }
+            } catch (NumberFormatException ignored) {
+                // Ignore non-numeric segments when calculating next index.
+            }
+        }
+        int nextIndex = 1;
+        while (used.contains(nextIndex)) {
+            nextIndex++;
+        }
+        int width = maxWidth > 0 ? maxWidth : defaultWidth;
+        String segment = String.format("%0" + width + "d", nextIndex);
+        return new NextSegment(nextIndex, segment);
+    }
+
+    private String lastSegment(String sortPath) {
+        int lastDot = sortPath.lastIndexOf('.');
+        if (lastDot < 0) {
+            return sortPath.trim();
+        }
+        return sortPath.substring(lastDot + 1).trim();
+    }
+
+    private record NextSegment(int index, String segment) {
     }
 }
