@@ -9,6 +9,8 @@ public interface PremisesRepository extends JpaRepository<Premises, Long> {
 
     boolean existsByBillingZoneIdAndPremisesCodeAndIdNot(Long billingZoneId, String premisesCode, Long id);
 
+    boolean existsByBillingZoneIdAndSortPath(Long billingZoneId, String sortPath);
+
     boolean existsByParentId(Long parentId);
 
     List<Premises> findByBillingZoneIdOrderBySortPathAsc(Long billingZoneId);

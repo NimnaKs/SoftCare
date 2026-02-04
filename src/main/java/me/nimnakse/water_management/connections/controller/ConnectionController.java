@@ -7,9 +7,11 @@ import jakarta.validation.constraints.Pattern;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.util.ValidationPatterns;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
+import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWithPremisesReq;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
 import me.nimnakse.water_management.connections.service.ConnectionService;
+import me.nimnakse.water_management.premises.dto.response.PremisesValidationRes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -38,6 +40,13 @@ public class ConnectionController {
         return ResponseEntity.ok(ApiResponse.success(connectionService.create(request)));
     }
 
+    @PostMapping("/create-with-premises")
+    @Operation(summary = "Create connection with premises", description = "Creates a new premises and water connection.")
+    public ResponseEntity<ApiResponse<ConnectionRes>> createWithPremises(
+            @Valid @RequestBody ConnectionCreateWithPremisesReq request) {
+        return ResponseEntity.ok(ApiResponse.success(connectionService.createWithPremises(request)));
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Search connections", description = "Searches for connections by membership, account, NIC, or phone.")
     public ResponseEntity<ApiResponse<ConnectionSearchRes>> search(
@@ -47,5 +56,14 @@ public class ConnectionController {
             @RequestParam(required = false) @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX, message = "Phone number must be a 10-digit number starting with 07") String phoneNumber) {
         return ResponseEntity.ok(ApiResponse.success(
                 connectionService.search(membershipCode, accountNumber, nicNumber, phoneNumber)));
+    }
+
+    @GetMapping("/validate")
+    @Operation(summary = "Validate premises by account", description = "Validates premises details by connection account number.")
+    public ResponseEntity<ApiResponse<PremisesValidationRes>> validatePremisesByAccount(
+            @RequestParam String accountNumber,
+            @RequestParam(required = false) Long billingZoneId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                connectionService.validatePremisesByAccount(accountNumber, billingZoneId)));
     }
 }
