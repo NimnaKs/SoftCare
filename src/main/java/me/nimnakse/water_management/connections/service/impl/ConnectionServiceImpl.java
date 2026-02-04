@@ -3,6 +3,7 @@ package me.nimnakse.water_management.connections.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -11,6 +12,7 @@ import me.nimnakse.water_management.common.util.NicUtils;
 import me.nimnakse.water_management.common.util.ValidationUtils;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWithPremisesReq;
+import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
 import me.nimnakse.water_management.connections.dto.request.PremisesCreationMode;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
@@ -37,6 +39,9 @@ import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -197,6 +202,60 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .toList();
 
         return new ConnectionSearchRes(toMemberSummary(member), connections);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<ConnectionRes> getPage(int page, int size, String sort) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        Page<Connection> connectionPage = orgUnitId == null
+                ? connectionRepository.findAll(pageRequest(page, size, sort))
+                : connectionRepository.findByOrgUnitId(orgUnitId, pageRequest(page, size, sort));
+        return toPageResponse(connectionPage);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ConnectionRes getById(Long id) {
+        Connection connection = connectionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Connection not found",
+                        "සම්බන්ධතාවය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(connection.getOrgUnitId());
+        return toResponse(connection);
+    }
+
+    @Transactional
+    @Override
+    public ConnectionRes update(Long id, ConnectionUpdateReq request) {
+        Connection connection = connectionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Connection not found",
+                        "සම්බන්ධතාවය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(connection.getOrgUnitId());
+        validateTariff(request.tariffId());
+        validateOptionalReference(request.gnDivisionId(), "GN division", gnDivisionRepository::existsById);
+        validateOptionalReference(request.valveId(), "Valve", valveRepository::existsById);
+        validateOptionalReference(request.societyId(), "Society", societyRepository::existsById);
+        validateOptionalReference(request.clusterId(), "Cluster", clusterRepository::existsById);
+        validateContactNumbers(request.mobileNumber(), request.secondaryNumber(), request.fixedLineNumber());
+
+        connection.setLine1Id(request.line1Id());
+        connection.setLine2Id(request.line2Id());
+        connection.setLine3Id(request.line3Id());
+        connection.setLine4Id(request.line4Id());
+        connection.setHouseNumber(formatHouseNumber(request.houseNumber()));
+        connection.setHouseName(formatHouseName(request.houseName()));
+        connection.setHouseNickname(request.houseNickname());
+        connection.setGnDivisionId(request.gnDivisionId());
+        connection.setValveId(request.valveId());
+        connection.setSocietyId(request.societyId());
+        connection.setClusterId(request.clusterId());
+        connection.setMobileNumber(request.mobileNumber());
+        connection.setSecondaryNumber(request.secondaryNumber());
+        connection.setFixedLineNumber(request.fixedLineNumber());
+        connection.setTariffId(request.tariffId());
+        connection.setStatus(request.status());
+
+        return toResponse(connectionRepository.save(connection));
     }
 
     @Transactional(readOnly = true)
@@ -400,6 +459,46 @@ public class ConnectionServiceImpl implements ConnectionService {
             return memberRepository.findByMobileNumber(mobileNumber);
         }
         return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+    }
+
+    private PageResponse<ConnectionRes> toPageResponse(Page<Connection> page) {
+        List<ConnectionRes> items = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(
+                items,
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getNumber(),
+                page.getSize());
+    }
+
+    private PageRequest pageRequest(int page, int size, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
+        Sort sortSpec = parseSort(sort);
+        return PageRequest.of(safePage, safeSize, sortSpec);
+    }
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        String[] parts = sort.split(",");
+        String field = parts[0].trim();
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (parts.length > 1) {
+            String dir = parts[1].trim().toLowerCase();
+            if ("asc".equals(dir)) {
+                direction = Sort.Direction.ASC;
+            } else if ("desc".equals(dir)) {
+                direction = Sort.Direction.DESC;
+            }
+        }
+        if (field.isBlank()) {
+            field = "createdAt";
+        }
+        return Sort.by(direction, field);
     }
 
     private Long createPremisesForRequest(ConnectionCreateWithPremisesReq request) {

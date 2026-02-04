@@ -3,10 +3,14 @@ package me.nimnakse.water_management.connections.repository;
 import java.util.List;
 import java.util.Optional;
 import me.nimnakse.water_management.connections.entity.Connection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ConnectionRepository extends JpaRepository<Connection, Long> {
     List<Connection> findByOrgUnitId(Long orgUnitId);
+
+    Page<Connection> findByOrgUnitId(Long orgUnitId, Pageable pageable);
 
     Optional<Connection> findByAccountNumber(String accountNumber);
 
