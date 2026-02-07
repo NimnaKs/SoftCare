@@ -358,6 +358,11 @@ public class ConnectionServiceImpl implements ConnectionService {
                 : billingZoneRepository.findById(connection.getBillingZoneId())
                         .map(b -> b.getZoneName())
                         .orElse(null);
+        String premisesCode = connection.getPremisesId() == null
+                ? null
+                : premisesRepository.findById(connection.getPremisesId())
+                        .map(Premises::getPremisesCode)
+                        .orElse(null);
         String tariffName = connection.getTariffId() == null
                 ? null
                 : tariffRepository.findById(connection.getTariffId())
@@ -370,6 +375,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 memberMembershipCode,
                 memberDisplayName,
                 connection.getPremisesId(),
+                premisesCode,
                 connection.getBillingZoneId(),
                 billingZoneName,
                 connection.getAccountNumber(),

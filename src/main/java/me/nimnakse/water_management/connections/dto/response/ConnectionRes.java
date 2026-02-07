@@ -10,6 +10,7 @@ public record ConnectionRes(
                 String memberMembershipCode,
                 String memberDisplayName,
                 Long premisesId,
+                String premisesCode,
                 Long billingZoneId,
                 String billingZoneName,
                 String accountNumber,
