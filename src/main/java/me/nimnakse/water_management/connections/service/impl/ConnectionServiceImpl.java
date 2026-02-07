@@ -396,7 +396,8 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     private String generateAccountNumber(Member member) {
         OrgUnit orgUnit = resolveOrgUnitForAccount(member.getOrgUnitId());
-        String prefix = orgUnit.getOrganizationCode();
+        String rawPrefix = orgUnit.getOrganizationCode();
+        String prefix = normalizeConnectionPrefix(rawPrefix);
         int maxSuffix = 0;
 
         for (Connection existing : connectionRepository.findByOrgUnitId(orgUnit.getId())) {
@@ -404,21 +405,53 @@ public class ConnectionServiceImpl implements ConnectionService {
             if (accountNumber == null) {
                 continue;
             }
-            if (!accountNumber.startsWith(prefix)) {
-                continue;
-            }
-            String suffix = accountNumber.substring(prefix.length());
-            if (!suffix.matches("\\d+")) {
-                continue;
-            }
-            int value = Integer.parseInt(suffix);
-            if (value > maxSuffix) {
-                maxSuffix = value;
+            int suffixValue = extractAccountSuffix(accountNumber, prefix);
+            if (suffixValue > maxSuffix) {
+                maxSuffix = suffixValue;
             }
         }
 
         int nextSuffix = maxSuffix + 1;
-        return String.format("%s%03d", prefix, nextSuffix);
+        return String.format("%s%04d", prefix, nextSuffix);
+    }
+
+    private String normalizeConnectionPrefix(String rawPrefix) {
+        if (!StringUtils.hasText(rawPrefix)) {
+            throw new BadRequestException("Branch org unit must have an organization code",
+                    "à·à·à¶›à· à¶†à¶ºà¶­à¶± à¶’à¶šà¶šà¶ºà¶§ à·ƒà¶‚à·€à·’à¶°à·à¶± à¶šà·šà¶­à¶ºà¶šà·Š à¶­à·’à¶¶à·’à¶º à¶ºà·”à¶­à·”à¶º");
+        }
+        String trimmed = rawPrefix.trim();
+        if (trimmed.startsWith("400")) {
+            String withoutConst = trimmed.substring(3);
+            return withoutConst.isBlank() ? trimmed : withoutConst;
+        }
+        return trimmed;
+    }
+
+    private int extractAccountSuffix(String accountNumber, String prefix) {
+        if (!StringUtils.hasText(accountNumber)) {
+            return 0;
+        }
+        String trimmed = accountNumber.trim();
+        String legacyPrefix = "400" + prefix;
+        String matchedPrefix = null;
+        if (trimmed.startsWith(prefix)) {
+            matchedPrefix = prefix;
+        } else if (!legacyPrefix.equals(prefix) && trimmed.startsWith(legacyPrefix)) {
+            matchedPrefix = legacyPrefix;
+        }
+        if (matchedPrefix == null) {
+            return 0;
+        }
+        String suffix = trimmed.substring(matchedPrefix.length());
+        if (!suffix.matches("\\d+")) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(suffix);
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     private OrgUnit resolveOrgUnitForAccount(Long orgUnitId) {
