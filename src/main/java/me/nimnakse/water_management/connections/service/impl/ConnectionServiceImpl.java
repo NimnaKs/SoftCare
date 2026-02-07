@@ -24,6 +24,8 @@ import me.nimnakse.water_management.clusters.repository.ClusterRepository;
 import me.nimnakse.water_management.address_lines.entity.AddressLine;
 import me.nimnakse.water_management.address_lines.repository.AddressLineRepository;
 import me.nimnakse.water_management.gn_divisions.repository.GnDivisionRepository;
+import me.nimnakse.water_management.organization.entity.OrgUnit;
+import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.premises.dto.request.PremisesCreateReq;
 import me.nimnakse.water_management.premises.dto.response.PremisesNextAvailableRes;
 import me.nimnakse.water_management.premises.dto.response.PremisesValidationRes;
@@ -44,6 +46,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class ConnectionServiceImpl implements ConnectionService {
@@ -59,6 +62,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final AddressLineRepository addressLineRepository;
     private final OrganizationAccessService organizationAccessService;
     private final PremisesService premisesService;
+    private final OrgUnitRepository orgUnitRepository;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
@@ -71,7 +75,8 @@ public class ConnectionServiceImpl implements ConnectionService {
             ClusterRepository clusterRepository,
             AddressLineRepository addressLineRepository,
             OrganizationAccessService organizationAccessService,
-            PremisesService premisesService) {
+            PremisesService premisesService,
+            OrgUnitRepository orgUnitRepository) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.premisesRepository = premisesRepository;
@@ -84,6 +89,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         this.addressLineRepository = addressLineRepository;
         this.organizationAccessService = organizationAccessService;
         this.premisesService = premisesService;
+        this.orgUnitRepository = orgUnitRepository;
     }
 
     @Transactional
@@ -340,12 +346,32 @@ public class ConnectionServiceImpl implements ConnectionService {
     }
 
     private ConnectionRes toResponse(Connection connection) {
+        Member member = memberRepository.findById(connection.getMemberId()).orElse(null);
+        String memberMembershipCode = member != null ? member.getMembershipCode() : null;
+        String memberDisplayName = member != null
+                ? (member.getMembershipType() == MemberType.CORPORATE
+                        ? MemberNameFormatter.formatCorporateDisplayName(member.getCorporateName())
+                        : MemberNameFormatter.formatPersonalDisplayName(member.getFullName()))
+                : null;
+        String billingZoneName = connection.getBillingZoneId() == null
+                ? null
+                : billingZoneRepository.findById(connection.getBillingZoneId())
+                        .map(b -> b.getZoneName())
+                        .orElse(null);
+        String tariffName = connection.getTariffId() == null
+                ? null
+                : tariffRepository.findById(connection.getTariffId())
+                        .map(t -> t.getName())
+                        .orElse(null);
         return new ConnectionRes(
                 connection.getId(),
                 connection.getOrgUnitId(),
                 connection.getMemberId(),
+                memberMembershipCode,
+                memberDisplayName,
                 connection.getPremisesId(),
                 connection.getBillingZoneId(),
+                billingZoneName,
                 connection.getAccountNumber(),
                 connection.getStatus(),
                 connection.getLine1Id(),
@@ -363,24 +389,25 @@ public class ConnectionServiceImpl implements ConnectionService {
                 connection.getSecondaryNumber(),
                 connection.getFixedLineNumber(),
                 connection.getTariffId(),
+                tariffName,
                 connection.getCreatedAt(),
                 connection.getUpdatedAt());
     }
 
     private String generateAccountNumber(Member member) {
-        String prefix = member.getMembershipCode();
+        OrgUnit orgUnit = resolveOrgUnitForAccount(member.getOrgUnitId());
+        String prefix = orgUnit.getOrganizationCode();
         int maxSuffix = 0;
 
-        for (Connection existing : connectionRepository.findByMemberId(member.getId())) {
+        for (Connection existing : connectionRepository.findByOrgUnitId(orgUnit.getId())) {
             String accountNumber = existing.getAccountNumber();
             if (accountNumber == null) {
                 continue;
             }
-            String expectedPrefix = prefix + "-";
-            if (!accountNumber.startsWith(expectedPrefix)) {
+            if (!accountNumber.startsWith(prefix)) {
                 continue;
             }
-            String suffix = accountNumber.substring(expectedPrefix.length());
+            String suffix = accountNumber.substring(prefix.length());
             if (!suffix.matches("\\d+")) {
                 continue;
             }
@@ -391,7 +418,22 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
 
         int nextSuffix = maxSuffix + 1;
-        return String.format("%s-%02d", prefix, nextSuffix);
+        return String.format("%s%03d", prefix, nextSuffix);
+    }
+
+    private OrgUnit resolveOrgUnitForAccount(Long orgUnitId) {
+        if (orgUnitId == null) {
+            throw new BadRequestException("Branch org unit is required for account generation",
+                    "à·à·à¶›à· à¶†à¶ºà¶­à¶± à¶’à¶šà¶šà¶º à·„à¶¸à·” à¶±à·œà·€à·“à¶º");
+        }
+        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
+                .orElseThrow(() -> new NotFoundException("Org unit not found",
+                        "à¶†à¶ºà¶­à¶± à¶’à¶šà¶šà¶º à·„à¶¸à·” à¶±à·œà·€à·“à¶º", ErrorCode.NOT_FOUND));
+        if (!StringUtils.hasText(orgUnit.getOrganizationCode())) {
+            throw new BadRequestException("Branch org unit must have an organization code",
+                    "à·à·à¶›à· à¶†à¶ºà¶­à¶± à¶’à¶šà¶šà¶ºà¶§ à·ƒà¶‚à·€à·’à¶°à·à¶± à¶šà·šà¶­à¶ºà¶šà·Š à¶­à·’à¶¶à·’à¶º à¶ºà·”à¶­à·”à¶º");
+        }
+        return orgUnit;
     }
 
     private MemberSummaryRes toMemberSummary(Member member) {

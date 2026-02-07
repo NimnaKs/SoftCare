@@ -7,8 +7,11 @@ public record ConnectionRes(
                 Long id,
                 Long orgUnitId,
                 Long memberId,
+                String memberMembershipCode,
+                String memberDisplayName,
                 Long premisesId,
                 Long billingZoneId,
+                String billingZoneName,
                 String accountNumber,
                 ConnectionStatus status,
                 Long line1Id,
@@ -26,6 +29,7 @@ public record ConnectionRes(
                 String secondaryNumber,
                 String fixedLineNumber,
                 Long tariffId,
+                String tariffName,
                 Instant createdAt,
                 Instant updatedAt) {
 }
