@@ -25,7 +25,7 @@ public interface ExpenseAccountRepository extends JpaRepository<ExpenseAccount, 
     @Query("update ExpenseAccount ea set ea.isDefault = false where ea.mainCategory.id = :mainCategoryId")
     void clearDefaultForMainCategory(@Param("mainCategoryId") Long mainCategoryId);
 
-    Optional<ExpenseAccount> findTopByMainCategoryIdOrderByAccountCodeDesc(Long id);
+    Optional<ExpenseAccount> findTopByAccountCodeStartingWithOrderByAccountCodeDesc(String prefix);
 
     boolean existsByAccountCodeIgnoreCase(String candidate);
 }

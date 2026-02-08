@@ -4,7 +4,6 @@ import java.util.List;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
-import me.nimnakse.water_management.expenses.ExpenseType;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountCreateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.request.ExpenseAccountUpdateReq;
 import me.nimnakse.water_management.expenses.accounts.dto.response.ExpenseAccountRes;
@@ -158,15 +157,18 @@ public class ExpenseAccountServiceImpl implements ExpenseAccountService {
     }
 
     public String generateAccountCode(ExpenseMainCategory mainCategory) {
-        String typePrefix = mainCategory.getExpenseType() == ExpenseType.OPERATING ? "OP" : "NO";
-        String cat = String.format("%02d", mainCategory.getId());
-        int nextSeq = accountRepository.findTopByMainCategoryIdOrderByAccountCodeDesc(mainCategory.getId())
+        String prefix = "EXP-";
+        int nextSeq = accountRepository.findTopByAccountCodeStartingWithOrderByAccountCodeDesc(prefix)
                 .map(a -> {
-                    String[] parts = a.getAccountCode().split("-");
-                    return Integer.parseInt(parts[2]) + 1;
+                    String code = a.getAccountCode();
+                    int dashIndex = code.lastIndexOf('-');
+                    if (dashIndex < 0 || dashIndex + 1 >= code.length()) {
+                        return 1;
+                    }
+                    return Integer.parseInt(code.substring(dashIndex + 1)) + 1;
                 })
                 .orElse(1);
-        return String.format("%s-%s-%03d", typePrefix, cat, nextSeq);
+        return String.format("%s%03d", prefix, nextSeq);
     }
 
 }
