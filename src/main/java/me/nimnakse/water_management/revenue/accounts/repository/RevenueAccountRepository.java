@@ -23,4 +23,6 @@ public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, 
     @Modifying
     @Query("update RevenueAccount ra set ra.isDefault = false where ra.mainCategory.id = :mainCategoryId")
     void clearDefaultForMainCategory(@Param("mainCategoryId") Long mainCategoryId);
+
+    java.util.Optional<RevenueAccount> findTopByAccountNumberStartingWithOrderByAccountNumberDesc(String prefix);
 }

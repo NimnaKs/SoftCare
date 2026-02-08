@@ -30,14 +30,13 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
     @Transactional
     @Override
     public RevenueAccountRes create(RevenueAccountCreateReq request) {
-        String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
-        validateUniqueness(normalizedAccountNumber, null, request.mainCategoryId(), normalizedName);
+        validateUniqueness(null, request.mainCategoryId(), normalizedName);
         RevenueMainCategory mainCategory = getMainCategory(request.mainCategoryId());
         RevenueAccount account = new RevenueAccount();
-        applyRequest(account, mainCategory, normalizedAccountNumber, normalizedName, request.description(),
-                request.referencePrefix(), request.isDefault(), request.functionKey(), request.isSystem(),
-                request.isActive());
+        account.setAccountNumber(generateAccountNumber());
+        applyRequest(account, mainCategory, normalizedName, request.description(), request.referencePrefix(),
+                request.isDefault(), request.functionKey(), request.isSystem(), request.isActive());
         return toResponse(accountRepository.save(account));
     }
 
@@ -47,13 +46,11 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
         RevenueAccount account = accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Revenue account not found", "ආදායම් ගිණුම සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
-        String normalizedAccountNumber = request.accountNumber().trim();
         String normalizedName = request.name().trim();
-        validateUniqueness(normalizedAccountNumber, id, request.mainCategoryId(), normalizedName);
+        validateUniqueness(id, request.mainCategoryId(), normalizedName);
         RevenueMainCategory mainCategory = getMainCategory(request.mainCategoryId());
-        applyRequest(account, mainCategory, normalizedAccountNumber, normalizedName, request.description(),
-                request.referencePrefix(), request.isDefault(), request.functionKey(), request.isSystem(),
-                request.isActive());
+        applyRequest(account, mainCategory, normalizedName, request.description(), request.referencePrefix(),
+                request.isDefault(), request.functionKey(), request.isSystem(), request.isActive());
         return toResponse(accountRepository.save(account));
     }
 
@@ -93,24 +90,16 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
         accountRepository.delete(account);
     }
 
-    private void validateUniqueness(String accountNumber, Long id, Long mainCategoryId, String name) {
+    private void validateUniqueness(Long id, Long mainCategoryId, String name) {
         if (id == null) {
-            if (accountRepository.existsByAccountNumberIgnoreCase(accountNumber)) {
-                throw new BadRequestException("Revenue account number already exists",
-                        "ආදායම් ගිණුම් අංකය දැනටමත් පවතී");
-            }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCase(mainCategoryId, name)) {
                 throw new BadRequestException("Revenue account name already exists for the main category",
-                        "ප්‍රධාන ප්‍රභේදය සඳහා ආදායම් ගිණුම් නාමය දැනටමත් පවතී");
+                        "????????????????????? ???????????????????????? ???????????? ?????????????????? ?????????????????? ???????????? ????????????????????? ????????????");
             }
         } else {
-            if (accountRepository.existsByAccountNumberIgnoreCaseAndIdNot(accountNumber, id)) {
-                throw new BadRequestException("Revenue account number already exists",
-                        "ආදායම් ගිණුම් අංකය දැනටමත් පවතී");
-            }
             if (accountRepository.existsByMainCategoryIdAndNameIgnoreCaseAndIdNot(mainCategoryId, name, id)) {
                 throw new BadRequestException("Revenue account name already exists for the main category",
-                        "ප්‍රධාන ප්‍රභේදය සඳහා ආදායම් ගිණුම් නාමය දැනටමත් පවතී");
+                        "????????????????????? ???????????????????????? ???????????? ?????????????????? ?????????????????? ???????????? ????????????????????? ????????????");
             }
         }
     }
@@ -123,7 +112,6 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
 
     private void applyRequest(RevenueAccount account,
             RevenueMainCategory mainCategory,
-            String accountNumber,
             String name,
             String description,
             String referencePrefix,
@@ -132,7 +120,6 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
             Boolean isSystem,
             Boolean isActive) {
         account.setMainCategory(mainCategory);
-        account.setAccountNumber(accountNumber.trim());
         account.setName(name.trim());
         account.setDescription(trimToNull(description));
         account.setReferencePrefix(trimToNull(referencePrefix));
@@ -173,5 +160,20 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String generateAccountNumber() {
+        String prefix = "REV-";
+        int nextSeq = accountRepository.findTopByAccountNumberStartingWithOrderByAccountNumberDesc(prefix)
+                .map(a -> {
+                    String number = a.getAccountNumber();
+                    int dashIndex = number.lastIndexOf('-');
+                    if (dashIndex < 0 || dashIndex + 1 >= number.length()) {
+                        return 1;
+                    }
+                    return Integer.parseInt(number.substring(dashIndex + 1)) + 1;
+                })
+                .orElse(1);
+        return String.format("%s%04d", prefix, nextSeq);
     }
 }

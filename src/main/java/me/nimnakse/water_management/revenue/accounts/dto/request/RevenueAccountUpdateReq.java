@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record RevenueAccountUpdateReq(
         @NotNull Long mainCategoryId,
-        @NotBlank @Size(max = 50) String accountNumber,
+        @Size(max = 50) String accountNumber,
         @NotBlank @Size(max = 255) String name,
         @Size(max = 500) String description,
         @Size(max = 20) String referencePrefix,
