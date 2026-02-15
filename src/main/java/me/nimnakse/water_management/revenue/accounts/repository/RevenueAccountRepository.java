@@ -5,6 +5,7 @@ import me.nimnakse.water_management.revenue.accounts.entity.RevenueAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, Long> {
     boolean existsByAccountNumberIgnoreCase(String accountNumber);
@@ -20,8 +21,10 @@ public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, 
     List<RevenueAccount> findByMainCategoryId(Long mainCategoryId);
     Page<RevenueAccount> findByMainCategoryId(Long mainCategoryId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"mainCategory"})
     List<RevenueAccount> findByIsActiveAndDeletedAtIsNull(Boolean isActive);
 
+    @EntityGraph(attributePaths = {"mainCategory"})
     List<RevenueAccount> findByIsActiveAndDeletedAtIsNullAndMainCategoryId(Boolean isActive, Long mainCategoryId);
 
     java.util.Optional<RevenueAccount> findByIdAndDeletedAtIsNull(Long id);

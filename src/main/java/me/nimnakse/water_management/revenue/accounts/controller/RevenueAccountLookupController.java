@@ -8,6 +8,7 @@ import me.nimnakse.water_management.revenue.accounts.dto.response.RevenueAccount
 import me.nimnakse.water_management.revenue.accounts.entity.RevenueAccount;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +24,7 @@ public class RevenueAccountLookupController {
 
     @GetMapping
     @Operation(summary = "List revenue accounts for selection")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<RevenueAccountLookupRes>>> list(
             @RequestParam(defaultValue = "true") boolean active,
             @RequestParam(required = false) Long mainCategoryId) {
