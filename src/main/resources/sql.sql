@@ -465,7 +465,6 @@ CREATE TABLE connection_transfers (
 CREATE TABLE revenue_main_categories (
                                          id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                          customer_type   ENUM('CUSTOMER', 'NON_CUSTOMER') NOT NULL,
-                                         code            INT UNSIGNED NOT NULL,
                                          name            VARCHAR(255) NOT NULL,
                                          description     VARCHAR(500) NULL,
                                          is_system       TINYINT(1) NOT NULL DEFAULT 1,
@@ -473,7 +472,6 @@ CREATE TABLE revenue_main_categories (
                                          created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                          updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                                             ON UPDATE CURRENT_TIMESTAMP,
-                                         UNIQUE KEY uq_rev_main_code (code),
                                          UNIQUE KEY uq_rev_main_name (name),
                                          INDEX idx_rev_main_customer_type (customer_type)
 ) ENGINE=InnoDB
@@ -1971,7 +1969,6 @@ CREATE TABLE sms_outbox (
 CREATE TABLE revenue_main_categories (
                                          id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                          customer_type   ENUM('CUSTOMER', 'NON_CUSTOMER') NOT NULL,
-                                         code            INT UNSIGNED NOT NULL,
                                          name            VARCHAR(255) NOT NULL,
                                          description     VARCHAR(500) NULL,
                                          is_system       TINYINT(1) NOT NULL DEFAULT 1,
@@ -1979,7 +1976,6 @@ CREATE TABLE revenue_main_categories (
                                          created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                          updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                                             ON UPDATE CURRENT_TIMESTAMP,
-                                         UNIQUE KEY uq_rev_main_code (code),
                                          UNIQUE KEY uq_rev_main_name (name),
                                          INDEX idx_rev_main_customer_type (customer_type)
 ) ENGINE=InnoDB

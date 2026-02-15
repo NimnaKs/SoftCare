@@ -15,9 +15,6 @@ public class RevenueMainCategory extends BaseEntity {
     @Column(name = "customer_type", nullable = false)
     private RevenueCustomerType customerType;
 
-    @Column(name = "code", nullable = false, unique = true)
-    private Integer code;
-
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
@@ -36,14 +33,6 @@ public class RevenueMainCategory extends BaseEntity {
 
     public void setCustomerType(RevenueCustomerType customerType) {
         this.customerType = customerType;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public void setCode(Integer code) {
-        this.code = code;
     }
 
     public String getName() {

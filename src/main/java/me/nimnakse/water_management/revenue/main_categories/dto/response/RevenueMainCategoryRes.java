@@ -6,7 +6,6 @@ import me.nimnakse.water_management.revenue.RevenueCustomerType;
 public record RevenueMainCategoryRes(
         Long id,
         RevenueCustomerType customerType,
-        Integer code,
         String name,
         String description,
         Boolean isSystem,
