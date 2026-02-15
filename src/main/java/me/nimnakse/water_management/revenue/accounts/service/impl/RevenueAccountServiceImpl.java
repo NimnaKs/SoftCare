@@ -131,9 +131,6 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
             account.setIsActive(isActive);
         }
         if (isDefault != null) {
-            if (Boolean.TRUE.equals(isDefault)) {
-                accountRepository.clearDefaultForMainCategory(mainCategory.getId());
-            }
             account.setIsDefault(isDefault);
         }
     }
