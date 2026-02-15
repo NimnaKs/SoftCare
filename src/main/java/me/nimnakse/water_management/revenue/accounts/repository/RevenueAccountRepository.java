@@ -20,5 +20,11 @@ public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, 
     List<RevenueAccount> findByMainCategoryId(Long mainCategoryId);
     Page<RevenueAccount> findByMainCategoryId(Long mainCategoryId, Pageable pageable);
 
+    List<RevenueAccount> findByIsActiveAndDeletedAtIsNull(Boolean isActive);
+
+    List<RevenueAccount> findByIsActiveAndDeletedAtIsNullAndMainCategoryId(Boolean isActive, Long mainCategoryId);
+
+    java.util.Optional<RevenueAccount> findByIdAndDeletedAtIsNull(Long id);
+
     java.util.Optional<RevenueAccount> findTopByAccountNumberStartingWithOrderByAccountNumberDesc(String prefix);
 }
