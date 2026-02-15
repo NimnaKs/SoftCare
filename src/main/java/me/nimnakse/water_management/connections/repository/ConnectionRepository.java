@@ -21,6 +21,8 @@ public interface ConnectionRepository extends JpaRepository<Connection, Long>, J
 
     List<Connection> findByIdIn(List<Long> ids);
 
+    List<Connection> findByAccountNumberIn(List<String> accountNumbers);
+
     List<Connection> findByOrgUnitIdAndMemberId(Long orgUnitId, Long memberId);
 
     List<Connection> findByOrgUnitIdAndMobileNumber(Long orgUnitId, String mobileNumber);

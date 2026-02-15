@@ -21,6 +21,7 @@ public record SalesInvoiceCreateReq(
         @Valid SalesInvoiceInventoryPolicyReq inventoryPolicy,
         @Valid SalesInvoiceInstallmentSetupReq installmentSetup,
         List<Long> selectedConnectionIds,
+        List<String> selectedConnectionAccountNumbers,
         Boolean acceptedConnectionSelection
 ) {
 }

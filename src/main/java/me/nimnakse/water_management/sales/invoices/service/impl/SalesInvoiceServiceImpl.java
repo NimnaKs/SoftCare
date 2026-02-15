@@ -125,7 +125,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         invoice.setInventoryPolicy(policy);
 
         if (request.saleType() == SaleType.CUSTOMER) {
-            invoice.setConnections(buildConnections(invoice, request.selectedConnectionIds()));
+            invoice.setConnections(buildConnections(invoice, request.selectedConnectionIds(), request.selectedConnectionAccountNumbers()));
             if (invoice.getConnections().isEmpty()) {
                 throw new BadRequestException("Customer invoice requires at least one connection", "Customer invoice requires at least one connection");
             }
@@ -228,8 +228,13 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     private void validateCreateRequest(SalesInvoiceCreateReq request) {
         if (request.saleType() == SaleType.CUSTOMER) {
-            if (request.selectedConnectionIds() == null || request.selectedConnectionIds().isEmpty()) {
-                throw new BadRequestException("selectedConnectionIds is required for CUSTOMER sale", "selectedConnectionIds is required for CUSTOMER sale");
+            boolean hasIds = request.selectedConnectionIds() != null && !request.selectedConnectionIds().isEmpty();
+            boolean hasAccountNumbers = request.selectedConnectionAccountNumbers() != null
+                    && !sanitize(request.selectedConnectionAccountNumbers()).isEmpty();
+            if (!hasIds && !hasAccountNumbers) {
+                throw new BadRequestException(
+                        "selectedConnectionAccountNumbers (or selectedConnectionIds) is required for CUSTOMER sale",
+                        "selectedConnectionAccountNumbers (or selectedConnectionIds) is required for CUSTOMER sale");
             }
             if (!Boolean.TRUE.equals(request.acceptedConnectionSelection())) {
                 throw new BadRequestException("Connection selection must be accepted", "Connection selection must be accepted");
@@ -309,11 +314,27 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return policy;
     }
 
-    private List<SalesInvoiceConnection> buildConnections(SalesInvoice invoice, List<Long> connectionIds) {
-        List<Connection> connections = connectionRepository.findByIdIn(connectionIds);
-        if (connections.size() != connectionIds.size()) {
-            throw new BadRequestException("One or more selected connections not found", "One or more selected connections not found");
+    private List<SalesInvoiceConnection> buildConnections(
+            SalesInvoice invoice,
+            List<Long> connectionIds,
+            List<String> selectedConnectionAccountNumbers) {
+        List<String> accountNumbers = sanitize(selectedConnectionAccountNumbers);
+        List<Connection> connections;
+
+        if (!accountNumbers.isEmpty()) {
+            connections = connectionRepository.findByAccountNumberIn(accountNumbers);
+            if (connections.size() != accountNumbers.size()) {
+                throw new BadRequestException("One or more selected account numbers not found",
+                        "One or more selected account numbers not found");
+            }
+        } else {
+            List<Long> ids = connectionIds == null ? List.of() : connectionIds;
+            connections = connectionRepository.findByIdIn(ids);
+            if (connections.size() != ids.size()) {
+                throw new BadRequestException("One or more selected connections not found", "One or more selected connections not found");
+            }
         }
+
         Map<Long, Member> members = memberRepository.findAllById(connections.stream().map(Connection::getMemberId).distinct().toList())
                 .stream().collect(Collectors.toMap(Member::getId, m -> m));
         List<SalesInvoiceConnection> rows = new ArrayList<>();
