@@ -2,6 +2,7 @@ package me.nimnakse.water_management.connections.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import me.nimnakse.water_management.common.api.ApiResponse;
@@ -82,6 +83,17 @@ public class ConnectionController {
             @RequestParam(required = false) @Pattern(regexp = ValidationPatterns.SRI_LANKA_MOBILE_REGEX, message = "Phone number must be a 10-digit number starting with 07") String phoneNumber) {
         return ResponseEntity.ok(ApiResponse.success(
                 connectionService.search(membershipCode, accountNumber, nicNumber, phoneNumber)));
+    }
+
+    @GetMapping("/search/table")
+    @Operation(summary = "Search connections for table", description = "Searches connections by membership/account/NIC/phone with contains matching.")
+    public ResponseEntity<ApiResponse<List<ConnectionRes>>> searchForTable(
+            @RequestParam(required = false) String membershipCode,
+            @RequestParam(required = false) String accountNumber,
+            @RequestParam(required = false) String nicNumber,
+            @RequestParam(required = false) String phoneNumber) {
+        return ResponseEntity.ok(ApiResponse.success(
+                connectionService.searchForTable(membershipCode, accountNumber, nicNumber, phoneNumber)));
     }
 
     @GetMapping("/validate")

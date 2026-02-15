@@ -1,5 +1,6 @@
 package me.nimnakse.water_management.connections.service;
 
+import java.util.List;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWithPremisesReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
@@ -20,6 +21,8 @@ public interface ConnectionService {
     ConnectionRes update(Long id, ConnectionUpdateReq request);
 
     ConnectionSearchRes search(String membershipCode, String accountNumber, String nicNumber, String phoneNumber);
+
+    List<ConnectionRes> searchForTable(String membershipCode, String accountNumber, String nicNumber, String phoneNumber);
 
     PremisesValidationRes validatePremisesByAccount(String accountNumber, Long billingZoneId);
 }

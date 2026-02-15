@@ -13,6 +13,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMembershipCode(String membershipCode);
 
     Optional<Member> findByMembershipCodeAndOrgUnitId(String membershipCode, Long orgUnitId);
+    List<Member> findByMembershipCodeContainingIgnoreCase(String membershipCode);
+    List<Member> findByMembershipCodeContainingIgnoreCaseAndOrgUnitId(String membershipCode, Long orgUnitId);
 
     List<Member> findByMembershipCodeStartingWith(String membershipCode);
 
@@ -30,6 +32,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByNicNew(String nicNew);
 
     Optional<Member> findByNicNewAndOrgUnitId(String nicNew, Long orgUnitId);
+    List<Member> findByNicNewContainingIgnoreCase(String nicNew);
+    List<Member> findByNicNewContainingIgnoreCaseAndOrgUnitId(String nicNew, Long orgUnitId);
 
     List<Member> findByNicNewStartingWith(String nicNew);
 
@@ -38,10 +42,14 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     List<Member> findByNicOldStartingWith(String nicOld);
 
     List<Member> findByNicOldStartingWithAndOrgUnitId(String nicOld, Long orgUnitId);
+    List<Member> findByNicOldContainingIgnoreCase(String nicOld);
+    List<Member> findByNicOldContainingIgnoreCaseAndOrgUnitId(String nicOld, Long orgUnitId);
 
     List<Member> findByMobileNumber(String mobileNumber);
 
     List<Member> findByMobileNumberAndOrgUnitId(String mobileNumber, Long orgUnitId);
+    List<Member> findByMobileNumberContainingIgnoreCase(String mobileNumber);
+    List<Member> findByMobileNumberContainingIgnoreCaseAndOrgUnitId(String mobileNumber, Long orgUnitId);
 
     List<Member> findByMobileNumberStartingWith(String mobileNumber);
 
@@ -56,4 +64,5 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Page<Member> findByRegistrationNumberStartingWithAndOrgUnitId(String registrationNumber, Long orgUnitId, Pageable pageable);
 
     Page<Member> findByOrgUnitId(Long orgUnitId, Pageable pageable);
+    List<Member> findByOrgUnitId(Long orgUnitId);
 }

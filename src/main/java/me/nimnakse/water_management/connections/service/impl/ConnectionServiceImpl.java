@@ -1,8 +1,10 @@
 package me.nimnakse.water_management.connections.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -208,6 +210,34 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .toList();
 
         return new ConnectionSearchRes(toMemberSummary(member), connections);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ConnectionRes> searchForTable(String membershipCode, String accountNumber, String nicNumber,
+            String phoneNumber) {
+        Long orgUnitId = organizationAccessService.resolveOrgUnitId();
+        String membershipQuery = trimToNull(membershipCode);
+        String accountQuery = trimToNull(accountNumber);
+        String nicQuery = trimToNull(nicNumber);
+        String phoneQuery = trimToNull(phoneNumber);
+
+        List<Connection> scopedConnections = orgUnitId == null
+                ? connectionRepository.findAll()
+                : connectionRepository.findByOrgUnitId(orgUnitId);
+
+        Set<Long> membershipMatchedMemberIds = resolveMembershipMatchedMemberIds(membershipQuery, orgUnitId);
+        Set<Long> nicMatchedMemberIds = resolveNicMatchedMemberIds(nicQuery, orgUnitId);
+        Set<Long> memberPhoneMatchedMemberIds = resolveMemberPhoneMatchedMemberIds(phoneQuery, orgUnitId);
+        String normalizedPhoneQuery = normalizeDigits(phoneQuery);
+
+        return scopedConnections.stream()
+                .filter(connection -> matchesAccount(connection, accountQuery))
+                .filter(connection -> matchesMembership(connection, membershipQuery, membershipMatchedMemberIds))
+                .filter(connection -> matchesNic(connection, nicQuery, nicMatchedMemberIds))
+                .filter(connection -> matchesPhone(connection, phoneQuery, normalizedPhoneQuery, memberPhoneMatchedMemberIds))
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -540,6 +570,112 @@ public class ConnectionServiceImpl implements ConnectionService {
             return memberRepository.findByMobileNumber(mobileNumber);
         }
         return memberRepository.findByMobileNumberAndOrgUnitId(mobileNumber, orgUnitId);
+    }
+
+    private Set<Long> resolveMembershipMatchedMemberIds(String membershipQuery, Long orgUnitId) {
+        if (!StringUtils.hasText(membershipQuery)) {
+            return null;
+        }
+        List<Member> members = orgUnitId == null
+                ? memberRepository.findByMembershipCodeContainingIgnoreCase(membershipQuery)
+                : memberRepository.findByMembershipCodeContainingIgnoreCaseAndOrgUnitId(membershipQuery, orgUnitId);
+        return members.stream().map(Member::getId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    private Set<Long> resolveNicMatchedMemberIds(String nicQuery, Long orgUnitId) {
+        if (!StringUtils.hasText(nicQuery)) {
+            return null;
+        }
+        Set<Long> matchedIds = new HashSet<>();
+        List<Member> newNicMatches = orgUnitId == null
+                ? memberRepository.findByNicNewContainingIgnoreCase(nicQuery)
+                : memberRepository.findByNicNewContainingIgnoreCaseAndOrgUnitId(nicQuery, orgUnitId);
+        List<Member> oldNicMatches = orgUnitId == null
+                ? memberRepository.findByNicOldContainingIgnoreCase(nicQuery)
+                : memberRepository.findByNicOldContainingIgnoreCaseAndOrgUnitId(nicQuery, orgUnitId);
+        newNicMatches.stream().map(Member::getId).forEach(matchedIds::add);
+        oldNicMatches.stream().map(Member::getId).forEach(matchedIds::add);
+        return matchedIds;
+    }
+
+    private Set<Long> resolveMemberPhoneMatchedMemberIds(String phoneQuery, Long orgUnitId) {
+        if (!StringUtils.hasText(phoneQuery)) {
+            return null;
+        }
+        List<Member> members = orgUnitId == null
+                ? memberRepository.findByMobileNumberContainingIgnoreCase(phoneQuery)
+                : memberRepository.findByMobileNumberContainingIgnoreCaseAndOrgUnitId(phoneQuery, orgUnitId);
+        return members.stream().map(Member::getId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    private boolean matchesAccount(Connection connection, String accountQuery) {
+        if (!StringUtils.hasText(accountQuery)) {
+            return true;
+        }
+        return containsIgnoreCase(connection.getAccountNumber(), accountQuery);
+    }
+
+    private boolean matchesMembership(Connection connection, String membershipQuery, Set<Long> membershipMatchedMemberIds) {
+        if (!StringUtils.hasText(membershipQuery)) {
+            return true;
+        }
+        return membershipMatchedMemberIds != null && membershipMatchedMemberIds.contains(connection.getMemberId());
+    }
+
+    private boolean matchesNic(Connection connection, String nicQuery, Set<Long> nicMatchedMemberIds) {
+        if (!StringUtils.hasText(nicQuery)) {
+            return true;
+        }
+        return nicMatchedMemberIds != null && nicMatchedMemberIds.contains(connection.getMemberId());
+    }
+
+    private boolean matchesPhone(Connection connection, String phoneQuery, String normalizedPhoneQuery,
+            Set<Long> memberPhoneMatchedMemberIds) {
+        if (!StringUtils.hasText(phoneQuery)) {
+            return true;
+        }
+        boolean matchesMemberPhone = memberPhoneMatchedMemberIds != null
+                && memberPhoneMatchedMemberIds.contains(connection.getMemberId());
+        boolean matchesConnectionPhone = containsPhone(connection.getMobileNumber(), phoneQuery, normalizedPhoneQuery)
+                || containsPhone(connection.getSecondaryNumber(), phoneQuery, normalizedPhoneQuery)
+                || containsPhone(connection.getFixedLineNumber(), phoneQuery, normalizedPhoneQuery);
+        return matchesMemberPhone || matchesConnectionPhone;
+    }
+
+    private boolean containsPhone(String value, String query, String normalizedQuery) {
+        if (!StringUtils.hasText(value)) {
+            return false;
+        }
+        boolean rawMatch = containsIgnoreCase(value, query);
+        if (rawMatch) {
+            return true;
+        }
+        if (!StringUtils.hasText(normalizedQuery)) {
+            return false;
+        }
+        return normalizeDigits(value).contains(normalizedQuery);
+    }
+
+    private boolean containsIgnoreCase(String value, String query) {
+        if (!StringUtils.hasText(value) || !StringUtils.hasText(query)) {
+            return false;
+        }
+        return value.toLowerCase().contains(query.toLowerCase());
+    }
+
+    private String normalizeDigits(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("\\D", "");
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private PageResponse<ConnectionRes> toPageResponse(Page<Connection> page) {
