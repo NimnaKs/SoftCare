@@ -3,6 +3,8 @@ package me.nimnakse.water_management.revenue.accounts.repository;
 import java.util.List;
 import me.nimnakse.water_management.revenue.accounts.entity.RevenueAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, Long> {
     boolean existsByAccountNumberIgnoreCase(String accountNumber);
@@ -16,6 +18,7 @@ public interface RevenueAccountRepository extends JpaRepository<RevenueAccount, 
     boolean existsByMainCategoryId(Long mainCategoryId);
 
     List<RevenueAccount> findByMainCategoryId(Long mainCategoryId);
+    Page<RevenueAccount> findByMainCategoryId(Long mainCategoryId, Pageable pageable);
 
     java.util.Optional<RevenueAccount> findTopByAccountNumberStartingWithOrderByAccountNumberDesc(String prefix);
 }

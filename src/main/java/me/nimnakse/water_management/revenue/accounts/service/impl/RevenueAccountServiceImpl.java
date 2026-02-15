@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.revenue.accounts.service.impl;
 
 import java.util.List;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -12,6 +13,8 @@ import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRe
 import me.nimnakse.water_management.revenue.accounts.service.RevenueAccountService;
 import me.nimnakse.water_management.revenue.main_categories.entity.RevenueMainCategory;
 import me.nimnakse.water_management.revenue.main_categories.repository.RevenueMainCategoryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,16 +68,25 @@ public class RevenueAccountServiceImpl implements RevenueAccountService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<RevenueAccountRes> list(Long mainCategoryId) {
-        if (mainCategoryId != null) {
-            return accountRepository.findByMainCategoryId(mainCategoryId).stream()
-                    .sorted((a, b) -> a.getId().compareTo(b.getId()))
-                    .map(this::toResponse)
-                    .toList();
-        }
-        return accountRepository.findAll(Sort.by(Sort.Direction.ASC, "id")).stream()
+    public PageResponse<RevenueAccountRes> list(Long mainCategoryId, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 200);
+        PageRequest pageRequest = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "id"));
+
+        Page<RevenueAccount> accountPage = mainCategoryId != null
+                ? accountRepository.findByMainCategoryId(mainCategoryId, pageRequest)
+                : accountRepository.findAll(pageRequest);
+
+        List<RevenueAccountRes> items = accountPage.getContent().stream()
                 .map(this::toResponse)
                 .toList();
+
+        return new PageResponse<>(
+                items,
+                accountPage.getTotalElements(),
+                accountPage.getTotalPages(),
+                accountPage.getNumber(),
+                accountPage.getSize());
     }
 
     @Transactional

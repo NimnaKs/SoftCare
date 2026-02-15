@@ -3,8 +3,8 @@ package me.nimnakse.water_management.revenue.accounts.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.revenue.accounts.dto.request.RevenueAccountCreateReq;
 import me.nimnakse.water_management.revenue.accounts.dto.request.RevenueAccountUpdateReq;
 import me.nimnakse.water_management.revenue.accounts.dto.response.RevenueAccountRes;
@@ -46,8 +46,11 @@ public class RevenueAccountController {
 
     @GetMapping
     @Operation(summary = "List revenue accounts", description = "Lists revenue accounts optionally filtered by main category.")
-    public ResponseEntity<ApiResponse<List<RevenueAccountRes>>> list(@RequestParam(required = false) Long mainCategoryId) {
-        return ResponseEntity.ok(ApiResponse.success(accountService.list(mainCategoryId)));
+    public ResponseEntity<ApiResponse<PageResponse<RevenueAccountRes>>> list(
+            @RequestParam(required = false) Long mainCategoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(accountService.list(mainCategoryId, page, size)));
     }
 
     @DeleteMapping("/{id}")
