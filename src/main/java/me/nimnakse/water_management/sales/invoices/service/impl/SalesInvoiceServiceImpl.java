@@ -46,6 +46,7 @@ import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePost
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePrintableConnectionsRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRevenueLineRes;
+import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceSummaryRes;
 import me.nimnakse.water_management.sales.invoices.entity.BillingMethod;
 import me.nimnakse.water_management.sales.invoices.entity.SaleType;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
@@ -143,6 +144,26 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     @Transactional(readOnly = true)
     public SalesInvoiceRes getById(Long id) {
         return toRes(getInvoice(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.min(Math.max(size, 1), 200),
+                Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Page<SalesInvoice> result = saleType == null
+                ? invoiceRepository.findByDeletedAtIsNull(pageRequest)
+                : invoiceRepository.findByDeletedAtIsNullAndSaleType(saleType, pageRequest);
+        List<SalesInvoiceSummaryRes> items = result.getContent().stream()
+                .peek(inv -> {
+                    if (inv.getOrgUnitId() != null) {
+                        organizationAccessService.enforceOrgUnitAccess(inv.getOrgUnitId());
+                    }
+                })
+                .map(this::toSummaryRes)
+                .toList();
+        return new PageResponse<>(items, result.getTotalElements(), result.getTotalPages(), result.getNumber(),
+                result.getSize());
     }
 
     @Override
@@ -575,6 +596,20 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     private RecurringInvoiceRes toRecurringRes(SalesInvoice invoice) {
         return new RecurringInvoiceRes(invoice.getId(), invoice.getInvoiceNo(), invoice.getBillingZoneId(), invoice.getRecurringEnabled(), invoice.getGrandTotalPayable(), invoice.getCreatedAt(), invoice.getUpdatedAt());
+    }
+
+    private SalesInvoiceSummaryRes toSummaryRes(SalesInvoice invoice) {
+        return new SalesInvoiceSummaryRes(
+                invoice.getId(),
+                invoice.getInvoiceNo(),
+                invoice.getSaleType(),
+                invoice.getBillingMethod(),
+                invoice.getStatus(),
+                invoice.getBillingZoneId(),
+                invoice.getGrandTotalPayable(),
+                invoice.getIsRecurring(),
+                invoice.getCreatedAt(),
+                invoice.getUpdatedAt());
     }
 
     private void applyTotals(SalesInvoice invoice, SalesInvoiceTotals totals) {

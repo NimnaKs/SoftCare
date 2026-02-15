@@ -24,6 +24,10 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
 
     Page<SalesInvoice> findByIsRecurringTrueAndDeletedAtIsNullAndBillingZoneId(Long billingZoneId, Pageable pageable);
 
+    Page<SalesInvoice> findByDeletedAtIsNull(Pageable pageable);
+
+    Page<SalesInvoice> findByDeletedAtIsNullAndSaleType(me.nimnakse.water_management.sales.invoices.entity.SaleType saleType, Pageable pageable);
+
     @Query("select max(s.invoiceNo) from SalesInvoice s where s.invoiceNo like concat(:prefix, '%')")
     String findMaxInvoiceNoByPrefix(@Param("prefix") String prefix);
 }

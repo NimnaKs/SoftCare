@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
+import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.sales.invoices.dto.SalesInvoicePostAction;
 import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceConnectionPreviewReq;
 import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceCreateReq;
@@ -11,6 +12,8 @@ import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceConn
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePostRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePrintableConnectionsRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRes;
+import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceSummaryRes;
+import me.nimnakse.water_management.sales.invoices.entity.SaleType;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +47,15 @@ public class SalesInvoiceController {
     @Operation(summary = "Get sales invoice by id")
     public ResponseEntity<ApiResponse<SalesInvoiceRes>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.getById(id)));
+    }
+
+    @GetMapping
+    @Operation(summary = "List sales invoices")
+    public ResponseEntity<ApiResponse<PageResponse<SalesInvoiceSummaryRes>>> list(
+            @RequestParam(required = false) SaleType saleType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.listInvoices(saleType, page, size)));
     }
 
     @PostMapping("/{id}/post")

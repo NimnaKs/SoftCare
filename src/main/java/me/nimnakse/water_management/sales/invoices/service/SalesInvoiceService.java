@@ -10,6 +10,8 @@ import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceConn
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePostRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoicePrintableConnectionsRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRes;
+import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceSummaryRes;
+import me.nimnakse.water_management.sales.invoices.entity.SaleType;
 
 public interface SalesInvoiceService {
     SalesInvoiceConnectionPreviewRes previewConnections(SalesInvoiceConnectionPreviewReq request, String sort);
@@ -17,6 +19,8 @@ public interface SalesInvoiceService {
     SalesInvoiceRes createDraftInvoice(SalesInvoiceCreateReq request);
 
     SalesInvoiceRes getById(Long id);
+
+    PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, int page, int size);
 
     SalesInvoicePostRes postInvoice(Long id, SalesInvoicePostAction action);
 
