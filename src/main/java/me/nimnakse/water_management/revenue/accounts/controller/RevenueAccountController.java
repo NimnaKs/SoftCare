@@ -49,7 +49,7 @@ public class RevenueAccountController {
     public ResponseEntity<ApiResponse<PageResponse<RevenueAccountRes>>> list(
             @RequestParam(required = false) Long mainCategoryId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(accountService.list(mainCategoryId, page, size)));
     }
 
