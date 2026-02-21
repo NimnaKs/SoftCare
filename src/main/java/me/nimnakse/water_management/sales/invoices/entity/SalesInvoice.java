@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +21,11 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
         @Index(name = "idx_sales_invoices_invoice_no", columnList = "invoice_no"),
         @Index(name = "idx_sales_invoices_billing_zone_id", columnList = "billing_zone_id"),
         @Index(name = "idx_sales_invoices_status", columnList = "status")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uq_sales_invoices_org_invoice_no", columnNames = { "org_unit_id", "invoice_no" })
 })
 public class SalesInvoice extends BaseEntity {
-    @Column(name = "invoice_no", nullable = false, unique = true, length = 50)
+    @Column(name = "invoice_no", nullable = false, length = 50)
     private String invoiceNo;
 
     @Enumerated(EnumType.STRING)

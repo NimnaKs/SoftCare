@@ -102,12 +102,13 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     @Transactional
     public SalesInvoiceRes createDraftInvoice(SalesInvoiceCreateReq request) {
         validateCreateRequest(request);
+        Long orgUnitId = resolveOrgUnitId(request.orgUnitId());
         SalesInvoice invoice = new SalesInvoice();
-        invoice.setInvoiceNo(nextInvoiceNo());
+        invoice.setInvoiceNo(nextInvoiceNo(orgUnitId));
         invoice.setSaleType(request.saleType());
         invoice.setBillingMethod(request.billingMethod());
         invoice.setStatus(SalesInvoiceStatus.DRAFT);
-        invoice.setOrgUnitId(resolveOrgUnitId(request.orgUnitId()));
+        invoice.setOrgUnitId(orgUnitId);
         invoice.setBillingZoneId(request.billingZoneId());
         invoice.setCustomerName(trimToNull(request.customerName()));
         invoice.setCustomerNic(trimToNull(request.customerNic()));
@@ -434,7 +435,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     private SalesInvoice cloneRecurringByZone(SalesInvoice source, Long zoneId) {
         SalesInvoice clone = new SalesInvoice();
-        clone.setInvoiceNo(nextInvoiceNo());
+        clone.setInvoiceNo(nextInvoiceNo(source.getOrgUnitId()));
         clone.setSaleType(source.getSaleType());
         clone.setBillingMethod(source.getBillingMethod());
         clone.setStatus(SalesInvoiceStatus.POSTED);
@@ -619,9 +620,9 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         invoice.setGrandTotalPayable(totals.grandTotalPayable());
     }
 
-    private String nextInvoiceNo() {
-        String prefix = "SI-";
-        String max = invoiceRepository.findMaxInvoiceNoByPrefix(prefix);
+    private String nextInvoiceNo(Long orgUnitId) {
+        String prefix = "INV-";
+        String max = invoiceRepository.findMaxInvoiceNoByPrefixAndOrgUnitId(prefix, orgUnitId);
         int next = 1;
         if (max != null && max.startsWith(prefix)) {
             try {
