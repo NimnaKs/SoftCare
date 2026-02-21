@@ -51,6 +51,13 @@ public class EmployeeController {
         return ResponseEntity.ok(ApiResponse.success("Employee deactivated", null));
     }
 
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Activate employee", description = "Marks an employee as active.")
+    public ResponseEntity<ApiResponse<Void>> activate(@PathVariable Long id) {
+        employeeService.activate(id);
+        return ResponseEntity.ok(ApiResponse.success("Employee activated", null));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get employee", description = "Fetches an employee by identifier.")
     public ResponseEntity<ApiResponse<EmployeeRes>> getById(@PathVariable Long id) {

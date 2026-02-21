@@ -14,5 +14,7 @@ public interface EmployeeService {
 
     PageResponse<EmployeeRes> getPage(int page, int size);
 
+    void activate(Long id);
+
     void deactivate(Long id);
 }

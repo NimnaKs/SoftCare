@@ -90,6 +90,14 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Transactional
     @Override
+    public void activate(Long id) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Employee not found", "සේවකයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+        employee.setStatus(EmployeeStatus.ACTIVE);
+    }
+
+    @Transactional
+    @Override
     public void deactivate(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(
