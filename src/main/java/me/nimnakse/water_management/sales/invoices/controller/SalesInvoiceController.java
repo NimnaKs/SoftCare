@@ -15,7 +15,7 @@ import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceSummaryRes;
 import me.nimnakse.water_management.sales.invoices.entity.SaleType;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
-import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;`r`nimport org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -55,7 +55,7 @@ public class SalesInvoiceController {
             @RequestParam(required = false) SaleType saleType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.listInvoices(saleType, page, size)));
+        return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.listInvoices(saleType, invoiceNo, connectionAccountNo, dateFrom, dateTo, page, size)));
     }
 
     @PostMapping("/{id}/post")
@@ -87,3 +87,6 @@ public class SalesInvoiceController {
         return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.reverseNonCustomerInvoice(id)));
     }
 }
+
+
+

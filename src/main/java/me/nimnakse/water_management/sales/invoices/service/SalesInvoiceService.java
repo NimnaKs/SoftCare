@@ -20,7 +20,7 @@ public interface SalesInvoiceService {
 
     SalesInvoiceRes getById(Long id);
 
-    PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, int page, int size);
+    PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, String invoiceNo, String connectionAccountNo, java.time.LocalDate dateFrom, java.time.LocalDate dateTo, int page, int size);
 
     SalesInvoicePostRes postInvoice(Long id, SalesInvoicePostAction action);
 
@@ -34,3 +34,5 @@ public interface SalesInvoiceService {
 
     SalesInvoiceRes reverseNonCustomerInvoice(Long id);
 }
+
+

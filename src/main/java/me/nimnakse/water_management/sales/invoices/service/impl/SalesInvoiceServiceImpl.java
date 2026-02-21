@@ -4,7 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDate;`r`nimport java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -159,7 +159,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, int page, int size) {
+    public PageResponse<SalesInvoiceSummaryRes> listInvoices(SaleType saleType, String invoiceNo, String connectionAccountNo, LocalDate dateFrom, LocalDate dateTo, int page, int size) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.min(Math.max(size, 1), 200),
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
         Page<SalesInvoice> result = saleType == null
@@ -740,6 +740,8 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
     }
 }
+
+
 
 
 
