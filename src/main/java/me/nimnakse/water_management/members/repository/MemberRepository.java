@@ -27,6 +27,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("select max(m.membershipCode) from Member m where m.orgUnitId = :orgUnitId")
     String findMaxMembershipCodeByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
+    Optional<Member> findTopByMembershipCodeStartingWithOrderByMembershipCodeDesc(String membershipCodePrefix);
+
     boolean existsByMembershipCode(String membershipCode);
 
     Optional<Member> findByNicNew(String nicNew);
