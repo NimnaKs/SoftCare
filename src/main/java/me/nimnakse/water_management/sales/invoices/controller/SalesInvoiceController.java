@@ -3,6 +3,7 @@ package me.nimnakse.water_management.sales.invoices.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.sales.invoices.dto.SalesInvoicePostAction;
@@ -54,6 +55,10 @@ public class SalesInvoiceController {
     @Operation(summary = "List sales invoices")
     public ResponseEntity<ApiResponse<PageResponse<SalesInvoiceSummaryRes>>> list(
             @RequestParam(required = false) SaleType saleType,
+            @RequestParam(required = false) String invoiceNo,
+            @RequestParam(required = false) String connectionAccountNo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(salesInvoiceService.listInvoices(saleType, invoiceNo, connectionAccountNo, dateFrom, dateTo, page, size)));
