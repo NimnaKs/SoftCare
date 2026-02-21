@@ -1,4 +1,4 @@
-﻿package me.nimnakse.water_management.sales.invoices.dto.request;
+package me.nimnakse.water_management.sales.invoices.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;

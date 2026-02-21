@@ -15,7 +15,8 @@ import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceRes;
 import me.nimnakse.water_management.sales.invoices.dto.response.SalesInvoiceSummaryRes;
 import me.nimnakse.water_management.sales.invoices.entity.SaleType;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
-import org.springframework.format.annotation.DateTimeFormat;`r`nimport org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

@@ -1,4 +1,4 @@
-﻿package me.nimnakse.water_management.sales.invoices.service.impl;
+package me.nimnakse.water_management.sales.invoices.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

@@ -1,4 +1,4 @@
-﻿package me.nimnakse.water_management.sales.invoices.service.impl;
+package me.nimnakse.water_management.sales.invoices.service.impl;
 
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;

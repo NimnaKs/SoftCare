@@ -1,4 +1,4 @@
-﻿package me.nimnakse.water_management.sales.invoices.entity;
+package me.nimnakse.water_management.sales.invoices.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
