@@ -1,7 +1,9 @@
-package me.nimnakse.water_management.sales.invoices.service.impl;
+﻿package me.nimnakse.water_management.sales.invoices.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -59,7 +61,10 @@ final class SalesInvoiceRules {
     static List<SalesInvoiceInstallmentPlanItem> buildInstallmentPlan(
             BigDecimal totalPayable,
             BigDecimal downPayment,
-            int numberOfInstallments) {
+            int numberOfInstallments,
+            LocalDate downPaymentDate,
+            Integer installmentStartYear,
+            Integer installmentStartMonth) {
         List<SalesInvoiceInstallmentPlanItem> plan = new ArrayList<>();
         BigDecimal safeTotal = scaleMoney(totalPayable);
         BigDecimal safeDownPayment = scaleMoney(downPayment);
@@ -68,10 +73,17 @@ final class SalesInvoiceRules {
             balance = BigDecimal.ZERO;
         }
 
+        LocalDate safeDownPaymentDate = downPaymentDate == null ? LocalDate.now() : downPaymentDate;
+        int cycleDay = safeDownPaymentDate.getDayOfMonth();
+        int startYear = installmentStartYear == null ? safeDownPaymentDate.getYear() : installmentStartYear;
+        int startMonth = installmentStartMonth == null ? safeDownPaymentDate.getMonthValue() : installmentStartMonth;
+        LocalDate firstInstallmentDate = atMonthCycle(startYear, startMonth, cycleDay);
+
         plan.add(new SalesInvoiceInstallmentPlanItem(
                 0,
                 "Down Payment",
                 safeDownPayment,
+                safeDownPaymentDate,
                 SalesInvoiceInstallmentStatus.POSTED));
 
         if (numberOfInstallments <= 0) {
@@ -90,6 +102,7 @@ final class SalesInvoiceRules {
                     i,
                     ordinal(i) + " Installment",
                     amount,
+                    firstInstallmentDate.plusMonths(i - 1L),
                     SalesInvoiceInstallmentStatus.PLANNED));
         }
         return plan;
@@ -117,6 +130,12 @@ final class SalesInvoiceRules {
             case 3 -> number + "rd";
             default -> number + "th";
         };
+    }
+
+    private static LocalDate atMonthCycle(int year, int month, int day) {
+        YearMonth ym = YearMonth.of(year, month);
+        int validDay = Math.min(day, ym.lengthOfMonth());
+        return ym.atDay(validDay);
     }
 
     private static BigDecimal scaleMoney(BigDecimal value) {

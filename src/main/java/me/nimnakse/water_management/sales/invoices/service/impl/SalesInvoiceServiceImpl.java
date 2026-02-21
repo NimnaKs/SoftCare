@@ -1,10 +1,11 @@
-package me.nimnakse.water_management.sales.invoices.service.impl;
+﻿package me.nimnakse.water_management.sales.invoices.service.impl;
 
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.LocalDate;`r`nimport java.time.ZoneOffset;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -126,6 +127,9 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         invoice.setCustomerMobile(trimToNull(request.customerMobile()));
         invoice.setDownPayment(request.installmentSetup() == null ? null : scale(request.installmentSetup().downPayment()));
         invoice.setNumberOfInstallments(request.installmentSetup() == null ? null : request.installmentSetup().numberOfInstallments());
+        invoice.setDownPaymentDate(request.installmentSetup() == null ? null : request.installmentSetup().downPaymentDate());
+        invoice.setInstallmentStartYear(request.installmentSetup() == null ? null : request.installmentSetup().installmentStartYear());
+        invoice.setInstallmentStartMonth(request.installmentSetup() == null ? null : request.installmentSetup().installmentStartMonth());
 
         List<SalesInvoiceRevenueLine> lines = buildRevenueLines(invoice, request.revenueLines());
         invoice.setRevenueLines(lines);
@@ -397,7 +401,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
             if (invoice.getDownPayment().compareTo(invoice.getGrandTotalPayable()) > 0) {
                 throw new BadRequestException("downPayment exceeds total", "downPayment exceeds total");
             }
-            List<SalesInvoiceInstallmentPlanItem> plan = SalesInvoiceRules.buildInstallmentPlan(invoice.getGrandTotalPayable(), invoice.getDownPayment(), invoice.getNumberOfInstallments());
+            List<SalesInvoiceInstallmentPlanItem> plan = SalesInvoiceRules.buildInstallmentPlan(invoice.getGrandTotalPayable(), invoice.getDownPayment(), invoice.getNumberOfInstallments(), invoice.getDownPaymentDate(), invoice.getInstallmentStartYear(), invoice.getInstallmentStartMonth());
             invoice.getInstallments().clear();
             for (SalesInvoiceInstallmentPlanItem p : plan) {
                 SalesInvoiceInstallment inst = new SalesInvoiceInstallment();
@@ -406,6 +410,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 inst.setLabel(p.label());
                 inst.setAmount(p.amount());
                 inst.setStatus(p.status());
+                inst.setDueDate(p.dueDate());
                 invoice.getInstallments().add(inst);
             }
         }
@@ -740,6 +745,8 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
     }
 }
+
+
 
 
 

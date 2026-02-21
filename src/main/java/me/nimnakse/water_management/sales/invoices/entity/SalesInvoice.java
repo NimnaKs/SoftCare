@@ -1,4 +1,4 @@
-package me.nimnakse.water_management.sales.invoices.entity;
+﻿package me.nimnakse.water_management.sales.invoices.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import me.nimnakse.water_management.common.entity.BaseEntity;
@@ -84,6 +85,15 @@ public class SalesInvoice extends BaseEntity {
 
     @Column(name = "number_of_installments")
     private Integer numberOfInstallments;
+
+    @Column(name = "down_payment_date")
+    private LocalDate downPaymentDate;
+
+    @Column(name = "installment_start_year")
+    private Integer installmentStartYear;
+
+    @Column(name = "installment_start_month")
+    private Integer installmentStartMonth;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<SalesInvoiceRevenueLine> revenueLines = new ArrayList<>();
@@ -252,6 +262,30 @@ public class SalesInvoice extends BaseEntity {
         this.numberOfInstallments = numberOfInstallments;
     }
 
+    public LocalDate getDownPaymentDate() {
+        return downPaymentDate;
+    }
+
+    public void setDownPaymentDate(LocalDate downPaymentDate) {
+        this.downPaymentDate = downPaymentDate;
+    }
+
+    public Integer getInstallmentStartYear() {
+        return installmentStartYear;
+    }
+
+    public void setInstallmentStartYear(Integer installmentStartYear) {
+        this.installmentStartYear = installmentStartYear;
+    }
+
+    public Integer getInstallmentStartMonth() {
+        return installmentStartMonth;
+    }
+
+    public void setInstallmentStartMonth(Integer installmentStartMonth) {
+        this.installmentStartMonth = installmentStartMonth;
+    }
+
     public List<SalesInvoiceRevenueLine> getRevenueLines() {
         return revenueLines;
     }
@@ -292,3 +326,6 @@ public class SalesInvoice extends BaseEntity {
         this.connections = connections;
     }
 }
+
+
+
