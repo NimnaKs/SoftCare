@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import me.nimnakse.water_management.revenue.accounts.entity.RevenueAccount;
 import me.nimnakse.water_management.sales.invoices.entity.SaleType;
@@ -44,6 +45,9 @@ class SalesInvoiceRulesTest {
         List<SalesInvoiceInstallmentPlanItem> plan = SalesInvoiceRules.buildInstallmentPlan(
                 new BigDecimal("100.00"),
                 new BigDecimal("10.00"),
+                3,
+                LocalDate.of(2026, 2, 21),
+                2026,
                 3);
 
         assertEquals(4, plan.size());
