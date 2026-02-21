@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 
 public record SalesInvoiceInventoryItemRes(
         Long id,
+        Long inventoryTemplateId,
+        String batchNo,
         String category1,
         String category2,
         String category3,

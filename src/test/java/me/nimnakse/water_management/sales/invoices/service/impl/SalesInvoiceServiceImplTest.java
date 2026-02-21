@@ -11,6 +11,7 @@ import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.inventory.consumptions.service.InventoryConsumptionService;
 import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.dto.ConnectionIncludeMode;
@@ -38,6 +39,8 @@ class SalesInvoiceServiceImplTest {
     private MemberRepository memberRepository;
     @Mock
     private OrganizationAccessService organizationAccessService;
+    @Mock
+    private InventoryConsumptionService inventoryConsumptionService;
 
     private SalesInvoiceServiceImpl service;
 
@@ -48,7 +51,8 @@ class SalesInvoiceServiceImplTest {
                 revenueAccountRepository,
                 connectionRepository,
                 memberRepository,
-                organizationAccessService);
+                organizationAccessService,
+                inventoryConsumptionService);
     }
 
     @Test
@@ -100,3 +104,7 @@ class SalesInvoiceServiceImplTest {
         assertThrows(BadRequestException.class, () -> service.reverseNonCustomerInvoice(10L));
     }
 }
+
+
+
+

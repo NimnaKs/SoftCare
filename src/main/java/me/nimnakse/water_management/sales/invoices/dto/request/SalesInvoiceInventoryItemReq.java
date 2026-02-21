@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record SalesInvoiceInventoryItemReq(
+        Long inventoryTemplateId,
+        String batchNo,
         String category1,
         String category2,
         String category3,

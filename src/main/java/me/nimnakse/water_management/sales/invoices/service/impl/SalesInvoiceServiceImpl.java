@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
@@ -21,6 +24,8 @@ import me.nimnakse.water_management.common.util.MemberNameFormatter;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.inventory.consumptions.dto.request.InventoryConsumptionCreateReq;
+import me.nimnakse.water_management.inventory.consumptions.service.InventoryConsumptionService;
 import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
@@ -69,23 +74,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SalesInvoiceServiceImpl implements SalesInvoiceService {
+    private static final Pattern TEMPLATE_PATTERN = Pattern.compile("(?i)template\\s*[:=]\\s*(\\d+)");
+    private static final Pattern BATCH_PATTERN = Pattern.compile("(?i)batch\\s*[:=]\\s*([^|,;\\s]+)");
     private final SalesInvoiceRepository invoiceRepository;
     private final RevenueAccountRepository revenueAccountRepository;
     private final ConnectionRepository connectionRepository;
     private final MemberRepository memberRepository;
     private final OrganizationAccessService organizationAccessService;
+    private final InventoryConsumptionService inventoryConsumptionService;
 
     public SalesInvoiceServiceImpl(
             SalesInvoiceRepository invoiceRepository,
             RevenueAccountRepository revenueAccountRepository,
             ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
-            OrganizationAccessService organizationAccessService) {
+            OrganizationAccessService organizationAccessService,
+            InventoryConsumptionService inventoryConsumptionService) {
         this.invoiceRepository = invoiceRepository;
         this.revenueAccountRepository = revenueAccountRepository;
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.organizationAccessService = organizationAccessService;
+        this.inventoryConsumptionService = inventoryConsumptionService;
     }
 
     @Override
@@ -312,6 +322,8 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
             item.setUnit(trimToNull(req.unit()));
             item.setUnitCost(scale(req.unitCost()));
             item.setAmount(scale(req.amount()));
+            item.setInventoryTemplateId(resolveInventoryTemplateId(req));
+            item.setBatchNo(resolveBatchNo(req));
             items.add(item);
         }
         return items;
@@ -377,6 +389,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
 
     private void postProceedNow(SalesInvoice invoice) {
         invoice.setStatus(SalesInvoiceStatus.POSTED);
+        consumeInventoryFromInvoice(invoice);
         if (invoice.getBillingMethod() == BillingMethod.INSTALLMENTS) {
             if (invoice.getDownPayment() == null || invoice.getNumberOfInstallments() == null) {
                 throw new BadRequestException("Installment setup missing", "Installment setup missing");
@@ -398,6 +411,65 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         }
     }
 
+
+    private void consumeInventoryFromInvoice(SalesInvoice invoice) {
+        if (!Boolean.TRUE.equals(invoice.getHasInventoryIssue()) || invoice.getInventoryItems() == null || invoice.getInventoryItems().isEmpty()) {
+            return;
+        }
+
+        int rowNo = 1;
+        for (SalesInvoiceInventoryItem item : invoice.getInventoryItems()) {
+            Long templateId = item.getInventoryTemplateId();
+            String batchNo = trimToNull(item.getBatchNo());
+            if (templateId == null || batchNo == null) {
+                throw new BadRequestException(
+                        "Inventory template and batch are required for inventory issue posting",
+                        "Inventory template and batch are required for inventory issue posting");
+            }
+            String referenceNo = "SINV-" + invoice.getInvoiceNo() + "-" + rowNo;
+            inventoryConsumptionService.create(new InventoryConsumptionCreateReq(
+                    templateId,
+                    null,
+                    item.getQty(),
+                    item.getAmount(),
+                    LocalDate.now(),
+                    batchNo,
+                    referenceNo,
+                    item.getDescriptionSpec()));
+            rowNo++;
+        }
+    }
+
+    private Long resolveInventoryTemplateId(SalesInvoiceInventoryItemReq req) {
+        if (req.inventoryTemplateId() != null) {
+            return req.inventoryTemplateId();
+        }
+        String description = trimToNull(req.descriptionSpec());
+        if (description == null) {
+            return null;
+        }
+        Matcher matcher = TEMPLATE_PATTERN.matcher(description);
+        if (!matcher.find()) {
+            return null;
+        }
+        return Long.parseLong(matcher.group(1));
+    }
+
+    private String resolveBatchNo(SalesInvoiceInventoryItemReq req) {
+        String direct = trimToNull(req.batchNo());
+        if (direct != null) {
+            return direct;
+        }
+        String description = trimToNull(req.descriptionSpec());
+        if (description == null) {
+            return null;
+        }
+        Matcher matcher = BATCH_PATTERN.matcher(description);
+        if (!matcher.find()) {
+            return null;
+        }
+        return trimToNull(matcher.group(1));
+    }
     private List<Long> postRecurring(SalesInvoice invoice) {
         validateRecurring(invoice);
         Set<Long> zones = invoice.getConnections().stream().map(SalesInvoiceConnection::getBillingZoneId).filter(Objects::nonNull).collect(Collectors.toCollection(HashSet::new));
@@ -584,7 +656,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     }
 
     private SalesInvoiceInventoryItemRes toInventoryItemRes(SalesInvoiceInventoryItem item) {
-        return new SalesInvoiceInventoryItemRes(item.getId(), item.getCategory1(), item.getCategory2(), item.getCategory3(), item.getDescriptionSpec(), item.getQty(), item.getUnit(), item.getUnitCost(), item.getAmount());
+        return new SalesInvoiceInventoryItemRes(item.getId(), item.getInventoryTemplateId(), item.getBatchNo(), item.getCategory1(), item.getCategory2(), item.getCategory3(), item.getDescriptionSpec(), item.getQty(), item.getUnit(), item.getUnitCost(), item.getAmount());
     }
 
     private SalesInvoiceInstallmentRes toInstallmentRes(SalesInvoiceInstallment installment) {
@@ -668,3 +740,11 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
     }
 }
+
+
+
+
+
+
+
+

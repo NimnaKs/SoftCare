@@ -16,6 +16,12 @@ public class SalesInvoiceInventoryItem extends BaseEntity {
     @JoinColumn(name = "invoice_id", nullable = false)
     private SalesInvoice invoice;
 
+    @Column(name = "inventory_template_id")
+    private Long inventoryTemplateId;
+
+    @Column(name = "batch_no", length = 50)
+    private String batchNo;
+
     @Column(name = "category1")
     private String category1;
 
@@ -46,6 +52,22 @@ public class SalesInvoiceInventoryItem extends BaseEntity {
 
     public void setInvoice(SalesInvoice invoice) {
         this.invoice = invoice;
+    }
+
+    public Long getInventoryTemplateId() {
+        return inventoryTemplateId;
+    }
+
+    public void setInventoryTemplateId(Long inventoryTemplateId) {
+        this.inventoryTemplateId = inventoryTemplateId;
+    }
+
+    public String getBatchNo() {
+        return batchNo;
+    }
+
+    public void setBatchNo(String batchNo) {
+        this.batchNo = batchNo;
     }
 
     public String getCategory1() {
