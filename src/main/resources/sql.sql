@@ -220,7 +220,7 @@ CREATE TABLE meter_reader_zones (
 
 CREATE TABLE members (
                          id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                         membership_code  VARCHAR(100) NOT NULL UNIQUE,
+                         membership_code  VARCHAR(100) NOT NULL,
                          org_unit_id      BIGINT UNSIGNED NOT NULL,
                          membership_type  ENUM('PERSONAL','CORPORATE') NOT NULL,
                          salutation       VARCHAR(50) NULL,
@@ -239,6 +239,7 @@ CREATE TABLE members (
 
                          UNIQUE KEY uq_members_nic_old (nic_old),
                          UNIQUE KEY uq_members_nic_new (nic_new),
+                         UNIQUE KEY uq_members_org_unit_membership_code (org_unit_id, membership_code),
                          INDEX idx_members_org_unit (org_unit_id),
 
                          CONSTRAINT fk_members_org_unit
