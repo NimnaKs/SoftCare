@@ -5,12 +5,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import me.nimnakse.water_management.common.entity.BaseEntity;
 
 @Entity
-@Table(name = "members")
+@Table(name = "members", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_members_org_unit_membership_code", columnNames = { "org_unit_id", "membership_code" })
+})
 public class Member extends BaseEntity {
-    @Column(name = "membership_code", nullable = false, unique = true)
+    @Column(name = "membership_code", nullable = false)
     private String membershipCode;
 
     @Column(name = "org_unit_id", nullable = false)

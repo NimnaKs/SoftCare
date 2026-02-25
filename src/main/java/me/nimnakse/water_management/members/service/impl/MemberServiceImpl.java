@@ -235,7 +235,10 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private String generateMembershipCode(OrgUnit orgUnit) {
-        String maxCode = memberRepository.findTopByMembershipCodeStartingWithOrderByMembershipCodeDesc(MEMBER_CODE_PREFIX)
+        String maxCode = memberRepository
+                .findTopByOrgUnitIdAndMembershipCodeStartingWithOrderByMembershipCodeDesc(
+                        orgUnit.getId(),
+                        MEMBER_CODE_PREFIX)
                 .map(Member::getMembershipCode)
                 .orElse(null);
         int nextSequence = 1;

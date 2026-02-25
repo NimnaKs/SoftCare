@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMembershipCode(String membershipCode);
+    List<Member> findByMembershipCodeIgnoreCase(String membershipCode);
 
     Optional<Member> findByMembershipCodeAndOrgUnitId(String membershipCode, Long orgUnitId);
     List<Member> findByMembershipCodeContainingIgnoreCase(String membershipCode);
@@ -27,7 +28,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("select max(m.membershipCode) from Member m where m.orgUnitId = :orgUnitId")
     String findMaxMembershipCodeByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
-    Optional<Member> findTopByMembershipCodeStartingWithOrderByMembershipCodeDesc(String membershipCodePrefix);
+    Optional<Member> findTopByOrgUnitIdAndMembershipCodeStartingWithOrderByMembershipCodeDesc(
+            Long orgUnitId,
+            String membershipCodePrefix);
 
     boolean existsByMembershipCode(String membershipCode);
 

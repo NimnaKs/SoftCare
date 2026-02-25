@@ -546,7 +546,13 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     private java.util.Optional<Member> findByMembershipCode(String membershipCode, Long orgUnitId) {
         if (orgUnitId == null) {
-            return memberRepository.findByMembershipCode(membershipCode);
+            List<Member> matches = memberRepository.findByMembershipCodeIgnoreCase(membershipCode);
+            if (matches.size() > 1) {
+                throw new BadRequestException(
+                        "Membership code is duplicated across organizations. Search within an organization scope.",
+                        "Duplicate membership code exists across organizations");
+            }
+            return matches.stream().findFirst();
         }
         return memberRepository.findByMembershipCodeAndOrgUnitId(membershipCode, orgUnitId);
     }
