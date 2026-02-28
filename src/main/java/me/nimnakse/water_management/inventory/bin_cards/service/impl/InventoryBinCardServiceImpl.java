@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InventoryBinCardServiceImpl implements InventoryBinCardService {
-        private static final Map<String, Integer> MOVEMENT_ORDER = movementOrder();
-
         private final InventoryInitialStockRepository initialStockRepository;
         private final InventoryConsumptionRepository consumptionRepository;
         private final InventoryTemplateRepository templateRepository;
@@ -114,8 +111,11 @@ public class InventoryBinCardServiceImpl implements InventoryBinCardService {
                                                                 && scopedBatchNos.contains(consumption.getBatchNo())))
                                 .toList();
                 for (InventoryConsumption consumption : consumptions) {
+                        LocalDateTime movementAt = consumption.getCreatedAt() != null
+                                        ? LocalDateTime.ofInstant(consumption.getCreatedAt(), ZoneId.systemDefault())
+                                        : consumption.getConsumedAt().atStartOfDay();
                         events.add(new MovementEvent(
-                                        consumption.getConsumedAt().atStartOfDay(),
+                                        movementAt,
                                         "Consumption",
                                         consumption.getReferenceNo(),
                                         consumption.getBatchNo(),
@@ -126,14 +126,15 @@ public class InventoryBinCardServiceImpl implements InventoryBinCardService {
                 for (GrnInvoiceItem item : grnItems) {
                         GrnInvoice invoice = grnInvoices.get(item.getGrnId());
                         LocalDateTime movementAt = invoice != null
-                                        ? invoice.getGrnDate().atStartOfDay()
+                                        ? LocalDateTime.ofInstant(invoice.getCreatedAt(), ZoneId.systemDefault())
                                         : LocalDateTime.now();
                         String referenceNo = invoice != null ? invoice.getGrnNo() : null;
+                        String batchNo = referenceNo != null ? referenceNo : item.getBatchNo();
                         events.add(new MovementEvent(
                                         movementAt,
                                         "Purchase",
                                         referenceNo,
-                                        item.getBatchNo(),
+                                        batchNo,
                                         referenceNo != null ? "GRN " + referenceNo : "GRN Purchase",
                                         item.getQuantity(),
                                         BigDecimal.ZERO));
@@ -141,8 +142,6 @@ public class InventoryBinCardServiceImpl implements InventoryBinCardService {
 
                 List<BinCardEntryRes> entries = events.stream()
                                 .sorted(Comparator.comparing(MovementEvent::movementAt)
-                                                .thenComparingInt(event -> MOVEMENT_ORDER
-                                                                .getOrDefault(event.movement(), Integer.MAX_VALUE))
                                                 .thenComparing(event -> Objects.requireNonNullElse(event.referenceNo(), ""))
                                                 .thenComparing(event -> Objects.requireNonNullElse(event.batchNo(), "")))
                                 .map(this::toEntry)
@@ -191,15 +190,6 @@ public class InventoryBinCardServiceImpl implements InventoryBinCardService {
                 List<BinCardEntryRes> paged = entries.subList(fromIndex, toIndex);
                 return new PageResponse<>(paged, totalItems, totalPages, page, size);
         }
-
-        private static Map<String, Integer> movementOrder() {
-                Map<String, Integer> order = new HashMap<>();
-                order.put("Initial Stock", 1);
-                order.put("Purchase", 2);
-                order.put("Consumption", 3);
-                return order;
-        }
-
         private record MovementEvent(
                         LocalDateTime movementAt,
                         String movement,
