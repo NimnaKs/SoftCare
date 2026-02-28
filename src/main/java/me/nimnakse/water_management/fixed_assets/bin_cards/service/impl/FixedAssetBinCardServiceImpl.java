@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -148,7 +149,9 @@ public class FixedAssetBinCardServiceImpl implements FixedAssetBinCardService {
                                 .map(this::toEntry)
                                 .toList();
                 List<BinCardEntryRes> withBalances = applyRunningBalances(entries);
-                return paginate(withBalances, page, size);
+                List<BinCardEntryRes> newestFirst = new ArrayList<>(withBalances);
+                Collections.reverse(newestFirst);
+                return paginate(newestFirst, page, size);
         }
 
         private BinCardEntryRes toEntry(MovementEvent event) {
