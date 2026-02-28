@@ -9,7 +9,8 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 
 @Entity
 @Table(name = "fixed_asset_initial_stocks", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"org_unit_id", "batch_no"})
+        @UniqueConstraint(columnNames = {"org_unit_id", "batch_no"}),
+        @UniqueConstraint(columnNames = {"org_unit_id", "template_id"})
 })
 public class FixedAssetInitialStock extends BaseEntity {
     @Column(name = "org_unit_id", nullable = false)

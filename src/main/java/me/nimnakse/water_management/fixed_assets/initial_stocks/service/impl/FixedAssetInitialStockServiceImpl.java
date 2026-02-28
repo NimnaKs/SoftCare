@@ -1,6 +1,5 @@
 package me.nimnakse.water_management.fixed_assets.initial_stocks.service.impl;
 
-import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +44,13 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     public FixedAssetInitialStockRes create(FixedAssetInitialStockCreateReq request) {
         validateOrgUnit(request.orgUnitId());
         FixedAssetTemplate template = loadTemplate(request.templateId());
+
+        if (initialStockRepository.existsByOrgUnitIdAndTemplateId(request.orgUnitId(), template.getId())) {
+            throw new BadRequestException(
+                    "Initial stock can be added only once per item.",
+                    "Initial stock can be added only once per item.");
+        }
+
         int nextSequence = resolveNextSequence(request.orgUnitId());
         String batchNo = formatBatchNo(nextSequence);
         FixedAssetInitialStock stock = new FixedAssetInitialStock();
@@ -61,28 +67,9 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     @Transactional
     @Override
     public FixedAssetInitialStockRes update(Long id, FixedAssetInitialStockUpdateReq request) {
-        FixedAssetInitialStock stock = initialStockRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
-                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
-        validateOrgUnit(request.orgUnitId());
-        FixedAssetTemplate template = loadTemplate(request.templateId());
-        if (!Objects.equals(stock.getOrgUnitId(), request.orgUnitId())
-                && initialStockRepository.existsByOrgUnitIdAndBatchNoAndIdNot(
-                        request.orgUnitId(), stock.getBatchNo(), stock.getId())) {
-            throw new BadRequestException("Initial fixed asset stock batch number already exists in the org unit",
-                    "මෙම ආයතන ඒකකය සඳහා ආරම්භක ස්ථාවර වත්කම් තොග කාණ්ඩ අංකය දැනටමත් පවතී");
-        }
-        BigDecimal consumedQuantity = resolveConsumedQuantity(stock.getQuantity(), stock.getRemainingQuantity());
-        if (request.quantity().compareTo(consumedQuantity) < 0) {
-            throw new BadRequestException("Initial fixed asset stock quantity cannot be less than consumed quantity",
-                    "ආරම්භක ස්ථාවර වත්කම් තොග ප්‍රමාණය පරිභෝජනය කළ ප්‍රමාණයට වඩා අඩු විය නොහැක");
-        }
-        stock.setOrgUnitId(request.orgUnitId());
-        stock.setTemplateId(template.getId());
-        stock.setQuantity(request.quantity());
-        stock.setRemainingQuantity(request.quantity().subtract(consumedQuantity));
-        stock.setUnitCost(request.unitCost());
-        return toResponse(initialStockRepository.save(stock), template);
+        throw new BadRequestException(
+                "Initial stock cannot be edited after creation.",
+                "Initial stock cannot be edited after creation.");
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +77,7 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     public FixedAssetInitialStockRes getById(Long id) {
         FixedAssetInitialStock stock = initialStockRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
-                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
+                        "Initial fixed asset stock not found", ErrorCode.NOT_FOUND));
         FixedAssetTemplate template = loadTemplate(stock.getTemplateId());
         return toResponse(stock, template);
     }
@@ -123,20 +110,20 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
     public void delete(Long id) {
         FixedAssetInitialStock stock = initialStockRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Initial fixed asset stock not found",
-                        "ආරම්භක ස්ථාවර වත්කම් තොගය හමු නොවීය", ErrorCode.NOT_FOUND));
+                        "Initial fixed asset stock not found", ErrorCode.NOT_FOUND));
         initialStockRepository.delete(stock);
     }
 
     private void validateOrgUnit(Long orgUnitId) {
         if (orgUnitId == null || !orgUnitRepository.existsById(orgUnitId)) {
-            throw new NotFoundException("Org unit not found", "ආයතන ඒකකය හමු නොවීය", ErrorCode.NOT_FOUND);
+            throw new NotFoundException("Org unit not found", "Org unit not found", ErrorCode.NOT_FOUND);
         }
     }
 
     private FixedAssetTemplate loadTemplate(Long templateId) {
         return templateRepository.findById(templateId)
                 .orElseThrow(() -> new NotFoundException("Fixed asset template not found",
-                        "ස්ථාවර වත්කම් සැකිල්ල හමු නොවීය", ErrorCode.NOT_FOUND));
+                        "Fixed asset template not found", ErrorCode.NOT_FOUND));
     }
 
     private int resolveNextSequence(Long orgUnitId) {
@@ -145,15 +132,9 @@ public class FixedAssetInitialStockServiceImpl implements FixedAssetInitialStock
         String nextBatchNo = formatBatchNo(next);
         if (initialStockRepository.existsByOrgUnitIdAndBatchNo(orgUnitId, nextBatchNo)) {
             throw new BadRequestException("Unable to generate a unique batch number",
-                    "අද්විතීය කාණ්ඩ අංකයක් උත්පාදනය කිරීමට නොහැක");
+                    "Unable to generate a unique batch number");
         }
         return next;
-    }
-
-    private BigDecimal resolveConsumedQuantity(BigDecimal quantity, BigDecimal remainingQuantity) {
-        BigDecimal safeQuantity = quantity == null ? BigDecimal.ZERO : quantity;
-        BigDecimal safeRemaining = remainingQuantity == null ? safeQuantity : remainingQuantity;
-        return safeQuantity.subtract(safeRemaining);
     }
 
     private String formatBatchNo(int sequence) {

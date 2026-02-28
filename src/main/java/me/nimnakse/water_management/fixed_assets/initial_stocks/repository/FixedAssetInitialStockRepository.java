@@ -9,6 +9,8 @@ public interface FixedAssetInitialStockRepository extends JpaRepository<FixedAss
     boolean existsByOrgUnitIdAndBatchNo(Long orgUnitId, String batchNo);
 
     boolean existsByOrgUnitIdAndBatchNoAndIdNot(Long orgUnitId, String batchNo, Long id);
+    
+    boolean existsByOrgUnitIdAndTemplateId(Long orgUnitId, Long templateId);
 
     FixedAssetInitialStock findTopByOrgUnitIdOrderByBatchSequenceDesc(Long orgUnitId);
 
