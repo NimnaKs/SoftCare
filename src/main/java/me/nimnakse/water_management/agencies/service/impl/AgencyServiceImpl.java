@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AgencyServiceImpl implements AgencyService {
     private static final BigDecimal DEFAULT_SERVICE_CHARGE_PERCENT = new BigDecimal("15.00");
     private static final BigDecimal DEFAULT_SUBSCRIPTION_FEE = new BigDecimal("5.00");
-    private static final BigDecimal DEFAULT_TOTAL_CHARGES = new BigDecimal("20.00");
 
     private final AgencyRepository agencyRepository;
     private final OrganizationRepository organizationRepository;
@@ -46,7 +45,7 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.totalCharges(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
         return toResponse(agencyRepository.save(agency));
@@ -65,7 +64,7 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.totalCharges(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
         return toResponse(agencyRepository.save(agency));
@@ -140,7 +139,6 @@ public class AgencyServiceImpl implements AgencyService {
             String secondaryContactNo,
             BigDecimal serviceChargePercent,
             BigDecimal subscriptionFee,
-            BigDecimal totalCharges,
             BillingMode billingMode,
             Boolean isActive) {
         agency.setBusinessName(businessName);
@@ -150,10 +148,13 @@ public class AgencyServiceImpl implements AgencyService {
         agency.setBrcNumber(brcNumber);
         agency.setOwnerName(ownerName);
         agency.setSecondaryContactNo(secondaryContactNo);
-        agency.setServiceChargePercent(
-                serviceChargePercent != null ? serviceChargePercent : DEFAULT_SERVICE_CHARGE_PERCENT);
-        agency.setSubscriptionFee(subscriptionFee != null ? subscriptionFee : DEFAULT_SUBSCRIPTION_FEE);
-        agency.setTotalCharges(totalCharges != null ? totalCharges : DEFAULT_TOTAL_CHARGES);
+        BigDecimal resolvedServiceChargePercent =
+                serviceChargePercent != null ? serviceChargePercent : DEFAULT_SERVICE_CHARGE_PERCENT;
+        BigDecimal resolvedSubscriptionFee =
+                subscriptionFee != null ? subscriptionFee : DEFAULT_SUBSCRIPTION_FEE;
+        agency.setServiceChargePercent(resolvedServiceChargePercent);
+        agency.setSubscriptionFee(resolvedSubscriptionFee);
+        agency.setTotalCharges(resolvedServiceChargePercent.add(resolvedSubscriptionFee));
         agency.setBillingMode(billingMode != null ? billingMode : BillingMode.PREPAID);
         agency.setIsActive(isActive != null ? isActive : Boolean.TRUE);
     }
