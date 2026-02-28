@@ -193,10 +193,7 @@ public class SupplierServiceImpl implements SupplierService {
 
     private LiabilityMainCategory createSupplierMainCategory() {
         LiabilityMainCategory category = new LiabilityMainCategory();
-        Integer maxCode = mainCategoryRepository.findMaxCode();
-        int nextCode = maxCode == null ? 1 : maxCode + 1;
         category.setLiabilityType(LiabilityType.CURRENT);
-        category.setCode(nextCode);
         category.setName(SUPPLIER_MAIN_CATEGORY_NAME);
         category.setDescription("System generated category for supplier liabilities");
         category.setIsSystem(Boolean.TRUE);
@@ -265,3 +262,4 @@ public class SupplierServiceImpl implements SupplierService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
+

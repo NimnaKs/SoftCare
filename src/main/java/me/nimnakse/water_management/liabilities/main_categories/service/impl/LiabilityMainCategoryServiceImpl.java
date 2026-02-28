@@ -31,9 +31,9 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     @Override
     public LiabilityMainCategoryRes create(LiabilityMainCategoryCreateReq request) {
         String normalizedName = request.name().trim();
-        validateUniqueness(request.code(), null, normalizedName);
+        validateUniqueness(null, normalizedName);
         LiabilityMainCategory category = new LiabilityMainCategory();
-        applyRequest(category, request.liabilityType(), request.code(), normalizedName, request.description(),
+        applyRequest(category, request.liabilityType(), normalizedName, request.description(),
                 request.isSystem(), request.isActive());
         return toResponse(mainCategoryRepository.save(category));
     }
@@ -43,10 +43,10 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     public LiabilityMainCategoryRes update(Long id, LiabilityMainCategoryUpdateReq request) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Liability main category not found",
-                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                        "Liability main category not found", ErrorCode.NOT_FOUND));
         String normalizedName = request.name().trim();
-        validateUniqueness(request.code(), id, normalizedName);
-        applyRequest(category, request.liabilityType(), request.code(), normalizedName, request.description(),
+        validateUniqueness(id, normalizedName);
+        applyRequest(category, request.liabilityType(), normalizedName, request.description(),
                 request.isSystem(), request.isActive());
         return toResponse(mainCategoryRepository.save(category));
     }
@@ -56,14 +56,14 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     public LiabilityMainCategoryRes getById(Long id) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Liability main category not found",
-                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                        "Liability main category not found", ErrorCode.NOT_FOUND));
         return toResponse(category);
     }
 
     @Transactional(readOnly = true)
     @Override
     public List<LiabilityMainCategoryRes> list() {
-        return mainCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "code", "name")).stream()
+        return mainCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -73,49 +73,39 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
     public void delete(Long id) {
         LiabilityMainCategory category = mainCategoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Liability main category not found",
-                        "වගකීම් ප්‍රධාන ප්‍රභේදය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                        "Liability main category not found", ErrorCode.NOT_FOUND));
         if (Boolean.TRUE.equals(category.getIsSystem())) {
             throw new BadRequestException("System liability accounts cannot be deleted",
-                    "පද්ධති වගකීම් ගිණුම් මකා දැමිය නොහැක");
+                    "System liability accounts cannot be deleted");
         }
         if (accountRepository.existsByMainCategoryId(id)) {
             throw new BadRequestException("Liability account name already exists for the main category",
-                    "ප්‍රධාන ප්‍රභේදය සඳහා වගකීම් ගිණුම් නාමය දැනටමත් පවතී");
+                    "Liability account name already exists for the main category");
         }
         mainCategoryRepository.delete(category);
     }
 
-    private void validateUniqueness(Integer code, Long id, String name) {
+    private void validateUniqueness(Long id, String name) {
         if (id == null) {
-            if (mainCategoryRepository.existsByCode(code)) {
-                throw new BadRequestException("Liability main category code already exists",
-                        "වගකීම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
-            }
             if (mainCategoryRepository.existsByNameIgnoreCase(name)) {
                 throw new BadRequestException("Liability main category name already exists",
-                        "වගකීම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
+                        "Liability main category name already exists");
             }
         } else {
-            if (mainCategoryRepository.existsByCodeAndIdNot(code, id)) {
-                throw new BadRequestException("Liability main category code already exists",
-                        "වගකීම් ප්‍රධාන ප්‍රභේද කේතය දැනටමත් පවතී");
-            }
             if (mainCategoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
                 throw new BadRequestException("Liability main category name already exists",
-                        "වගකීම් ප්‍රධාන ප්‍රභේදයේ නම දැනටමත් පවතී");
+                        "Liability main category name already exists");
             }
         }
     }
 
     private void applyRequest(LiabilityMainCategory category,
             LiabilityType liabilityType,
-            Integer code,
             String name,
             String description,
             Boolean isSystem,
             Boolean isActive) {
         category.setLiabilityType(liabilityType);
-        category.setCode(code);
         category.setName(name.trim());
         category.setDescription(trimToNull(description));
         if (isSystem != null) {
@@ -130,7 +120,6 @@ public class LiabilityMainCategoryServiceImpl implements LiabilityMainCategorySe
         return new LiabilityMainCategoryRes(
                 category.getId(),
                 category.getLiabilityType(),
-                category.getCode(),
                 category.getName(),
                 category.getDescription(),
                 category.getIsSystem(),

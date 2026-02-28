@@ -509,7 +509,6 @@ CREATE TABLE revenue_accounts (
 CREATE TABLE expense_main_categories (
                                          id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                          expense_type    ENUM('OPERATING', 'NON_OPERATING') NOT NULL,
-                                         code            INT UNSIGNED NOT NULL,
                                          name            VARCHAR(255) NOT NULL,
                                          description     VARCHAR(500) NULL,
                                          is_system       TINYINT(1) NOT NULL DEFAULT 1,
@@ -677,7 +676,6 @@ CREATE TABLE fixed_asset_template_imports (
 CREATE TABLE liability_main_categories (
                                            id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                            liability_type  ENUM('CURRENT', 'NON_CURRENT') NOT NULL,
-                                           code            INT UNSIGNED NOT NULL,
                                            name            VARCHAR(255) NOT NULL,
                                            description     VARCHAR(500) NULL,
                                            is_system       TINYINT(1) NOT NULL DEFAULT 1,
@@ -685,7 +683,6 @@ CREATE TABLE liability_main_categories (
                                            created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                            updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                                                ON UPDATE CURRENT_TIMESTAMP,
-                                           UNIQUE KEY uq_liab_main_code (code),
                                            UNIQUE KEY uq_liab_main_name (name),
                                            INDEX idx_liab_main_type (liability_type)
 ) ENGINE=InnoDB
@@ -2009,3 +2006,4 @@ CREATE TABLE revenue_accounts (
 ) ENGINE=InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
+
