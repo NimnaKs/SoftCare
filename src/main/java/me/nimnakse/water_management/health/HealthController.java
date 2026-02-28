@@ -21,6 +21,7 @@ public class HealthController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /*Done Bugs*/
     @GetMapping
     @Operation(summary = "Service health check", description = "Returns uptime status for the API service.")
     public Map<String, Object> health() {
