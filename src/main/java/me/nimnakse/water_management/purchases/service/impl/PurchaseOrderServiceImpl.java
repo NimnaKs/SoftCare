@@ -131,7 +131,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             throw new BadRequestException("Supplier must be assigned before converting to GRN",
                     "GRN බවට පරිවර්තනය කිරීමට පෙර සැපයුම්කරු පවරනු ලැබිය යුතුය");
         }
-        String grnNo = request.grnNo().trim();
+        String grnNo = generateGrnNo(order.getOrgUnitId());
         if (grnInvoiceRepository.existsByGrnNo(grnNo)) {
             throw new BadRequestException("GRN number already exists", "GRN අංකය දැනටමත් පවතී");
         }
@@ -192,6 +192,27 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private String buildBatchNo(String grnNo, int index) {
         return String.format("%s - B - %02d", grnNo, index);
     }
+
+    private String generateGrnNo(Long orgUnitId) {
+        String prefix = "GRN";
+        String maxNo = grnInvoiceRepository.findMaxGrnNoByOrgUnitId(orgUnitId);
+        int nextSequence = 1;
+        if (maxNo != null && maxNo.startsWith(prefix)) {
+            String suffix = maxNo.substring(prefix.length());
+            if (suffix.startsWith("-")) {
+                suffix = suffix.substring(1);
+            }
+            if (!suffix.isBlank()) {
+                try {
+                    nextSequence = Integer.parseInt(suffix) + 1;
+                } catch (NumberFormatException ignored) {
+                    nextSequence = 1;
+                }
+            }
+        }
+        return String.format("%s-%04d", prefix, nextSequence);
+    }
+
 
     private PurchaseOrderRes toPurchaseOrderResponse(PurchaseOrder order, List<PurchaseOrderItem> items) {
         List<PurchaseOrderItemRes> itemResponses = items.stream()
@@ -281,3 +302,4 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         item.setFixedAssetTemplateId(fixedAssetTemplateId);
     }
 }
+

@@ -256,7 +256,7 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
     }
 
     private String generateReferenceNo(Long orgUnitId) {
-        String prefix = "PUD-REF";
+        String prefix = "PVDT";
         String maxNo = draftRepository.findMaxReferenceNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -268,11 +268,11 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
                 nextSequence = 1;
             }
         }
-        return String.format("%s-%03d", prefix, nextSequence);
+        return String.format("%s-%04d", prefix, nextSequence);
     }
 
     private String generateVoucherNo(Long orgUnitId) {
-        String prefix = "PV-PUR";
+        String prefix = "PUV";
         String maxNo = voucherRepository.findMaxVoucherNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -283,7 +283,7 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
                 nextSequence = 1;
             }
         }
-        return String.format("%s-%03d", prefix, nextSequence);
+        return String.format("%s-%04d", prefix, nextSequence);
     }
 
     private PurchaseVoucherDraftRes toDraftResponse(PurchaseVoucherDraft draft, List<PurchaseVoucherDraftItem> items) {
@@ -321,3 +321,4 @@ public class PurchaseVoucherDraftServiceImpl implements PurchaseVoucherDraftServ
                 voucher.getUpdatedAt());
     }
 }
+

@@ -265,7 +265,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
     }
 
     private String generatePaymentVoucherNo(Long orgUnitId) {
-        String prefix = "PV-REF";
+        String prefix = "PV";
         String maxNo = paymentVoucherRepository.findMaxVoucherNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -281,11 +281,11 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 }
             }
         }
-        return String.format("%s-%03d", prefix, nextSequence);
+        return String.format("%s-%04d", prefix, nextSequence);
     }
 
     private String generateReferenceNo(Long orgUnitId) {
-        String prefix = "PVD-REF";
+        String prefix = "PVD";
         String maxNo = draftRepository.findMaxReferenceNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -301,7 +301,7 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
                 }
             }
         }
-        return String.format("%s-%03d", prefix, nextSequence);
+        return String.format("%s-%04d", prefix, nextSequence);
     }
 
     private PaymentVoucherDraftRes toDraftResponse(PaymentVoucherDraft draft, List<PaymentVoucherDraftItem> items) {
@@ -362,3 +362,4 @@ public class PaymentVoucherDraftServiceImpl implements PaymentVoucherDraftServic
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
+

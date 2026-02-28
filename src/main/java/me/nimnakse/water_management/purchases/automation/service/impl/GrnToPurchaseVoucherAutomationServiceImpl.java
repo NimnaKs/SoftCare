@@ -37,7 +37,7 @@ public class GrnToPurchaseVoucherAutomationServiceImpl implements GrnToPurchaseV
     }
 
     private String generateReferenceNo(Long orgUnitId) {
-        String prefix = "PUD-AUTO";
+        String prefix = "PVDT";
         String maxNo = draftRepository.findMaxReferenceNoByOrgUnitId(orgUnitId);
         int nextSequence = 1;
         if (maxNo != null && maxNo.startsWith(prefix)) {
@@ -48,6 +48,7 @@ public class GrnToPurchaseVoucherAutomationServiceImpl implements GrnToPurchaseV
                 nextSequence = 1;
             }
         }
-        return String.format("%s-%03d", prefix, nextSequence);
+        return String.format("%s-%04d", prefix, nextSequence);
     }
 }
+
