@@ -1469,6 +1469,36 @@ CREATE TABLE IF NOT EXISTS cheque_tracking (
   COLLATE=utf8mb4_unicode_ci;
 
 
+CREATE TABLE IF NOT EXISTS receipt_print_settings (
+                                                      id                         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                                      org_unit_id                BIGINT UNSIGNED NOT NULL,
+                                                      show_settlements_on_print  BOOLEAN NOT NULL DEFAULT FALSE,
+                                                      created_at                 DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                      updated_at                 DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                      deleted_at                 DATETIME NULL,
+                                                      UNIQUE KEY uq_receipt_print_org (org_unit_id),
+                                                      CONSTRAINT fk_receipt_print_org FOREIGN KEY (org_unit_id) REFERENCES org_units(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS receipt_audit_logs (
+                                                  id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                                  receipt_id   BIGINT UNSIGNED NULL,
+                                                  action       ENUM('CREATED','REVERSED','UNRECOGNIZED_FORWARD') NOT NULL,
+                                                  reason       VARCHAR(500) NULL,
+                                                  performed_by BIGINT UNSIGNED NULL,
+                                                  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                  deleted_at   DATETIME NULL,
+                                                  INDEX idx_receipt_audit_receipt (receipt_id),
+                                                  CONSTRAINT fk_receipt_audit_receipt FOREIGN KEY (receipt_id) REFERENCES receipts(id),
+                                                  CONSTRAINT fk_receipt_audit_user FOREIGN KEY (performed_by) REFERENCES users(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
 CREATE TABLE IF NOT EXISTS bill_runs (
                                          id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                          org_unit_id         BIGINT UNSIGNED NOT NULL,
