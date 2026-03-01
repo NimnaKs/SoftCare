@@ -18,6 +18,7 @@ public record AgencyUpdateReq(
                 @DecimalMin(value = "0.00") BigDecimal serviceChargePercent,
                 @DecimalMin(value = "0.00") BigDecimal subscriptionFee,
                 @DecimalMin(value = "0.00") BigDecimal totalCharges,
+                BigDecimal creditLimit,
                 BillingMode billingMode,
                 Boolean isActive) {
 }

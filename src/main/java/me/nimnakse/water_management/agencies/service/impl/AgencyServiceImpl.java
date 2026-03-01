@@ -45,7 +45,7 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), request.creditLimit(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
         return toResponse(agencyRepository.save(agency));
@@ -64,7 +64,7 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), request.creditLimit(), request.billingMode(), request.isActive());
         agency.setOrganization(organization);
 
         return toResponse(agencyRepository.save(agency));
@@ -123,6 +123,7 @@ public class AgencyServiceImpl implements AgencyService {
                 agency.getServiceChargePercent(),
                 agency.getSubscriptionFee(),
                 agency.getTotalCharges(),
+                agency.getCreditLimit(),
                 agency.getBillingMode(),
                 agency.getIsActive(),
                 agency.getCreatedAt(),
@@ -139,6 +140,7 @@ public class AgencyServiceImpl implements AgencyService {
             String secondaryContactNo,
             BigDecimal serviceChargePercent,
             BigDecimal subscriptionFee,
+            BigDecimal creditLimit,
             BillingMode billingMode,
             Boolean isActive) {
         agency.setBusinessName(businessName);
@@ -155,7 +157,21 @@ public class AgencyServiceImpl implements AgencyService {
         agency.setServiceChargePercent(resolvedServiceChargePercent);
         agency.setSubscriptionFee(resolvedSubscriptionFee);
         agency.setTotalCharges(resolvedServiceChargePercent.add(resolvedSubscriptionFee));
-        agency.setBillingMode(billingMode != null ? billingMode : BillingMode.PREPAID);
+        BillingMode resolvedBillingMode = billingMode != null ? billingMode : BillingMode.PREPAID;
+        agency.setBillingMode(resolvedBillingMode);
+        if (resolvedBillingMode == BillingMode.PREPAID) {
+            agency.setCreditLimit(BigDecimal.ZERO.setScale(2));
+        } else {
+            if (creditLimit == null) {
+                throw new BadRequestException("Credit limit is required for postpaid billing mode",
+                        "පසුගෙවුම් බිල්පත් ක්‍රමය සඳහා ණය සීමාව අනිවාර්යයි");
+            }
+            if (creditLimit.compareTo(BigDecimal.ZERO) >= 0) {
+                throw new BadRequestException("Credit limit must be a negative value for postpaid billing mode",
+                        "පසුගෙවුම් බිල්පත් ක්‍රමය සඳහා ණය සීමාව ඍණ අගයක් විය යුතුය");
+            }
+            agency.setCreditLimit(creditLimit);
+        }
         agency.setIsActive(isActive != null ? isActive : Boolean.TRUE);
     }
 

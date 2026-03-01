@@ -94,6 +94,7 @@ CREATE TABLE agencies (
                           service_charge_percent DECIMAL(6,2) NOT NULL DEFAULT 15.00,
                           subscription_fee       DECIMAL(14,2) NOT NULL DEFAULT 5.00,
                           total_charges          DECIMAL(14,2) NOT NULL DEFAULT 20.00,
+                          credit_limit           DECIMAL(14,2) NOT NULL DEFAULT 0.00,
                           billing_mode           ENUM('PREPAID', 'POSTPAID') NOT NULL DEFAULT 'PREPAID',
                           is_active              TINYINT(1) NOT NULL DEFAULT 1,
                           created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1467,6 +1468,9 @@ CREATE TABLE IF NOT EXISTS cheque_tracking (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE agencies
+    ADD COLUMN IF NOT EXISTS credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER total_charges;
 
 
 CREATE TABLE IF NOT EXISTS receipt_print_settings (
