@@ -41,7 +41,8 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(username, password));
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         Long organizationId = resolveOrganizationId(principal);
-        String accessToken = jwtService.generateAccessToken(principal, organizationId);
+        Long agencyId = resolveAgencyId(principal);
+        String accessToken = jwtService.generateAccessToken(principal, organizationId, agencyId);
         String refreshToken = jwtService.generateRefreshToken(principal);
         return new AuthRes(accessToken, refreshToken, "Bearer", accessTokenValidityMs / 1000);
     }
@@ -54,7 +55,8 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
         UserPrincipal principal = (UserPrincipal) userDetails;
         Long organizationId = resolveOrganizationId(principal);
-        String accessToken = jwtService.generateAccessToken(principal, organizationId);
+        Long agencyId = resolveAgencyId(principal);
+        String accessToken = jwtService.generateAccessToken(principal, organizationId, agencyId);
         String newRefreshToken = jwtService.generateRefreshToken(principal);
         return new AuthRes(accessToken, newRefreshToken, "Bearer", accessTokenValidityMs / 1000);
     }
@@ -71,5 +73,10 @@ public class AuthService {
         }
 
         return orgUnit.getId();
+    }
+
+    private Long resolveAgencyId(UserPrincipal principal) {
+        me.nimnakse.water_management.agencies.entity.Agency agency = principal.getUser().getAgency();
+        return agency == null ? null : agency.getId();
     }
 }

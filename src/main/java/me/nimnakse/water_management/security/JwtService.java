@@ -25,7 +25,7 @@ public class JwtService {
         this.refreshTokenValidityMs = refreshTokenValidityMs;
     }
 
-    public String generateAccessToken(UserPrincipal principal, Long organizationId) {
+    public String generateAccessToken(UserPrincipal principal, Long organizationId, Long agencyId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenValidityMs);
         List<String> roles = principal.getRoles().stream()
@@ -42,6 +42,9 @@ public class JwtService {
                 .claim("scopes", scopes);
         if (organizationId != null) {
             builder.claim("organizationId", organizationId);
+        }
+        if (agencyId != null) {
+            builder.claim("agencyId", agencyId);
         }
         return builder.signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
