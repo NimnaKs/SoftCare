@@ -29,11 +29,6 @@ public class SubscriptionPaymentRequestController {
         return ResponseEntity.ok(ApiResponse.success(service.list(agencyId)));
     }
 
-    @GetMapping("/payment-methods")
-    public ResponseEntity<ApiResponse<List<PaymentMethodRes>>> paymentMethods() {
-        return ResponseEntity.ok(ApiResponse.success(service.listPaymentMethods()));
-    }
-
     @PostMapping(value = "/preview", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<SubscriptionPaymentRequestRes>> createPreview(
             @RequestParam Long agencyId,
