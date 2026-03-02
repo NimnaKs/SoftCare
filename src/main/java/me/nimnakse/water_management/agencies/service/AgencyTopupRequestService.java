@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface AgencyTopupRequestService {
+    List<AgencyTopupRequestRes> list();
+
     List<AgencyTopupCashAccountRes> listTopupCashAccounts();
 
     List<PaymentMethodRes> listPaymentMethods(Long cashAccountId);
@@ -23,4 +25,3 @@ public interface AgencyTopupRequestService {
             MultipartFile file
     );
 }
-

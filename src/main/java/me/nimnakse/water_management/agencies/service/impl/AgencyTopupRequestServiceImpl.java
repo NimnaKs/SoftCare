@@ -71,6 +71,30 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
 
     @Transactional(readOnly = true)
     @Override
+    public List<AgencyTopupRequestRes> list() {
+        Agency agency = resolveCurrentAgency();
+        List<AgencyDepositRequest> requests = agencyDepositRequestRepository.findByAgencyIdOrderByCreatedAtDesc(agency.getId());
+        if (requests.isEmpty()) return List.of();
+
+        Set<Long> accountIds = requests.stream().map(AgencyDepositRequest::getMonetaryAccountId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> methodIds = requests.stream().map(AgencyDepositRequest::getPaymentMethodId).collect(java.util.stream.Collectors.toSet());
+
+        Map<Long, String> accountNames = monetaryAccountRepository.findAllById(accountIds).stream()
+                .collect(java.util.stream.Collectors.toMap(MonetaryAccount::getId, MonetaryAccount::getAccountName));
+        Map<Long, String> methodNames = paymentMethodLookupRepository.findAllById(methodIds).stream()
+                .collect(java.util.stream.Collectors.toMap(PaymentMethodLookup::getId, PaymentMethodLookup::getName));
+
+        return requests.stream()
+                .map(request -> toResponse(
+                        request,
+                        accountNames.getOrDefault(request.getMonetaryAccountId(), "-"),
+                        methodNames.getOrDefault(request.getPaymentMethodId(), "-")
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public List<AgencyTopupCashAccountRes> listTopupCashAccounts() {
         Agency agency = resolveCurrentAgency();
         Set<Long> orgUnitIds = collectOrgUnitTreeIds(agency.getOrganization().getOrgUnitId());

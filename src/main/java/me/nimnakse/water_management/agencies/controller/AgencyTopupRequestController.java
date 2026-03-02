@@ -24,6 +24,11 @@ public class AgencyTopupRequestController {
         this.agencyTopupRequestService = agencyTopupRequestService;
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AgencyTopupRequestRes>>> list() {
+        return ResponseEntity.ok(ApiResponse.success(agencyTopupRequestService.list()));
+    }
+
     @GetMapping("/cash-accounts")
     public ResponseEntity<ApiResponse<List<AgencyTopupCashAccountRes>>> cashAccounts() {
         return ResponseEntity.ok(ApiResponse.success(agencyTopupRequestService.listTopupCashAccounts()));
@@ -48,4 +53,3 @@ public class AgencyTopupRequestController {
         ));
     }
 }
-
