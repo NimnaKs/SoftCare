@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AgencyDepositRequestRepository extends JpaRepository<AgencyDepositRequest, Long> {
     List<AgencyDepositRequest> findByAgencyIdOrderByCreatedAtDesc(Long agencyId);
+    List<AgencyDepositRequest> findAllByOrderByCreatedAtDesc();
 }

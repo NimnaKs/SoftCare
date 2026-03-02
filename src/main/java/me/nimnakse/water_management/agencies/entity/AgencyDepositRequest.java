@@ -17,6 +17,9 @@ public class AgencyDepositRequest extends BaseEntity {
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;
 
+    @Column(name = "agency_id", insertable = false, updatable = false)
+    private Long agencyId;
+
     @Column(name = "monetary_account_id", nullable = false)
     private Long monetaryAccountId;
 
@@ -42,4 +45,3 @@ public class AgencyDepositRequest extends BaseEntity {
     @Column(name = "attachment_path", length = 500)
     private String attachmentPath;
 }
-

@@ -17,7 +17,8 @@ public record AgencyTopupRequestRes(
         BigDecimal amount,
         AgencyDepositRequestStatus status,
         String attachmentName,
-        Instant createdAt
+        Instant createdAt,
+        String agencyName
 ) {
 }
 

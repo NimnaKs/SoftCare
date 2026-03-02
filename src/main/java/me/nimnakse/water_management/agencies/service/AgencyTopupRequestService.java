@@ -12,6 +12,8 @@ import java.util.List;
 public interface AgencyTopupRequestService {
     List<AgencyTopupRequestRes> list();
 
+    List<AgencyTopupRequestRes> listAll();
+
     List<AgencyTopupCashAccountRes> listTopupCashAccounts();
 
     List<PaymentMethodRes> listPaymentMethods(Long cashAccountId);
@@ -22,6 +24,5 @@ public interface AgencyTopupRequestService {
             String reference,
             LocalDate paidDate,
             BigDecimal amount,
-            MultipartFile file
-    );
+            MultipartFile file);
 }

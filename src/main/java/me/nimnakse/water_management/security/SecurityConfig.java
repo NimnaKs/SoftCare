@@ -86,7 +86,6 @@ public class SecurityConfig {
                                                                 "/inventory-consumptions/**",
                                                                 "/fixed-asset-consumptions/**",
                                                                 "/fixed-asset-bin-cards/**",
-                                                                "/inventory-consumptions/**",
                                                                 "/inventory-bin-cards/**",
                                                                 "/monetary-transactions/**",
                                                                 "/purchase-vouchers/**",
@@ -101,11 +100,10 @@ public class SecurityConfig {
                                                                 "/valves/**",
                                                                 "/billing-zones/**",
                                                                 "/clusters/**",
-                                                                "/address-lines/**",
                                                                 "/tariffs",
                                                                 "/tariffs/**",
-                                                                "/connections/**",
-                                                                "/premises/**")
+                                                                "/premises/**",
+                                                                "/branch/**")
                                                 .hasAuthority("APP_SCOPE_BRANCH_APP")
                                                 .requestMatchers(
                                                                 "/roles/**",

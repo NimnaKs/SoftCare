@@ -44,8 +44,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
             "application/pdf",
             "image/png",
             "image/jpeg",
-            "image/jpg"
-    );
+            "image/jpg");
 
     private final AgencyRepository agencyRepository;
     private final OrgUnitRepository orgUnitRepository;
@@ -61,8 +60,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
             OrgUnitRepository orgUnitRepository,
             MonetaryAccountRepository monetaryAccountRepository,
             PaymentMethodLookupRepository paymentMethodLookupRepository,
-            AgencyDepositRequestRepository agencyDepositRequestRepository
-    ) {
+            AgencyDepositRequestRepository agencyDepositRequestRepository) {
         this.agencyRepository = agencyRepository;
         this.orgUnitRepository = orgUnitRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
@@ -74,11 +72,15 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
     @Override
     public List<AgencyTopupRequestRes> list() {
         Agency agency = resolveCurrentAgency();
-        List<AgencyDepositRequest> requests = agencyDepositRequestRepository.findByAgencyIdOrderByCreatedAtDesc(agency.getId());
-        if (requests.isEmpty()) return List.of();
+        List<AgencyDepositRequest> requests = agencyDepositRequestRepository
+                .findByAgencyIdOrderByCreatedAtDesc(agency.getId());
+        if (requests.isEmpty())
+            return List.of();
 
-        Set<Long> accountIds = requests.stream().map(AgencyDepositRequest::getMonetaryAccountId).collect(java.util.stream.Collectors.toSet());
-        Set<Long> methodIds = requests.stream().map(AgencyDepositRequest::getPaymentMethodId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> accountIds = requests.stream().map(AgencyDepositRequest::getMonetaryAccountId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> methodIds = requests.stream().map(AgencyDepositRequest::getPaymentMethodId)
+                .collect(java.util.stream.Collectors.toSet());
 
         Map<Long, String> accountNames = monetaryAccountRepository.findAllById(accountIds).stream()
                 .collect(java.util.stream.Collectors.toMap(MonetaryAccount::getId, MonetaryAccount::getAccountName));
@@ -89,8 +91,38 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                 .map(request -> toResponse(
                         request,
                         accountNames.getOrDefault(request.getMonetaryAccountId(), "-"),
-                        methodNames.getOrDefault(request.getPaymentMethodId(), "-")
-                ))
+                        methodNames.getOrDefault(request.getPaymentMethodId(), "-"),
+                        null))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<AgencyTopupRequestRes> listAll() {
+        List<AgencyDepositRequest> requests = agencyDepositRequestRepository.findAllByOrderByCreatedAtDesc();
+        if (requests.isEmpty())
+            return List.of();
+
+        Set<Long> accountIds = requests.stream().map(AgencyDepositRequest::getMonetaryAccountId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> methodIds = requests.stream().map(AgencyDepositRequest::getPaymentMethodId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> agencyIds = requests.stream().map(AgencyDepositRequest::getAgencyId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        Map<Long, String> accountNames = monetaryAccountRepository.findAllById(accountIds).stream()
+                .collect(java.util.stream.Collectors.toMap(MonetaryAccount::getId, MonetaryAccount::getAccountName));
+        Map<Long, String> methodNames = paymentMethodLookupRepository.findAllById(methodIds).stream()
+                .collect(java.util.stream.Collectors.toMap(PaymentMethodLookup::getId, PaymentMethodLookup::getName));
+        Map<Long, String> agencyNames = agencyRepository.findAllById(agencyIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Agency::getId, Agency::getBusinessName));
+
+        return requests.stream()
+                .map(request -> toResponse(
+                        request,
+                        accountNames.getOrDefault(request.getMonetaryAccountId(), "-"),
+                        methodNames.getOrDefault(request.getPaymentMethodId(), "-"),
+                        agencyNames.getOrDefault(request.getAgencyId(), "-")))
                 .toList();
     }
 
@@ -106,8 +138,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                         account.getId(),
                         account.getAccountName(),
                         account.getType().name(),
-                        account.getAccountNumber()
-                ))
+                        account.getAccountNumber()))
                 .toList();
     }
 
@@ -136,38 +167,43 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
             String reference,
             LocalDate paidDate,
             BigDecimal amount,
-            MultipartFile file
-    ) {
+            MultipartFile file) {
         if (cashAccountId == null || paymentMethodId == null || paidDate == null || amount == null) {
-            throw new BadRequestException("Required fields are missing", "අනිවාර්ය ක්ෂේත්‍ර හිස්ව ඇත", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Required fields are missing", "අනිවාර්ය ක්ෂේත්‍ර හිස්ව ඇත",
+                    ErrorCode.VALIDATION_ERROR);
         }
         if (!StringUtils.hasText(reference)) {
             throw new BadRequestException("Reference is required", "යොමු අංකය අනිවාර්යයි", ErrorCode.VALIDATION_ERROR);
         }
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("Amount must be greater than zero", "මුදල ශුන්‍යයට වඩා වැඩි විය යුතුය", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Amount must be greater than zero", "මුදල ශුන්‍යයට වඩා වැඩි විය යුතුය",
+                    ErrorCode.VALIDATION_ERROR);
         }
         if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Attachment is required", "ගොනුව ඇමිණීම අනිවාර්යයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Attachment is required", "ගොනුව ඇමිණීම අනිවාර්යයි",
+                    ErrorCode.VALIDATION_ERROR);
         }
         String contentType = file.getContentType();
-        if (!StringUtils.hasText(contentType) || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
-            throw new BadRequestException("Only PDF or image files are allowed", "PDF හෝ image ගොනු පමණක් අවසර ඇත", ErrorCode.VALIDATION_ERROR);
+        if (!StringUtils.hasText(contentType)
+                || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new BadRequestException("Only PDF or image files are allowed", "PDF හෝ image ගොනු පමණක් අවසර ඇත",
+                    ErrorCode.VALIDATION_ERROR);
         }
 
         Agency agency = resolveCurrentAgency();
         MonetaryAccount account = resolveAllowedAccount(agency, cashAccountId);
         PaymentMethodLookup paymentMethod = paymentMethodLookupRepository.findById(paymentMethodId)
                 .filter(method -> Boolean.TRUE.equals(method.getIsActive()))
-                .orElseThrow(() -> new BadRequestException("Invalid payment method", "වලංගු නොවන ගෙවීම් ක්‍රමය", ErrorCode.VALIDATION_ERROR));
+                .orElseThrow(() -> new BadRequestException("Invalid payment method", "වලංගු නොවන ගෙවීම් ක්‍රමය",
+                        ErrorCode.VALIDATION_ERROR));
 
         List<PaymentMethodLookup> mappedMethods = getMappedMethodsWithFallback(account.getId());
-        if (!mappedMethods.isEmpty() && mappedMethods.stream().noneMatch(method -> Objects.equals(method.getId(), paymentMethodId))) {
+        if (!mappedMethods.isEmpty()
+                && mappedMethods.stream().noneMatch(method -> Objects.equals(method.getId(), paymentMethodId))) {
             throw new BadRequestException(
                     "Selected payment method is not allowed for this cash account",
                     "තෝරාගත් ගෙවීම් ක්‍රමය මෙම ගිණුම සඳහා අවසර නැත",
-                    ErrorCode.VALIDATION_ERROR
-            );
+                    ErrorCode.VALIDATION_ERROR);
         }
 
         StoredFile storedFile = storeAttachment(agency.getId(), file);
@@ -193,22 +229,27 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
             throw new BadRequestException("Unauthorized", "අවසර නැත", ErrorCode.VALIDATION_ERROR);
         }
         if (principal.getUser().getAgency() == null) {
-            throw new BadRequestException("Agency user is required", "නියෝජිත පරිශීලකයෙකු අවශ්‍යයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Agency user is required", "නියෝජිත පරිශීලකයෙකු අවශ්‍යයි",
+                    ErrorCode.VALIDATION_ERROR);
         }
         Long agencyId = principal.getUser().getAgency().getId();
         return agencyRepository.findByIdAndDeletedAtIsNull(agencyId)
-                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිතයා හමු නොවීය", ErrorCode.NOT_FOUND));
+                .orElseThrow(
+                        () -> new NotFoundException("Agency not found", "නියෝජිතයා හමු නොවීය", ErrorCode.NOT_FOUND));
     }
 
     private MonetaryAccount resolveAllowedAccount(Agency agency, Long cashAccountId) {
         Set<Long> orgUnitIds = collectOrgUnitTreeIds(agency.getOrganization().getOrgUnitId());
         MonetaryAccount account = monetaryAccountRepository.findByIdAndOrgUnitIdIn(cashAccountId, orgUnitIds)
-                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය", ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Cash account not found", "මුදල් ගිණුම හමු නොවීය",
+                        ErrorCode.NOT_FOUND));
         if (!Boolean.TRUE.equals(account.getIsActive())) {
-            throw new BadRequestException("Cash account is inactive", "මුදල් ගිණුම අක්‍රියයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Cash account is inactive", "මුදල් ගිණුම අක්‍රියයි",
+                    ErrorCode.VALIDATION_ERROR);
         }
         if (!Boolean.TRUE.equals(account.getAllowTopup())) {
-            throw new BadRequestException("Cash account is not allowed for top-up", "මෙම ගිණුමට top-up අවසර නැත", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Cash account is not allowed for top-up", "මෙම ගිණුමට top-up අවසර නැත",
+                    ErrorCode.VALIDATION_ERROR);
         }
         return account;
     }
@@ -251,7 +292,8 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
         }
     }
 
-    private AgencyTopupRequestRes toResponse(AgencyDepositRequest request, String accountName, String paymentMethodName) {
+    private AgencyTopupRequestRes toResponse(AgencyDepositRequest request, String accountName, String paymentMethodName,
+            String agencyName) {
         return new AgencyTopupRequestRes(
                 request.getId(),
                 request.getMonetaryAccountId(),
@@ -263,8 +305,8 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                 request.getAmount(),
                 request.getStatus(),
                 request.getAttachmentName(),
-                request.getCreatedAt()
-        );
+                request.getCreatedAt(),
+                agencyName);
     }
 
     private record StoredFile(String fileName, String path) {
