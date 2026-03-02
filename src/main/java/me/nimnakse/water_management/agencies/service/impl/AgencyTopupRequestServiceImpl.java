@@ -20,6 +20,7 @@ import me.nimnakse.water_management.receipts.entity.PaymentMethodLookup;
 import me.nimnakse.water_management.receipts.repository.PaymentMethodLookupRepository;
 import me.nimnakse.water_management.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -116,8 +117,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
         Agency agency = resolveCurrentAgency();
         MonetaryAccount account = resolveAllowedAccount(agency, cashAccountId);
 
-        List<PaymentMethodLookup> mappedMethods = paymentMethodLookupRepository
-                .findActiveByMonetaryAccountId(account.getId());
+        List<PaymentMethodLookup> mappedMethods = getMappedMethodsWithFallback(account.getId());
         List<PaymentMethodLookup> paymentMethods = mappedMethods.isEmpty()
                 ? paymentMethodLookupRepository.findByIsActiveTrue()
                 : mappedMethods;
@@ -161,7 +161,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                 .filter(method -> Boolean.TRUE.equals(method.getIsActive()))
                 .orElseThrow(() -> new BadRequestException("Invalid payment method", "වලංගු නොවන ගෙවීම් ක්‍රමය", ErrorCode.VALIDATION_ERROR));
 
-        List<PaymentMethodLookup> mappedMethods = paymentMethodLookupRepository.findActiveByMonetaryAccountId(account.getId());
+        List<PaymentMethodLookup> mappedMethods = getMappedMethodsWithFallback(account.getId());
         if (!mappedMethods.isEmpty() && mappedMethods.stream().noneMatch(method -> Objects.equals(method.getId(), paymentMethodId))) {
             throw new BadRequestException(
                     "Selected payment method is not allowed for this cash account",
@@ -241,6 +241,14 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
 
     private PaymentMethodRes toPaymentMethodRes(PaymentMethodLookup method) {
         return new PaymentMethodRes(method.getId(), method.getCode(), method.getName(), method.getIsActive());
+    }
+
+    private List<PaymentMethodLookup> getMappedMethodsWithFallback(Long monetaryAccountId) {
+        try {
+            return paymentMethodLookupRepository.findActiveByMonetaryAccountId(monetaryAccountId);
+        } catch (DataAccessException exception) {
+            return List.of();
+        }
     }
 
     private AgencyTopupRequestRes toResponse(AgencyDepositRequest request, String accountName, String paymentMethodName) {
