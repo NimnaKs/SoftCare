@@ -1480,6 +1480,28 @@ ALTER TABLE agency_deposit_requests
     ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255) NULL AFTER amount,
     ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(500) NULL AFTER attachment_name;
 
+CREATE TABLE IF NOT EXISTS monetary_account_payment_methods (
+    monetary_account_id  BIGINT UNSIGNED NOT NULL,
+    payment_method_id    BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (monetary_account_id, payment_method_id),
+    CONSTRAINT fk_mapm_account
+        FOREIGN KEY (monetary_account_id) REFERENCES monetary_accounts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_mapm_method
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO payment_methods (code, name, is_active)
+VALUES
+    ('CASH', 'Cash', 1),
+    ('CHEQUE', 'Cheque', 1),
+    ('CARD', 'Cards', 1),
+    ('E_TRANSFER', 'E-Transfers', 1)
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    is_active = VALUES(is_active);
+
 
 CREATE TABLE IF NOT EXISTS receipt_print_settings (
                                                       id                         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -4,8 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.util.List;
 import me.nimnakse.water_management.cash_accounts.BankAccountType;
 import me.nimnakse.water_management.cash_accounts.MonetaryAccountType;
+import me.nimnakse.water_management.receipts.PaymentMethodCode;
 
 public record CashAccountUpdateReq(
         @NotNull Long orgUnitId,
@@ -19,6 +21,7 @@ public record CashAccountUpdateReq(
         @Size(max = 30) String branchContactNumber,
         @NotNull BigDecimal openingBalance,
         @NotNull Boolean allowTopup,
+        @NotNull List<PaymentMethodCode> paymentMethods,
         @Size(max = 500) String description,
         Boolean isActive
 ) {

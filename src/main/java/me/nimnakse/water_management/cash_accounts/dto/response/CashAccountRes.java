@@ -2,8 +2,10 @@ package me.nimnakse.water_management.cash_accounts.dto.response;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import me.nimnakse.water_management.cash_accounts.BankAccountType;
 import me.nimnakse.water_management.cash_accounts.MonetaryAccountType;
+import me.nimnakse.water_management.receipts.PaymentMethodCode;
 
 public record CashAccountRes(
         Long id,
@@ -19,6 +21,7 @@ public record CashAccountRes(
         BigDecimal openingBalance,
         BigDecimal currentBalance,
         Boolean allowTopup,
+        List<PaymentMethodCode> paymentMethods,
         String description,
         Boolean isActive,
         Instant createdAt,
