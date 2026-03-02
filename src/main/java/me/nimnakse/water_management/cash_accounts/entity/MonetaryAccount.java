@@ -57,4 +57,7 @@ public class MonetaryAccount extends BaseEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = Boolean.TRUE;
+
+    @Column(name = "allow_topup", nullable = false)
+    private Boolean allowTopup = Boolean.FALSE;
 }

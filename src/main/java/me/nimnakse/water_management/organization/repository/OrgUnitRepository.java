@@ -2,6 +2,7 @@ package me.nimnakse.water_management.organization.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.entity.OrgUnitLevel;
@@ -24,4 +25,6 @@ public interface OrgUnitRepository extends JpaRepository<OrgUnit, Long> {
 
     @Query("select max(o.organizationCode) from OrgUnit o where o.level = :level")
     String findMaxOrganizationCodeByLevel(@Param("level") OrgUnitLevel level);
+
+    List<OrgUnit> findByParentIdIn(Collection<Long> parentIds);
 }

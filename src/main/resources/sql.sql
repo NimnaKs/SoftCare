@@ -774,6 +774,7 @@ CREATE TABLE monetary_accounts (
                                    branch_contact_number    VARCHAR(30) NULL,
                                    opening_balance          DECIMAL(14,2) NOT NULL DEFAULT 0.00,
                                    current_balance          DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                                   allow_topup              TINYINT(1) NOT NULL DEFAULT 0,
                                    description              VARCHAR(500) NULL,
                                    is_active                TINYINT(1) NOT NULL DEFAULT 1,
                                    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1472,6 +1473,13 @@ CREATE TABLE IF NOT EXISTS cheque_tracking (
 ALTER TABLE agencies
     ADD COLUMN IF NOT EXISTS credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER total_charges;
 
+ALTER TABLE monetary_accounts
+    ADD COLUMN IF NOT EXISTS allow_topup TINYINT(1) NOT NULL DEFAULT 0 AFTER current_balance;
+
+ALTER TABLE agency_deposit_requests
+    ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255) NULL AFTER amount,
+    ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(500) NULL AFTER attachment_name;
+
 
 CREATE TABLE IF NOT EXISTS receipt_print_settings (
                                                       id                         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -1739,6 +1747,8 @@ CREATE TABLE IF NOT EXISTS agency_deposit_requests (
                                                        reference_text      VARCHAR(255) NOT NULL,
                                                        paid_date           DATE NOT NULL,
                                                        amount              DECIMAL(14,2) NOT NULL,
+                                                       attachment_name     VARCHAR(255) NULL,
+                                                       attachment_path     VARCHAR(500) NULL,
                                                        status              ENUM('REQUESTED','APPROVED','REJECTED','POSTED','REVERSED') NOT NULL DEFAULT 'REQUESTED',
                                                        created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                                        updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

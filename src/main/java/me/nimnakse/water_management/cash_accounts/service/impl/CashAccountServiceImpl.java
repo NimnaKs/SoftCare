@@ -49,7 +49,7 @@ public class CashAccountServiceImpl implements CashAccountService {
         MonetaryAccount account = new MonetaryAccount();
         applyRequest(account, request.type(), request.bankAccountType(), normalizedName, request.accountNumber(),
                 request.bankName(), request.branchName(), request.branchCode(), request.branchContactNumber(),
-                request.openingBalance(), request.description());
+                request.openingBalance(), request.allowTopup(), request.description());
         account.setOrgUnitId(request.orgUnitId());
         account.setCurrentBalance(request.openingBalance());
         account.setIsActive(Boolean.TRUE);
@@ -73,7 +73,7 @@ public class CashAccountServiceImpl implements CashAccountService {
         }
         applyRequest(account, request.type(), request.bankAccountType(), normalizedName, request.accountNumber(),
                 request.bankName(), request.branchName(), request.branchCode(), request.branchContactNumber(),
-                request.openingBalance(), request.description());
+                request.openingBalance(), request.allowTopup(), request.description());
         account.setOrgUnitId(request.orgUnitId());
         if (request.isActive() != null) {
             account.setIsActive(request.isActive());
@@ -128,6 +128,7 @@ public class CashAccountServiceImpl implements CashAccountService {
             String branchCode,
             String branchContactNumber,
             BigDecimal openingBalance,
+            Boolean allowTopup,
             String description) {
         if (type == MonetaryAccountType.BANK) {
             if (bankAccountType == null) {
@@ -150,6 +151,7 @@ public class CashAccountServiceImpl implements CashAccountService {
         account.setBranchCode(type == MonetaryAccountType.BANK ? trimToNull(branchCode) : null);
         account.setBranchContactNumber(type == MonetaryAccountType.BANK ? trimToNull(branchContactNumber) : null);
         account.setOpeningBalance(openingBalance);
+        account.setAllowTopup(Boolean.TRUE.equals(allowTopup));
         account.setDescription(trimToNull(description));
     }
 
@@ -179,6 +181,7 @@ public class CashAccountServiceImpl implements CashAccountService {
                 account.getBranchContactNumber(),
                 account.getOpeningBalance(),
                 account.getCurrentBalance(),
+                account.getAllowTopup(),
                 account.getDescription(),
                 account.getIsActive(),
                 account.getCreatedAt(),

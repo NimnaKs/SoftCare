@@ -18,6 +18,7 @@ public record CashAccountRes(
         String branchContactNumber,
         BigDecimal openingBalance,
         BigDecimal currentBalance,
+        Boolean allowTopup,
         String description,
         Boolean isActive,
         Instant createdAt,

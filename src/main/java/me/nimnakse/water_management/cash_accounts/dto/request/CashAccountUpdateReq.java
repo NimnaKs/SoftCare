@@ -18,6 +18,7 @@ public record CashAccountUpdateReq(
         @Size(max = 50) String branchCode,
         @Size(max = 30) String branchContactNumber,
         @NotNull BigDecimal openingBalance,
+        @NotNull Boolean allowTopup,
         @Size(max = 500) String description,
         Boolean isActive
 ) {
