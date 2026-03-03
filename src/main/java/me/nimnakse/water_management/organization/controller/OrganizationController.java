@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import me.nimnakse.water_management.common.api.ApiResponse;
 import me.nimnakse.water_management.common.api.PageResponse;
+import me.nimnakse.water_management.agencies.dto.response.AgencyRes;
+import me.nimnakse.water_management.agencies.service.AgencyService;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerCreateReq;
 import me.nimnakse.water_management.organization.dto.request.AuthorizedOfficerUpdateReq;
 import me.nimnakse.water_management.organization.dto.request.OrgNotificationContactCreateReq;
@@ -27,13 +29,16 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 public class OrganizationController {
     private final OrganizationService organizationService;
+    private final AgencyService agencyService;
     private final AuthorizedOfficerService authorizedOfficerService;
     private final OrgNotificationContactService notificationContactService;
 
     public OrganizationController(OrganizationService organizationService,
+                                  AgencyService agencyService,
                                   AuthorizedOfficerService authorizedOfficerService,
                                   OrgNotificationContactService notificationContactService) {
         this.organizationService = organizationService;
+        this.agencyService = agencyService;
         this.authorizedOfficerService = authorizedOfficerService;
         this.notificationContactService = notificationContactService;
     }
@@ -69,6 +74,12 @@ public class OrganizationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(organizationService.getAllPaginated(page, size)));
+    }
+
+    @GetMapping("/{id}/agencies")
+    @Operation(summary = "List agencies by organization", description = "Returns agencies for an organization.")
+    public ResponseEntity<ApiResponse<List<AgencyRes>>> getAgenciesByOrganization(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(agencyService.listByOrganizationId(id)));
     }
 
     @DeleteMapping("/{id}")

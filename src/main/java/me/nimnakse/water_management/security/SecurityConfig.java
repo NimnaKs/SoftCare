@@ -63,6 +63,8 @@ public class SecurityConfig {
                                                                 "/liability-accounts/**",
                                                                 "/org-units/**")
                                                 .hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
+                                                .requestMatchers(HttpMethod.GET, "/organizations/*/agencies")
+                                                .hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
                                                                 "/inventory-templates/import",

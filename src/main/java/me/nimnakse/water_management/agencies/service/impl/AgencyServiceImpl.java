@@ -16,6 +16,7 @@ import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
 import me.nimnakse.water_management.organization.entity.Organization;
 import me.nimnakse.water_management.organization.repository.OrganizationRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,10 +30,15 @@ public class AgencyServiceImpl implements AgencyService {
 
     private final AgencyRepository agencyRepository;
     private final OrganizationRepository organizationRepository;
+    private final OrganizationAccessService organizationAccessService;
 
-    public AgencyServiceImpl(AgencyRepository agencyRepository, OrganizationRepository organizationRepository) {
+    public AgencyServiceImpl(
+            AgencyRepository agencyRepository,
+            OrganizationRepository organizationRepository,
+            OrganizationAccessService organizationAccessService) {
         this.agencyRepository = agencyRepository;
         this.organizationRepository = organizationRepository;
+        this.organizationAccessService = organizationAccessService;
     }
 
     @Transactional
@@ -90,7 +96,8 @@ public class AgencyServiceImpl implements AgencyService {
     @Transactional(readOnly = true)
     @Override
     public List<AgencyRes> listByOrganizationId(Long organizationId) {
-        resolveOrganization(organizationId);
+        Organization organization = resolveOrganization(organizationId);
+        organizationAccessService.enforceOrgUnitAccess(organization.getOrgUnitId());
         return agencyRepository.findAllByOrganization_IdAndDeletedAtIsNull(organizationId).stream()
                 .map(this::toResponse)
                 .toList();
