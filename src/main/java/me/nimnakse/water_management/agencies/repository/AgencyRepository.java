@@ -14,6 +14,8 @@ public interface AgencyRepository extends JpaRepository<Agency, Long> {
 
     List<Agency> findAllByOrganization_IdAndDeletedAtIsNull(Long organizationId);
 
+    List<Agency> findAllByOrganization_OrgUnitIdAndDeletedAtIsNull(Long orgUnitId);
+
     Page<Agency> findAllByDeletedAtIsNull(Pageable pageable);
 
     boolean existsByMobileNumberAndDeletedAtIsNull(String mobileNumber);

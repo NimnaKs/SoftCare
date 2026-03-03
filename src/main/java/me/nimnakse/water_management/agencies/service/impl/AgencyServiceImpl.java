@@ -45,7 +45,7 @@ public class AgencyServiceImpl implements AgencyService {
     @Override
     public AgencyRes create(AgencyCreateReq request) {
         validateUniqueness(request.mobileNumber(), request.nicNumber(), null);
-        Organization organization = resolveOrganization(request.organizationId());
+        Organization organization = resolveOrganizationByOrgId(request.organizationId());
 
         Agency agency = new Agency();
         applyFields(agency, request.businessName(), request.mobileNumber(),
@@ -65,7 +65,7 @@ public class AgencyServiceImpl implements AgencyService {
                         ErrorCode.NOT_FOUND));
 
         validateUniqueness(request.mobileNumber(), request.nicNumber(), id);
-        Organization organization = resolveOrganization(request.organizationId());
+        Organization organization = resolveOrganizationByOrgId(request.organizationId());
 
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
@@ -96,9 +96,9 @@ public class AgencyServiceImpl implements AgencyService {
     @Transactional(readOnly = true)
     @Override
     public List<AgencyRes> listByOrganizationId(Long organizationId) {
-        Organization organization = resolveOrganization(organizationId);
+        Organization organization = resolveOrganizationByOrgId(organizationId);
         organizationAccessService.enforceOrgUnitAccess(organization.getOrgUnitId());
-        return agencyRepository.findAllByOrganization_IdAndDeletedAtIsNull(organizationId).stream()
+        return agencyRepository.findAllByOrganization_OrgUnitIdAndDeletedAtIsNull(organization.getOrgUnitId()).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -128,7 +128,7 @@ public class AgencyServiceImpl implements AgencyService {
     private AgencyRes toResponse(Agency agency) {
         return new AgencyRes(
                 agency.getId(),
-                agency.getOrganization().getId(),
+                agency.getOrganization().getOrgUnitId(),
                 agency.getBusinessName(),
                 agency.getMobileNumber(),
                 agency.getNicNumber(),
@@ -207,8 +207,9 @@ public class AgencyServiceImpl implements AgencyService {
         }
     }
 
-    private Organization resolveOrganization(Long organizationId) {
-        return organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
+    private Organization resolveOrganizationByOrgId(Long organizationId) {
+        return organizationRepository.findByOrgUnitIdAndDeletedAtIsNull(organizationId)
+                .or(() -> organizationRepository.findByIdAndDeletedAtIsNull(organizationId))
                 .orElseThrow(() -> new NotFoundException("Organization not found", "සංවිධානය සොයාගත නොහැක",
                         ErrorCode.NOT_FOUND));
     }
