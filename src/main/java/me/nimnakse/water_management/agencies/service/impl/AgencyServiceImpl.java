@@ -89,6 +89,15 @@ public class AgencyServiceImpl implements AgencyService {
 
     @Transactional(readOnly = true)
     @Override
+    public List<AgencyRes> listByOrganizationId(Long organizationId) {
+        resolveOrganization(organizationId);
+        return agencyRepository.findAllByOrganization_IdAndDeletedAtIsNull(organizationId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public PageResponse<AgencyRes> listPaginated(int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
         Page<Agency> agencyPage = agencyRepository.findAllByDeletedAtIsNull(pageRequest);

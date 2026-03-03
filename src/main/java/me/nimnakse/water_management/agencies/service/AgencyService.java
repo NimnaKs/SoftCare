@@ -15,6 +15,8 @@ public interface AgencyService {
 
     List<AgencyRes> list();
 
+    List<AgencyRes> listByOrganizationId(Long organizationId);
+
     PageResponse<AgencyRes> listPaginated(int page, int size);
 
     void delete(Long id);

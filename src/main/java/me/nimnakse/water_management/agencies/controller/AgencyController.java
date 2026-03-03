@@ -49,6 +49,13 @@ public class AgencyController {
         return ResponseEntity.ok(ApiResponse.success(agencyService.list()));
     }
 
+    @GetMapping(params = "organizationId")
+    @Operation(summary = "List agencies by organization", description = "Lists agencies for the given organization ID")
+    public ResponseEntity<ApiResponse<List<AgencyRes>>> listByOrganization(
+            @RequestParam Long organizationId) {
+        return ResponseEntity.ok(ApiResponse.success(agencyService.listByOrganizationId(organizationId)));
+    }
+
     @GetMapping("/paginated")
     @Operation(summary = "List agencies (paginated)", description = "Lists paginated agencies ordered by last update")
     public ResponseEntity<ApiResponse<PageResponse<AgencyRes>>> listPaginated(
