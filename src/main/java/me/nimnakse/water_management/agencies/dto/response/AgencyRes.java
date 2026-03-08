@@ -18,6 +18,7 @@ public record AgencyRes(
                 BigDecimal subscriptionFee,
                 BigDecimal totalCharges,
                 BigDecimal creditLimit,
+                BigDecimal walletAmount,
                 BillingMode billingMode,
                 Boolean isActive,
                 Instant createdAt,

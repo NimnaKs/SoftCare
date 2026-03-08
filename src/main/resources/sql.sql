@@ -95,6 +95,7 @@ CREATE TABLE agencies (
                           subscription_fee       DECIMAL(14,2) NOT NULL DEFAULT 5.00,
                           total_charges          DECIMAL(14,2) NOT NULL DEFAULT 20.00,
                           credit_limit           DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                          wallet_amount          DECIMAL(14,2) NOT NULL DEFAULT 0.00,
                           billing_mode           ENUM('PREPAID', 'POSTPAID') NOT NULL DEFAULT 'PREPAID',
                           is_active              TINYINT(1) NOT NULL DEFAULT 1,
                           created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1471,7 +1472,8 @@ CREATE TABLE IF NOT EXISTS cheque_tracking (
   COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE agencies
-    ADD COLUMN IF NOT EXISTS credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER total_charges;
+    ADD COLUMN IF NOT EXISTS credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER total_charges,
+    ADD COLUMN IF NOT EXISTS wallet_amount DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER credit_limit;
 
 ALTER TABLE monetary_accounts
     ADD COLUMN IF NOT EXISTS allow_topup TINYINT(1) NOT NULL DEFAULT 0 AFTER current_balance;

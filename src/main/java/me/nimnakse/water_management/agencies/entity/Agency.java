@@ -56,6 +56,9 @@ public class Agency extends BaseEntity {
     @Column(name = "credit_limit", nullable = false, precision = 14, scale = 2)
     private BigDecimal creditLimit = BigDecimal.ZERO;
 
+    @Column(name = "wallet_amount", nullable = false, precision = 14, scale = 2)
+    private BigDecimal walletAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "billing_mode", nullable = false, length = 8)
     private BillingMode billingMode = BillingMode.PREPAID;

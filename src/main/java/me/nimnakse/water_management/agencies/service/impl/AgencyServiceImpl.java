@@ -51,8 +51,9 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.creditLimit(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), BigDecimal.ZERO, null, request.isActive());
         agency.setOrganization(organization);
+        agency.setWalletAmount(BigDecimal.ZERO.setScale(2));
 
         return toResponse(agencyRepository.save(agency));
     }
@@ -70,8 +71,11 @@ public class AgencyServiceImpl implements AgencyService {
         applyFields(agency, request.businessName(), request.mobileNumber(),
                 request.nicNumber(), request.businessAddress(), request.brcNumber(), request.ownerName(),
                 request.secondaryContactNo(), request.serviceChargePercent(),
-                request.subscriptionFee(), request.creditLimit(), request.billingMode(), request.isActive());
+                request.subscriptionFee(), BigDecimal.ZERO, null, request.isActive());
         agency.setOrganization(organization);
+        if (agency.getWalletAmount() == null) {
+            agency.setWalletAmount(BigDecimal.ZERO.setScale(2));
+        }
 
         return toResponse(agencyRepository.save(agency));
     }
@@ -140,6 +144,7 @@ public class AgencyServiceImpl implements AgencyService {
                 agency.getSubscriptionFee(),
                 agency.getTotalCharges(),
                 agency.getCreditLimit(),
+                agency.getWalletAmount(),
                 agency.getBillingMode(),
                 agency.getIsActive(),
                 agency.getCreatedAt(),
@@ -173,6 +178,8 @@ public class AgencyServiceImpl implements AgencyService {
         agency.setServiceChargePercent(resolvedServiceChargePercent);
         agency.setSubscriptionFee(resolvedSubscriptionFee);
         agency.setTotalCharges(resolvedServiceChargePercent.add(resolvedSubscriptionFee));
+        billingMode = BillingMode.PREPAID;
+        creditLimit = BigDecimal.ZERO.setScale(2);
         BillingMode resolvedBillingMode = billingMode != null ? billingMode : BillingMode.PREPAID;
         agency.setBillingMode(resolvedBillingMode);
         if (resolvedBillingMode == BillingMode.PREPAID) {
