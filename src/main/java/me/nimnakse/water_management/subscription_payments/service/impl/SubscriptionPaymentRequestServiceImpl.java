@@ -20,12 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymentRequestService {
@@ -70,8 +82,6 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
             throw new BadRequestException("Agency is required", "Agency is required", ErrorCode.VALIDATION_ERROR);
         }
 
-        // Optional: enforce access here if you have an Agency access service
-
         List<SubscriptionPaymentRequest> items = repository.findByAgencyIdOrderByCreatedAtDesc(agencyId);
         if (items.isEmpty()) return List.of();
 
@@ -90,8 +100,38 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
 
     @Transactional(readOnly = true)
     @Override
+    public SubscriptionPaymentRequestRes getById(Long id) {
+        SubscriptionPaymentRequest entity = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Request not found", "Request not found", ErrorCode.NOT_FOUND));
+
+        String methodName = paymentMethodLookupRepository.findById(entity.getPaymentMethodId())
+                .map(PaymentMethodLookup::getName)
+                .orElse("-");
+
+        return toRes(entity, methodName);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public File loadAttachment(Long id) {
+        SubscriptionPaymentRequest entity = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Request not found", "Request not found", ErrorCode.NOT_FOUND));
+
+        if (!StringUtils.hasText(entity.getAttachmentPath())) {
+            throw new NotFoundException("Attachment not found", "Attachment not found", ErrorCode.NOT_FOUND);
+        }
+
+        Path path = Paths.get(entity.getAttachmentPath()).normalize();
+        if (!Files.exists(path) || !Files.isRegularFile(path)) {
+            throw new NotFoundException("Attachment not found", "Attachment not found", ErrorCode.NOT_FOUND);
+        }
+
+        return path.toFile();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
     public List<PaymentMethodRes> listPaymentMethods() {
-        // Return the 4 allowed methods (active ones)
         List<PaymentMethodRes> out = new ArrayList<>();
         for (PaymentMethodCode code : ALLOWED_METHOD_CODES) {
             PaymentMethodLookup lookup = paymentMethodLookupRepository.findByCodeIgnoreCase(code.name())
@@ -123,24 +163,22 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new NotFoundException("Agency not found", "Agency not found", ErrorCode.NOT_FOUND));
 
-        // Optional: enforce access here if you have an Agency access service
-
         if (!StringUtils.hasText(reference)) {
-            throw new BadRequestException("Reference is required", "Reference අවශ්‍යයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Reference is required", "Reference is required", ErrorCode.VALIDATION_ERROR);
         }
         if (paidDate == null) {
-            throw new BadRequestException("Paid date is required", "Paid date අවශ්‍යයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Paid date is required", "Paid date is required", ErrorCode.VALIDATION_ERROR);
         }
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("Amount must be positive", "Amount ධන අගයක් විය යුතුය", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Amount must be positive", "Amount must be positive", ErrorCode.VALIDATION_ERROR);
         }
         if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Attachment is required", "Attachment අවශ්‍යයි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Attachment is required", "Attachment is required", ErrorCode.VALIDATION_ERROR);
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new BadRequestException("Invalid attachment type", "Attachment වර්ගය වැරදියි", ErrorCode.VALIDATION_ERROR);
+            throw new BadRequestException("Invalid attachment type", "Invalid attachment type", ErrorCode.VALIDATION_ERROR);
         }
 
         PaymentMethodLookup method = paymentMethodLookupRepository.findById(paymentMethodId)
@@ -150,7 +188,7 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
         if (!Boolean.TRUE.equals(method.getIsActive()) || !ALLOWED_METHOD_CODES.contains(methodCode)) {
             throw new BadRequestException(
                     "Selected payment method is not allowed",
-                    "තෝරාගත් ගෙවීම් ක්‍රමය අවසර නැත",
+                    "Selected payment method is not allowed",
                     ErrorCode.VALIDATION_ERROR
             );
         }
@@ -177,8 +215,6 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
     public SubscriptionPaymentRequestRes proceed(Long id) {
         SubscriptionPaymentRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Request not found", "Request not found", ErrorCode.NOT_FOUND));
-
-        // Optional: enforce access to entity.getAgency().getId()
 
         if (entity.getStatus() != SubscriptionPaymentRequestStatus.PENDING_CONFIRMATION) {
             throw new BadRequestException("Request cannot be proceeded", "Request cannot be proceeded", ErrorCode.VALIDATION_ERROR);

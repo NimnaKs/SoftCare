@@ -76,9 +76,11 @@ public class SecurityConfig {
                                                                 "/inventory-templates/**")
                                                 .hasAnyAuthority("APP_SCOPE_ADMIN_PORTAL", "APP_SCOPE_BRANCH_APP")
                                                 .requestMatchers(
-                                                                "/agency/**",
-                                                                "/subscription/**")
+                                                                "/agency/**")
                                                 .hasAuthority("APP_SCOPE_AGENCY_APP")
+                                                .requestMatchers(
+                                                                "/subscription/**")
+                                                .hasAnyAuthority("APP_SCOPE_AGENCY_APP", "APP_SCOPE_ADMIN_PORTAL")
                                                 .requestMatchers(
                                                                 "/members/**",
                                                                 "/api/sales/**",
@@ -161,3 +163,5 @@ public class SecurityConfig {
                 return source;
         }
 }
+
+
