@@ -220,7 +220,18 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
             throw new BadRequestException("Request cannot be proceeded", "Request cannot be proceeded", ErrorCode.VALIDATION_ERROR);
         }
 
-        entity.setStatus(SubscriptionPaymentRequestStatus.SUBMITTED);
+        Agency agency = entity.getAgency();
+        BigDecimal currentCreditLimit = agency.getCreditLimit() == null
+                ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : agency.getCreditLimit().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal amount = entity.getAmount() == null
+                ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : entity.getAmount().setScale(2, RoundingMode.HALF_UP);
+
+        agency.setCreditLimit(currentCreditLimit.add(amount));
+        agencyRepository.save(agency);
+
+        entity.setStatus(SubscriptionPaymentRequestStatus.PROCESSED);
 
         String methodName = paymentMethodLookupRepository.findById(entity.getPaymentMethodId())
                 .map(PaymentMethodLookup::getName)
