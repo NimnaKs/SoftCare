@@ -8,16 +8,24 @@ import me.nimnakse.water_management.agencies.entity.AgencyDepositRequestStatus;
 import me.nimnakse.water_management.agencies.repository.AgencyDepositRequestRepository;
 import me.nimnakse.water_management.agencies.repository.AgencyRepository;
 import me.nimnakse.water_management.agencies.service.AgencyTopupRequestService;
+import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
 import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount;
+import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.liabilities.LiabilityType;
+import me.nimnakse.water_management.liabilities.accounts.entity.LiabilityAccount;
+import me.nimnakse.water_management.liabilities.accounts.repository.LiabilityAccountRepository;
+import me.nimnakse.water_management.liabilities.main_categories.entity.LiabilityMainCategory;
+import me.nimnakse.water_management.liabilities.main_categories.repository.LiabilityMainCategoryRepository;
 import me.nimnakse.water_management.organization.entity.OrgUnit;
 import me.nimnakse.water_management.organization.repository.OrgUnitRepository;
 import me.nimnakse.water_management.receipts.dto.response.PaymentMethodRes;
 import me.nimnakse.water_management.receipts.entity.PaymentMethodLookup;
 import me.nimnakse.water_management.receipts.repository.PaymentMethodLookupRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
@@ -28,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +49,9 @@ import java.util.*;
 
 @Service
 public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService {
+        private static final String AGENCY_LIABILITY_MAIN_CATEGORY = "Current Liability";
+        private static final String AGENCY_LIABILITY_ACCOUNT_NAME = "Suppliers and Agency Liabilities";
+        private static final String AGENCY_LIABILITY_FUNCTION_KEY = "SUPPLIERS_AND_AGENCY_LIABILITIES";
         private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
                         "application/pdf",
                         "image/png",
@@ -49,8 +61,12 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
         private final AgencyRepository agencyRepository;
         private final OrgUnitRepository orgUnitRepository;
         private final MonetaryAccountRepository monetaryAccountRepository;
+        private final MonetaryTransactionService monetaryTransactionService;
         private final PaymentMethodLookupRepository paymentMethodLookupRepository;
         private final AgencyDepositRequestRepository agencyDepositRequestRepository;
+        private final LiabilityMainCategoryRepository liabilityMainCategoryRepository;
+        private final LiabilityAccountRepository liabilityAccountRepository;
+        private final OrganizationAccessService organizationAccessService;
 
         @Value("${app.upload-dir:uploads}")
         private String uploadDir;
@@ -59,13 +75,21 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                         AgencyRepository agencyRepository,
                         OrgUnitRepository orgUnitRepository,
                         MonetaryAccountRepository monetaryAccountRepository,
+                        MonetaryTransactionService monetaryTransactionService,
                         PaymentMethodLookupRepository paymentMethodLookupRepository,
-                        AgencyDepositRequestRepository agencyDepositRequestRepository) {
+                        AgencyDepositRequestRepository agencyDepositRequestRepository,
+                        LiabilityMainCategoryRepository liabilityMainCategoryRepository,
+                        LiabilityAccountRepository liabilityAccountRepository,
+                        OrganizationAccessService organizationAccessService) {
                 this.agencyRepository = agencyRepository;
                 this.orgUnitRepository = orgUnitRepository;
                 this.monetaryAccountRepository = monetaryAccountRepository;
+                this.monetaryTransactionService = monetaryTransactionService;
                 this.paymentMethodLookupRepository = paymentMethodLookupRepository;
                 this.agencyDepositRequestRepository = agencyDepositRequestRepository;
+                this.liabilityMainCategoryRepository = liabilityMainCategoryRepository;
+                this.liabilityAccountRepository = liabilityAccountRepository;
+                this.organizationAccessService = organizationAccessService;
         }
 
         @Transactional(readOnly = true)
@@ -163,6 +187,147 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                                                 String.CASE_INSENSITIVE_ORDER))
                                 .map(this::toPaymentMethodRes)
                                 .toList();
+        }
+
+        @Transactional(readOnly = true)
+        @Override
+        public AgencyTopupRequestRes getByIdForBranch(Long requestId) {
+                AgencyDepositRequest request = agencyDepositRequestRepository.findById(requestId)
+                                .orElseThrow(() -> new NotFoundException(
+                                                "Top-up request not found",
+                                                "Top-up ඉල්ලීම සොයාගත නොහැක",
+                                                ErrorCode.NOT_FOUND));
+
+                Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(request.getAgencyId())
+                                .orElseThrow(() -> new NotFoundException(
+                                                "Agency not found",
+                                                "නියෝජිතයා සොයාගත නොහැක",
+                                                ErrorCode.NOT_FOUND));
+                organizationAccessService.enforceOrgUnitAccess(agency.getOrganization().getOrgUnitId());
+
+                String accountName = monetaryAccountRepository.findById(request.getMonetaryAccountId())
+                                .map(MonetaryAccount::getAccountName)
+                                .orElse("-");
+                String methodName = paymentMethodLookupRepository.findById(request.getPaymentMethodId())
+                                .map(PaymentMethodLookup::getName)
+                                .orElse("-");
+
+                return toResponse(request, accountName, methodName, agency.getBusinessName());
+        }
+
+        @Transactional
+        @Override
+        public AgencyTopupRequestRes postByBranch(
+                        Long requestId,
+                        Long cashAccountId,
+                        Long paymentMethodId,
+                        String reference,
+                        LocalDate paidDate,
+                        BigDecimal amount) {
+                if (cashAccountId == null || paymentMethodId == null || paidDate == null || amount == null) {
+                        throw new BadRequestException("Required fields are missing", "අනිවාර්ය ක්ෂේත්‍ර හිස්ව ඇත",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+                if (!StringUtils.hasText(reference)) {
+                        throw new BadRequestException("Reference is required", "යොමු අංකය අවශ්‍යයි",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+                if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new BadRequestException("Amount must be greater than zero", "මුදල ශුන්‍යයට වඩා වැඩි විය යුතුය",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+
+                AgencyDepositRequest request = agencyDepositRequestRepository.findById(requestId)
+                                .orElseThrow(() -> new NotFoundException(
+                                                "Top-up request not found",
+                                                "Top-up ඉල්ලීම සොයාගත නොහැක",
+                                                ErrorCode.NOT_FOUND));
+
+                if (request.getStatus() != AgencyDepositRequestStatus.REQUESTED
+                                && request.getStatus() != AgencyDepositRequestStatus.APPROVED) {
+                        throw new BadRequestException(
+                                        "Only requested or approved top-up requests can be posted",
+                                        "REQUESTED හෝ APPROVED top-up ඉල්ලීම් පමණක් post කළ හැක",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+
+                Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(request.getAgencyId())
+                                .orElseThrow(() -> new NotFoundException("Agency not found", "නියෝජිතයා සොයාගත නොහැක",
+                                                ErrorCode.NOT_FOUND));
+                organizationAccessService.enforceOrgUnitAccess(agency.getOrganization().getOrgUnitId());
+
+                MonetaryAccount cashAccount = monetaryAccountRepository.findById(cashAccountId)
+                                .orElseThrow(() -> new NotFoundException("Cash account not found",
+                                                "මුදල් ගිණුම සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                organizationAccessService.enforceOrgUnitAccess(cashAccount.getOrgUnitId());
+                if (!Boolean.TRUE.equals(cashAccount.getIsActive())) {
+                        throw new BadRequestException("Cash account is inactive", "මුදල් ගිණුම අක්‍රියයි",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+
+                PaymentMethodLookup paymentMethod = paymentMethodLookupRepository.findById(paymentMethodId)
+                                .filter(method -> Boolean.TRUE.equals(method.getIsActive()))
+                                .orElseThrow(() -> new BadRequestException("Invalid payment method",
+                                                "වලංගු නොවන ගෙවීම් ක්‍රමය",
+                                                ErrorCode.VALIDATION_ERROR));
+
+                List<PaymentMethodLookup> mappedMethods = getMappedMethodsWithFallback(cashAccount.getId());
+                if (!mappedMethods.isEmpty()
+                                && mappedMethods.stream().noneMatch(method -> Objects.equals(method.getId(), paymentMethodId))) {
+                        throw new BadRequestException(
+                                        "Selected payment method is not allowed for this cash account",
+                                        "තෝරාගත් ගෙවීම් ක්‍රමය මෙම ගිණුම සඳහා අවසර නැත",
+                                        ErrorCode.VALIDATION_ERROR);
+                }
+
+                BigDecimal postedAmount = amount.setScale(2, RoundingMode.HALF_UP);
+                request.setMonetaryAccountId(cashAccount.getId());
+                request.setPaymentMethodId(paymentMethod.getId());
+                request.setReferenceText(reference.trim());
+                request.setPaidDate(paidDate);
+                request.setAmount(postedAmount);
+                request.setStatus(AgencyDepositRequestStatus.POSTED);
+
+                cashAccount.setCurrentBalance(cashAccount.getCurrentBalance().add(postedAmount));
+                agency.setWalletAmount((agency.getWalletAmount() == null ? BigDecimal.ZERO : agency.getWalletAmount()).add(postedAmount));
+
+                LiabilityAccount liabilityAccount = ensureAgencyLiabilityAccountExists();
+                monetaryTransactionService.recordTransaction(
+                                cashAccount.getId(),
+                                postedAmount,
+                                MonetaryTransaction.TransactionType.TRANSFER_IN,
+                                request.getReferenceText(),
+                                "Agency top-up posted. Liability: " + liabilityAccount.getName() + ", Agency: "
+                                                + agency.getBusinessName(),
+                                request.getId());
+
+                monetaryAccountRepository.save(cashAccount);
+                agencyRepository.save(agency);
+                AgencyDepositRequest saved = agencyDepositRequestRepository.save(request);
+                return toResponse(saved, cashAccount.getAccountName(), paymentMethod.getName(), agency.getBusinessName());
+        }
+
+        @Transactional(readOnly = true)
+        @Override
+        public File loadAttachmentForBranch(Long requestId) {
+                AgencyDepositRequest request = agencyDepositRequestRepository.findById(requestId)
+                                .orElseThrow(() -> new NotFoundException("Top-up request not found",
+                                                "Top-up ඉල්ලීම සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(request.getAgencyId())
+                                .orElseThrow(() -> new NotFoundException("Agency not found",
+                                                "නියෝජිතයා සොයාගත නොහැක", ErrorCode.NOT_FOUND));
+                organizationAccessService.enforceOrgUnitAccess(agency.getOrganization().getOrgUnitId());
+
+                if (!StringUtils.hasText(request.getAttachmentPath())) {
+                        throw new NotFoundException("Attachment not found", "ඇමුණුම සොයාගත නොහැක", ErrorCode.NOT_FOUND);
+                }
+
+                File file = new File(request.getAttachmentPath());
+                if (!file.exists() || !file.isFile()) {
+                        throw new NotFoundException("Attachment file not found", "ඇමුණුම් ගොනුව සොයාගත නොහැක",
+                                        ErrorCode.NOT_FOUND);
+                }
+                return file;
         }
 
         @Transactional
@@ -294,6 +459,51 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                 }
         }
 
+        private LiabilityAccount ensureAgencyLiabilityAccountExists() {
+                return liabilityAccountRepository.findByFunctionKeyIgnoreCase(AGENCY_LIABILITY_FUNCTION_KEY)
+                                .orElseGet(() -> {
+                                        LiabilityMainCategory mainCategory = liabilityMainCategoryRepository
+                                                        .findByNameIgnoreCase(AGENCY_LIABILITY_MAIN_CATEGORY)
+                                                        .orElseGet(this::createAgencyLiabilityMainCategory);
+                                        return liabilityAccountRepository
+                                                        .findByMainCategoryIdAndNameIgnoreCase(mainCategory.getId(),
+                                                                        AGENCY_LIABILITY_ACCOUNT_NAME)
+                                                        .orElseGet(() -> createAgencyLiabilityAccount(mainCategory));
+                                });
+        }
+
+        private LiabilityMainCategory createAgencyLiabilityMainCategory() {
+                LiabilityMainCategory category = new LiabilityMainCategory();
+                category.setLiabilityType(LiabilityType.CURRENT);
+                category.setName(AGENCY_LIABILITY_MAIN_CATEGORY);
+                category.setDescription("System generated category for agency liabilities");
+                category.setIsSystem(Boolean.TRUE);
+                category.setIsActive(Boolean.TRUE);
+                return liabilityMainCategoryRepository.save(category);
+        }
+
+        private LiabilityAccount createAgencyLiabilityAccount(LiabilityMainCategory mainCategory) {
+                LiabilityAccount account = new LiabilityAccount();
+                account.setMainCategory(mainCategory);
+                account.setName(AGENCY_LIABILITY_ACCOUNT_NAME);
+                account.setDescription("System generated liability account for suppliers and agencies");
+                account.setFunctionKey(AGENCY_LIABILITY_FUNCTION_KEY);
+                account.setIsActive(Boolean.TRUE);
+                account.setIsSystem(Boolean.TRUE);
+                account.setIsDefault(Boolean.TRUE);
+                liabilityAccountRepository.clearDefaultForMainCategory(mainCategory.getId());
+                account.setAccountNumber(generateAgencyLiabilityAccountNumber(mainCategory));
+                return liabilityAccountRepository.save(account);
+        }
+
+        private String generateAgencyLiabilityAccountNumber(LiabilityMainCategory mainCategory) {
+                String base = String.format("CL-AP-%d", mainCategory.getId());
+                if (!liabilityAccountRepository.existsByAccountNumberIgnoreCase(base)) {
+                        return base;
+                }
+                return base + "-ALT";
+        }
+
         private PaymentMethodRes toPaymentMethodRes(PaymentMethodLookup method) {
                 return new PaymentMethodRes(method.getId(), method.getCode(), method.getName(), method.getIsActive());
         }
@@ -311,6 +521,7 @@ public class AgencyTopupRequestServiceImpl implements AgencyTopupRequestService 
                         String agencyName) {
                 return new AgencyTopupRequestRes(
                                 request.getId(),
+                                request.getAgencyId(),
                                 request.getMonetaryAccountId(),
                                 accountName,
                                 request.getPaymentMethodId(),

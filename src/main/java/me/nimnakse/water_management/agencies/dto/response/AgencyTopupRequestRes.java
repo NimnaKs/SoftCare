@@ -8,6 +8,7 @@ import java.time.LocalDate;
 
 public record AgencyTopupRequestRes(
         Long id,
+        Long agencyId,
         Long cashAccountId,
         String cashAccountName,
         Long paymentMethodId,

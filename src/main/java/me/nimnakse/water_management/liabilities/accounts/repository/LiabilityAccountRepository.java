@@ -23,6 +23,8 @@ public interface LiabilityAccountRepository extends JpaRepository<LiabilityAccou
 
     Optional<LiabilityAccount> findByMainCategoryIdAndNameIgnoreCase(Long mainCategoryId, String name);
 
+    Optional<LiabilityAccount> findByFunctionKeyIgnoreCase(String functionKey);
+
     @Modifying
     @Query("update LiabilityAccount la set la.isDefault = false where la.mainCategory.id = :mainCategoryId")
     void clearDefaultForMainCategory(@Param("mainCategoryId") Long mainCategoryId);
