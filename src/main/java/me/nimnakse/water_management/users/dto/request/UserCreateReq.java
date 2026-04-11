@@ -16,7 +16,7 @@ public record UserCreateReq(
                 @Pattern(regexp = ValidationPatterns.OPTIONAL_SRI_LANKA_PHONE_REGEX, message = "Secondary contact number must be a 10-digit Sri Lankan phone number") String secondaryContactNumber,
                 String address,
                 String profilePhotoUrl,
-                @NotBlank String passwordHash,
+                String passwordHash,
                 Long orgUnitId,
                 Long agencyId,
                 @NotNull RoleAppScope appScope,

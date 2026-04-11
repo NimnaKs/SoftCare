@@ -22,12 +22,15 @@ import me.nimnakse.water_management.users.repository.UserRepository;
 import me.nimnakse.water_management.users.repository.UserRoleRepository;
 import me.nimnakse.water_management.users.service.UserMapper;
 import me.nimnakse.water_management.users.service.UserService;
+import me.nimnakse.water_management.sms.service.SmsNotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -38,6 +41,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final OrgUnitRepository orgUnitRepository;
     private final me.nimnakse.water_management.agencies.repository.AgencyRepository agencyRepository;
+    private final SmsNotificationService smsNotificationService;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public UserServiceImpl(UserRepository userRepository,
             UserRoleRepository userRoleRepository,
@@ -45,7 +50,8 @@ public class UserServiceImpl implements UserService {
             UserMapper userMapper,
             PasswordEncoder passwordEncoder,
             OrgUnitRepository orgUnitRepository,
-            me.nimnakse.water_management.agencies.repository.AgencyRepository agencyRepository) {
+            me.nimnakse.water_management.agencies.repository.AgencyRepository agencyRepository,
+            SmsNotificationService smsNotificationService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
@@ -53,6 +59,7 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
         this.orgUnitRepository = orgUnitRepository;
         this.agencyRepository = agencyRepository;
+        this.smsNotificationService = smsNotificationService;
     }
 
     @Transactional
@@ -61,10 +68,11 @@ public class UserServiceImpl implements UserService {
         validateAgencySelection(request.appScope(), request.agencyId());
         OrgUnit orgUnit = resolveOrgUnit(request.orgUnitId());
         me.nimnakse.water_management.agencies.entity.Agency agency = resolveAgency(request.agencyId());
+        String rawPassword = hasText(request.passwordHash()) ? request.passwordHash() : generateTemporaryPassword();
 
         User user = new User();
         user.setUsername(request.username());
-        user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setNic(request.nic());
         user.setName(request.name());
         user.setMobileNumber(request.mobileNumber());
@@ -79,6 +87,12 @@ public class UserServiceImpl implements UserService {
 
         List<Role> roles = loadAndValidateRoles(request.roleIds(), request.appScope());
         saveUserRoles(savedUser, roles);
+
+        try {
+            smsNotificationService.sendWelcomeMessage(savedUser.getMobileNumber(), savedUser.getName());
+        } catch (Exception e) {
+            System.err.println("Failed to send welcome SMS for user " + savedUser.getUsername() + ": " + e.getMessage());
+        }
 
         return buildUserResponse(savedUser, roles);
     }
@@ -274,5 +288,18 @@ public class UserServiceImpl implements UserService {
                 base.id(), base.username(), base.nic(), base.name(), base.mobileNumber(),
                 base.secondaryContactNumber(), base.address(), base.profilePhotoUrl(),
                 base.status(), base.orgUnitId(), base.agencyId(), roles);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private String generateTemporaryPassword() {
+        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        StringBuilder password = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            password.append(alphabet.charAt(RANDOM.nextInt(alphabet.length())));
+        }
+        return password.toString();
     }
 }
