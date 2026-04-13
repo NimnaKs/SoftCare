@@ -2,6 +2,8 @@ package me.nimnakse.water_management.receipts.service.impl;
 
 import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
+import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
+import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
@@ -73,6 +75,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final ConnectionRepository connectionRepository;
     private final MemberRepository memberRepository;
     private final MonetaryAccountRepository monetaryAccountRepository;
+    private final MonetaryTransactionService monetaryTransactionService;
     private final PaymentMethodLookupRepository paymentMethodRepository;
     private final LiabilityAccountRepository liabilityAccountRepository;
     private final SalesInvoiceConnectionLookupRepository invoiceConnectionRepository;
@@ -92,6 +95,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
             MonetaryAccountRepository monetaryAccountRepository,
+            MonetaryTransactionService monetaryTransactionService,
             PaymentMethodLookupRepository paymentMethodRepository,
             LiabilityAccountRepository liabilityAccountRepository,
             SalesInvoiceConnectionLookupRepository invoiceConnectionRepository,
@@ -110,6 +114,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
+        this.monetaryTransactionService = monetaryTransactionService;
         this.paymentMethodRepository = paymentMethodRepository;
         this.liabilityAccountRepository = liabilityAccountRepository;
         this.invoiceConnectionRepository = invoiceConnectionRepository;
@@ -232,7 +237,12 @@ public class ReceiptServiceImpl implements ReceiptService {
         checkOrg(cash.getOrgUnitId());
 
         PaymentMethodLookup method = paymentMethodRepository.findByCodeIgnoreCase(request.paymentMethodCode())
+                .filter(pm -> Boolean.TRUE.equals(pm.getIsActive()))
                 .orElseThrow(() -> new BadRequestException("Invalid payment method", "Invalid payment method", ErrorCode.VALIDATION_ERROR));
+        List<PaymentMethodLookup> mappedMethods = paymentMethodRepository.findActiveByMonetaryAccountId(cash.getId());
+        if (!mappedMethods.isEmpty() && mappedMethods.stream().noneMatch(pm -> Objects.equals(pm.getId(), method.getId()))) {
+            throw new BadRequestException("Selected payment method is not allowed for this cash account", "Selected payment method is not allowed for this cash account", ErrorCode.VALIDATION_ERROR);
+        }
         if ("CHEQUE".equalsIgnoreCase(method.getCode()) && (request.chequeNo() == null || request.chequeNo().isBlank())) {
             throw new BadRequestException("Cheque number is required", "Cheque number is required", ErrorCode.VALIDATION_ERROR);
         }
@@ -277,6 +287,15 @@ public class ReceiptServiceImpl implements ReceiptService {
             receipt.setCustomerMobileUpdated(mobile);
         }
         receipt = receiptRepository.save(receipt);
+        cash.setCurrentBalance(cash.getCurrentBalance().add(money(request.paidAmount())));
+        monetaryAccountRepository.save(cash);
+        monetaryTransactionService.recordTransaction(
+                cash.getId(),
+                money(request.paidAmount()),
+                MonetaryTransaction.TransactionType.TRANSFER_IN,
+                receipt.getReceiptNo(),
+                "Receipt posted: " + receipt.getReceiptNo(),
+                receipt.getId());
 
         if (type != ReceiptType.UNRECOGNIZED) {
             List<ReceiptSettlementPreviewItemRes> items = (request.settlements() == null || request.settlements().isEmpty())
@@ -344,6 +363,18 @@ public class ReceiptServiceImpl implements ReceiptService {
         }
         receipt.setStatus(ReceiptStatus.REVERSED);
         receiptRepository.save(receipt);
+        monetaryAccountRepository.findById(receipt.getMonetaryAccountId()).ifPresent(cash -> {
+            BigDecimal amount = money(receipt.getPaidAmount());
+            cash.setCurrentBalance(cash.getCurrentBalance().subtract(amount));
+            monetaryAccountRepository.save(cash);
+            monetaryTransactionService.recordTransaction(
+                    cash.getId(),
+                    amount.negate(),
+                    MonetaryTransaction.TransactionType.TRANSFER_OUT,
+                    receipt.getReceiptNo(),
+                    "Receipt reversed: " + request.reason(),
+                    receipt.getId());
+        });
         unrecognizedReceiptRepository.findByReceipt_Id(receiptId).ifPresent(u -> {
             u.setStatus(UnrecognizedReceiptStatus.REVERSED);
             unrecognizedReceiptRepository.save(u);
