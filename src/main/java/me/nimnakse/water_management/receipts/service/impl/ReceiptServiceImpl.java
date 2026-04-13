@@ -13,6 +13,8 @@ import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.receipts.dto.request.*;
 import me.nimnakse.water_management.receipts.dto.response.*;
 import me.nimnakse.water_management.receipts.entity.*;
+import me.nimnakse.water_management.liabilities.accounts.entity.LiabilityAccount;
+import me.nimnakse.water_management.liabilities.accounts.repository.LiabilityAccountRepository;
 import me.nimnakse.water_management.receipts.repository.PaymentMethodLookupRepository;
 import me.nimnakse.water_management.receipts.repository.BulkReceiptUploadBatchRepository;
 import me.nimnakse.water_management.receipts.repository.BulkReceiptUploadRowRepository;
@@ -72,6 +74,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final MemberRepository memberRepository;
     private final MonetaryAccountRepository monetaryAccountRepository;
     private final PaymentMethodLookupRepository paymentMethodRepository;
+    private final LiabilityAccountRepository liabilityAccountRepository;
     private final SalesInvoiceConnectionLookupRepository invoiceConnectionRepository;
     private final SalesInvoiceInstallmentLookupRepository installmentRepository;
     private final UnrecognizedReceiptRepository unrecognizedReceiptRepository;
@@ -90,6 +93,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             MemberRepository memberRepository,
             MonetaryAccountRepository monetaryAccountRepository,
             PaymentMethodLookupRepository paymentMethodRepository,
+            LiabilityAccountRepository liabilityAccountRepository,
             SalesInvoiceConnectionLookupRepository invoiceConnectionRepository,
             SalesInvoiceInstallmentLookupRepository installmentRepository,
             UnrecognizedReceiptRepository unrecognizedReceiptRepository,
@@ -107,6 +111,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         this.memberRepository = memberRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
         this.paymentMethodRepository = paymentMethodRepository;
+        this.liabilityAccountRepository = liabilityAccountRepository;
         this.invoiceConnectionRepository = invoiceConnectionRepository;
         this.installmentRepository = installmentRepository;
         this.unrecognizedReceiptRepository = unrecognizedReceiptRepository;
@@ -212,7 +217,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         SettlementComputation sc = computeSettlement(connection.getId(), request.paidAmount());
         BigDecimal remaining = sc.currentDue.subtract(sc.allocated);
         if (remaining.signum() < 0) remaining = ZERO;
-        return new ReceiptSettlementPreviewRes(sc.currentDue, money(request.paidAmount()), money(remaining), sc.items, request.paidAmount().compareTo(sc.currentDue) > 0);
+        return new ReceiptSettlementPreviewRes(sc.currentDue, money(request.paidAmount()), money(remaining), sc.items, request.paidAmount().compareTo(sc.currentDue) > 0 && !Boolean.TRUE.equals(request.allowOverpayment()));
     }
 
     @Override
@@ -230,6 +235,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         }
 
         ReceiptType type = parseReceiptType(request.receiptType());
+        boolean allowOverpayment = Boolean.TRUE.equals(request.allowOverpayment());
         Connection connection = null;
         if (request.connectionId() != null) {
             connection = connectionRepository.findById(request.connectionId())
@@ -238,7 +244,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         } else if (request.accountNumber() != null && !request.accountNumber().isBlank()) {
             connection = connectionRepository.findByOrgUnitIdAndAccountNumber(org, request.accountNumber().trim()).orElse(null);
         }
-        if (type != ReceiptType.UNRECOGNIZED && connection == null) {
+        if (type == ReceiptType.CUSTOMER && connection == null) {
             throw new BadRequestException("Connection is required", "Connection is required", ErrorCode.VALIDATION_ERROR);
         }
         if (type == ReceiptType.UNRECOGNIZED && request.liabilityAccountId() == null) {
@@ -275,6 +281,9 @@ public class ReceiptServiceImpl implements ReceiptService {
                     : request.settlements().stream()
                     .map(s -> new ReceiptSettlementPreviewItemRes(s.invoiceId(), s.installmentId(), "Settlement", money(s.settledAmount()), money(s.settledAmount())))
                     .toList();
+            String settlementPrefix = "REC-";
+            int settlementSequence = nextSettlementReferenceSequence(org, settlementPrefix);
+            BigDecimal allocated = ZERO;
             for (ReceiptSettlementPreviewItemRes item : items) {
                 if (item.settleAmount().compareTo(ZERO) <= 0) continue;
                 ReceiptSettlement rs = new ReceiptSettlement();
@@ -282,7 +291,21 @@ public class ReceiptServiceImpl implements ReceiptService {
                 rs.setInvoiceId(item.invoiceId());
                 rs.setInstallmentId(item.installmentId());
                 rs.setSettledAmount(money(item.settleAmount()));
+                rs.setSettlementType(ReceiptSettlementType.INVOICE);
+                rs.setReferenceNo(settlementPrefix + String.format("%04d", settlementSequence++));
                 settlementRepository.save(rs);
+                allocated = allocated.add(money(item.settleAmount()));
+            }
+            if (type == ReceiptType.CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
+                if (!allowOverpayment) {
+                    throw new BadRequestException("Overpayment is not allowed", "Overpayment is not allowed", ErrorCode.VALIDATION_ERROR);
+                }
+                BigDecimal overpayment = money(request.paidAmount()).subtract(allocated);
+                LiabilityAccount overpaymentAccount = resolveLiabilityAccount("OVER_PAYMENT", 4L);
+                saveSettlement(receipt, org, null, null, overpayment, ReceiptSettlementType.OVERPAYMENT, overpaymentAccount.getId(), "REC-CR-");
+            }
+            if (type == ReceiptType.NON_CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
+                throw new BadRequestException("Non-customer receipts cannot have overpayments", "Non-customer receipts cannot have overpayments", ErrorCode.VALIDATION_ERROR);
             }
         } else {
             UnrecognizedReceipt u = new UnrecognizedReceipt();
@@ -371,7 +394,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             try {
                 Connection c = connectionRepository.findByOrgUnitIdAndAccountNumber(batch.getOrgUnitId(), row.getAccountNumber())
                         .orElseThrow(() -> new BadRequestException("Connection not found", "Connection not found", ErrorCode.VALIDATION_ERROR));
-                create(new ReceiptCreateReq(cashAccountId, "CASH", c.getId(), c.getAccountNumber(), row.getPaidAmount(), null, "BULK-" + row.getId(), "Bulk upload", "CUSTOMER", null, null, List.of()));
+                create(new ReceiptCreateReq(cashAccountId, "CASH", c.getId(), c.getAccountNumber(), row.getPaidAmount(), null, "BULK-" + row.getId(), "Bulk upload", Boolean.FALSE, "CUSTOMER", null, null, List.<ReceiptSettlementReq>of()));
                 row.setStatus(BulkReceiptUploadRowStatus.POSTED);
                 row.setErrorMessage(null);
             } catch (Exception ex) {
@@ -546,7 +569,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     }
 
     private String nextReceiptNo(Long org) {
-        String prefix = "RCT-" + LocalDate.now().getYear() + "-";
+        String prefix = "REC-";
         String max = receiptRepository.findMaxReceiptNoByPrefixAndOrgUnitId(org, prefix);
         int next = 1;
         if (max != null && max.startsWith(prefix)) {
@@ -556,7 +579,61 @@ public class ReceiptServiceImpl implements ReceiptService {
                 next = 1;
             }
         }
-        return prefix + String.format("%06d", next);
+        return prefix + String.format("%04d", next);
+    }
+
+    private String nextSettlementReferenceNo(Long org, String prefix) {
+        String effectivePrefix = prefix == null || prefix.isBlank() ? "REC-" : prefix;
+        String max = settlementRepository.findMaxReferenceNoByPrefixAndOrgUnitId(org, effectivePrefix);
+        int next = 1;
+        if (max != null && max.startsWith(effectivePrefix)) {
+            try {
+                next = Integer.parseInt(max.substring(effectivePrefix.length())) + 1;
+            } catch (NumberFormatException ignored) {
+                next = 1;
+            }
+        }
+        return effectivePrefix + String.format("%04d", next);
+    }
+
+    private int nextSettlementReferenceSequence(Long org, String prefix) {
+        String effectivePrefix = prefix == null || prefix.isBlank() ? "REC-" : prefix;
+        String max = settlementRepository.findMaxReferenceNoByPrefixAndOrgUnitId(org, effectivePrefix);
+        int next = 1;
+        if (max != null && max.startsWith(effectivePrefix)) {
+            try {
+                next = Integer.parseInt(max.substring(effectivePrefix.length())) + 1;
+            } catch (NumberFormatException ignored) {
+                next = 1;
+            }
+        }
+        return next;
+    }
+
+    private void saveSettlement(Receipt receipt, Long org, Long invoiceId, Long installmentId, BigDecimal amount, ReceiptSettlementType settlementType, Long liabilityAccountId, String prefix) {
+        ReceiptSettlement rs = new ReceiptSettlement();
+        rs.setReceipt(receipt);
+        rs.setInvoiceId(invoiceId);
+        rs.setInstallmentId(installmentId);
+        rs.setSettledAmount(money(amount));
+        rs.setSettlementType(settlementType);
+        rs.setLiabilityAccountId(liabilityAccountId);
+        rs.setReferenceNo(nextSettlementReferenceNo(org, prefix));
+        settlementRepository.save(rs);
+    }
+
+    private LiabilityAccount resolveLiabilityAccount(String functionKey, Long fallbackId) {
+        if (functionKey != null) {
+            LiabilityAccount byKey = liabilityAccountRepository.findByFunctionKeyIgnoreCase(functionKey).orElse(null);
+            if (byKey != null) {
+                return byKey;
+            }
+        }
+        if (fallbackId != null) {
+            return liabilityAccountRepository.findById(fallbackId)
+                    .orElseThrow(() -> new BadRequestException("Liability account not found", "Liability account not found", ErrorCode.VALIDATION_ERROR));
+        }
+        throw new BadRequestException("Liability account not found", "Liability account not found", ErrorCode.VALIDATION_ERROR);
     }
 
     private String trim(String value) {
@@ -662,3 +739,16 @@ public class ReceiptServiceImpl implements ReceiptService {
             List<ReceiptSettlementPreviewItemRes> items
     ) {}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

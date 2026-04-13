@@ -7,5 +7,6 @@ import java.math.BigDecimal;
 
 public record ReceiptSettlementPreviewReq(
         @NotNull Long connectionId,
-        @NotNull @DecimalMin(value = "0.01") BigDecimal paidAmount
+        @NotNull @DecimalMin(value = "0.01") BigDecimal paidAmount,
+        @NotNull Boolean allowOverpayment
 ) {}

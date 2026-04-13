@@ -16,4 +16,7 @@ public interface ReceiptSettlementRepository extends JpaRepository<ReceiptSettle
 
     @Query("select coalesce(sum(rs.settledAmount), 0) from ReceiptSettlement rs join rs.receipt r where rs.installmentId = :installmentId and r.status = me.nimnakse.water_management.receipts.entity.ReceiptStatus.POSTED")
     BigDecimal sumPostedSettledByInstallmentId(@Param("installmentId") Long installmentId);
+
+    @Query("select max(rs.referenceNo) from ReceiptSettlement rs join rs.receipt r where r.orgUnitId = :orgUnitId and rs.referenceNo like concat(:prefix, '%')")
+    String findMaxReferenceNoByPrefixAndOrgUnitId(@Param("orgUnitId") Long orgUnitId, @Param("prefix") String prefix);
 }

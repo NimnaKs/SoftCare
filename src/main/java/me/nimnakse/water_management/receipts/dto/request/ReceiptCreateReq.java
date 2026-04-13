@@ -3,7 +3,6 @@ package me.nimnakse.water_management.receipts.dto.request;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -18,8 +17,10 @@ public record ReceiptCreateReq(
         String chequeNo,
         String referenceNo,
         String remark,
+        @NotNull Boolean allowOverpayment,
         @NotBlank String receiptType,
         Long liabilityAccountId,
         String updateMobileNumber,
-        @Valid @NotEmpty List<ReceiptSettlementReq> settlements
+        @Valid List<ReceiptSettlementReq> settlements
 ) {}
+

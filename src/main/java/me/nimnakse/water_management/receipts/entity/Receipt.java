@@ -22,8 +22,9 @@ public class Receipt extends BaseEntity {
     @Column(name = "connection_id")
     private Long connectionId;
 
-    @Column(name = "receipt_no", nullable = false, unique = true, length = 50)
+    @Column(name = "receipt_no", nullable = false, length = 50)
     private String receiptNo;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "receipt_type", nullable = false, length = 30)
@@ -86,3 +87,4 @@ public class Receipt extends BaseEntity {
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
 }
+
