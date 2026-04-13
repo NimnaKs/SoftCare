@@ -5,6 +5,7 @@ import java.time.Instant;
 
 public record ReceiptListRes(
         Long id,
+        Long unrecognizedReceiptId,
         String receiptNo,
         String receiptCode,
         Long connectionId,

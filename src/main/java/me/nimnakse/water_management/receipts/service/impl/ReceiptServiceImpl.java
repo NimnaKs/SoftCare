@@ -179,6 +179,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             if (amount.compareTo(ZERO) < 0) amount = ZERO;
             items.add(new ReceiptListRes(
                     r.getId(),
+                    unrecognized == null ? null : unrecognized.getId(),
                     r.getReceiptNo(),
                     r.getReceiptNo(),
                     r.getConnectionId(),
