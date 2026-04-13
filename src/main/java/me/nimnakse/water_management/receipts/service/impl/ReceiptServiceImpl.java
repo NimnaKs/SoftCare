@@ -361,14 +361,11 @@ public class ReceiptServiceImpl implements ReceiptService {
                 receiptRepository.save(receipt);
                 if (sourceUnrecognized != null) {
                     BigDecimal newAllocated = money(sourceUnrecognized.getAllocatedAmount()).add(money(allocated));
-                    sourceUnrecognized.setAllocatedAmount(newAllocated);
                     BigDecimal remaining = money(sourceUnrecognized.getReceipt().getPaidAmount()).subtract(newAllocated);
-                    if (remaining.compareTo(ZERO) <= 0) {
-                        sourceUnrecognized.setStatus(type == ReceiptType.CUSTOMER ? UnrecognizedReceiptStatus.SETTLED_AS_CUSTOMER : UnrecognizedReceiptStatus.SETTLED_AS_NON_CUSTOMER);
-                    } else {
-                        sourceUnrecognized.setStatus(UnrecognizedReceiptStatus.OPEN);
-                    }
-                    unrecognizedReceiptRepository.save(sourceUnrecognized);
+                    UnrecognizedReceiptStatus nextStatus = remaining.compareTo(ZERO) <= 0
+                            ? (type == ReceiptType.CUSTOMER ? UnrecognizedReceiptStatus.SETTLED_AS_CUSTOMER : UnrecognizedReceiptStatus.SETTLED_AS_NON_CUSTOMER)
+                            : UnrecognizedReceiptStatus.OPEN;
+                    unrecognizedReceiptRepository.applyAllocation(sourceUnrecognized.getId(), money(allocated), nextStatus);
                 }
                 if (type == ReceiptType.NON_CUSTOMER) {
                     updateNonCustomerInvoiceStatuses(items, SalesInvoiceStatus.SETTLED);
