@@ -126,13 +126,15 @@ public class ReceiptServiceImpl implements ReceiptService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ReceiptListRes> list(int page, int size, String dateFrom, String dateTo, Long connectionId, String receiptNo, String status, String paymentMethod) {
+    public PageResponse<ReceiptListRes> list(int page, int size, String dateFrom, String dateTo, Long connectionId, String receiptNo, String status, String paymentMethod, String receiptType) {
         ReceiptStatus st = status == null || status.isBlank() ? null : ReceiptStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        ReceiptType typeFilter = receiptType == null || receiptType.isBlank() ? null : ReceiptType.valueOf(receiptType.trim().toUpperCase(Locale.ROOT));
         Page<Receipt> paged = receiptRepository.search(
                 organizationAccessService.resolveOrgUnitId(),
                 connectionId,
                 blank(receiptNo),
                 st,
+                typeFilter,
                 parseDate(dateFrom),
                 parseDate(dateTo) == null ? null : parseDate(dateTo).plusSeconds(86400),
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
@@ -152,6 +154,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         for (Receipt r : paged.getContent()) {
             PaymentMethodLookup pm = methods.get(r.getPaymentMethodId());
             if (paymentMethod != null && !paymentMethod.isBlank() && pm != null && !paymentMethod.equalsIgnoreCase(pm.getCode())) continue;
+            if (typeFilter != null && r.getReceiptType() != typeFilter) continue;
             Connection c = r.getConnectionId() == null ? null : connections.get(r.getConnectionId());
             Member m = c == null ? null : members.get(c.getMemberId());
             MonetaryAccount ca = cash.get(r.getMonetaryAccountId());
@@ -171,7 +174,7 @@ public class ReceiptServiceImpl implements ReceiptService {
                     r.getStatus().name(),
                     r.getStatus() == ReceiptStatus.POSTED ? "SUCCESS" : "REVERSED",
                     r.getStatus().name(),
-                    "UNRECOGNIZED".equals(r.getReceiptType().name()) ? "UNRECOGNIZED" : "STANDARD"
+                    r.getReceiptType().name()
             ));
         }
 

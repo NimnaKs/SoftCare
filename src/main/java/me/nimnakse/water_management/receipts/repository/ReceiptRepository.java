@@ -2,6 +2,7 @@ package me.nimnakse.water_management.receipts.repository;
 
 import me.nimnakse.water_management.receipts.entity.Receipt;
 import me.nimnakse.water_management.receipts.entity.ReceiptStatus;
+import me.nimnakse.water_management.receipts.entity.ReceiptType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +21,7 @@ public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
               and (:connectionId is null or r.connectionId = :connectionId)
               and (:receiptNo is null or lower(r.receiptNo) like concat('%', lower(:receiptNo), '%'))
               and (:status is null or r.status = :status)
+              and (:receiptType is null or r.receiptType = :receiptType)
               and (:dateFrom is null or r.paidDate >= :dateFrom)
               and (:dateTo is null or r.paidDate < :dateTo)
             """)
@@ -28,6 +30,7 @@ public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
             @Param("connectionId") Long connectionId,
             @Param("receiptNo") String receiptNo,
             @Param("status") ReceiptStatus status,
+            @Param("receiptType") ReceiptType receiptType,
             @Param("dateFrom") Instant dateFrom,
             @Param("dateTo") Instant dateTo,
             Pageable pageable);

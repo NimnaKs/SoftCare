@@ -6,7 +6,7 @@ import me.nimnakse.water_management.receipts.dto.response.*;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ReceiptService {
-    PageResponse<ReceiptListRes> list(int page, int size, String dateFrom, String dateTo, Long connectionId, String receiptNo, String status, String paymentMethod);
+    PageResponse<ReceiptListRes> list(int page, int size, String dateFrom, String dateTo, Long connectionId, String receiptNo, String status, String paymentMethod, String receiptType);
     ReceiptVerifyPasswordRes verifyPassword(ReceiptVerifyPasswordReq request);
     ConnectionByAccountRes findConnectionByAccountNumber(String accountNo);
     ReceiptSettlementPreviewRes previewSettlement(ReceiptSettlementPreviewReq request);

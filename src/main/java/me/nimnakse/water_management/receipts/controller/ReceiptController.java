@@ -35,9 +35,10 @@ public class ReceiptController {
             @RequestParam(required = false) Long connectionId,
             @RequestParam(required = false) String receiptNo,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String paymentMethod
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(required = false) String receiptType
     ) {
-        return ResponseEntity.ok(ApiResponse.success(receiptService.list(page, size, dateFrom, dateTo, connectionId, receiptNo, status, paymentMethod)));
+        return ResponseEntity.ok(ApiResponse.success(receiptService.list(page, size, dateFrom, dateTo, connectionId, receiptNo, status, paymentMethod, receiptType)));
     }
 
     @PostMapping("/verify-password")
