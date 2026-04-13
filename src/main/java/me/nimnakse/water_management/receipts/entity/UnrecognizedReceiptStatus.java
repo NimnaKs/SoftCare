@@ -5,5 +5,6 @@ public enum UnrecognizedReceiptStatus {
     REFUNDED,
     SETTLED_AS_CUSTOMER,
     SETTLED_AS_INCOME,
+    SETTLED_AS_NON_CUSTOMER,
     REVERSED
 }

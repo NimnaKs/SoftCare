@@ -533,6 +533,13 @@ public class ReceiptServiceImpl implements ReceiptService {
                 receiptRepository.save(receipt);
                 unrecognized.setStatus(UnrecognizedReceiptStatus.SETTLED_AS_CUSTOMER);
             }
+            case "SETTLE_AS_NON_CUSTOMER" -> {
+                receipt.setReceiptType(ReceiptType.NON_CUSTOMER);
+                receipt.setConnectionId(null);
+                receipt.setBillingZoneId(null);
+                receiptRepository.save(receipt);
+                unrecognized.setStatus(UnrecognizedReceiptStatus.SETTLED_AS_NON_CUSTOMER);
+            }
             case "SETTLE_AS_INCOME" -> unrecognized.setStatus(UnrecognizedReceiptStatus.SETTLED_AS_INCOME);
             default -> throw new BadRequestException("Unsupported action", "Unsupported action", ErrorCode.VALIDATION_ERROR);
         }
