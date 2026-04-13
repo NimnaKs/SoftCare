@@ -7,5 +7,6 @@ public record ReceiptSettlementPreviewItemRes(
         Long installmentId,
         String invoiceNo,
         BigDecimal dueAmount,
-        BigDecimal settleAmount
+        BigDecimal settleAmount,
+        boolean overdue
 ) {}

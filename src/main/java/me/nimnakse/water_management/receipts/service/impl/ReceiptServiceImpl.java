@@ -30,6 +30,7 @@ import me.nimnakse.water_management.receipts.repository.SalesInvoiceInstallmentL
 import me.nimnakse.water_management.receipts.repository.UnrecognizedReceiptRepository;
 import me.nimnakse.water_management.receipts.service.ReceiptService;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
+import me.nimnakse.water_management.sales.invoices.repository.SalesInvoiceRepository;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceConnection;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallment;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallmentStatus;
@@ -86,6 +87,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final BulkReceiptUploadRowRepository rowRepository;
     private final ReceiptPrintSettingRepository printSettingRepository;
     private final ReceiptAuditLogRepository auditLogRepository;
+    private final SalesInvoiceRepository salesInvoiceRepository;
     private final OrganizationAccessService organizationAccessService;
     private final AuthenticationManager authenticationManager;
 
@@ -106,6 +108,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             BulkReceiptUploadRowRepository rowRepository,
             ReceiptPrintSettingRepository printSettingRepository,
             ReceiptAuditLogRepository auditLogRepository,
+            SalesInvoiceRepository salesInvoiceRepository,
             OrganizationAccessService organizationAccessService,
             AuthenticationManager authenticationManager
     ) {
@@ -125,6 +128,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         this.rowRepository = rowRepository;
         this.printSettingRepository = printSettingRepository;
         this.auditLogRepository = auditLogRepository;
+        this.salesInvoiceRepository = salesInvoiceRepository;
         this.organizationAccessService = organizationAccessService;
         this.authenticationManager = authenticationManager;
     }
@@ -301,7 +305,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             List<ReceiptSettlementPreviewItemRes> items = (request.settlements() == null || request.settlements().isEmpty())
                     ? (connection == null ? List.of() : computeSettlement(connection.getId(), request.paidAmount()).items)
                     : request.settlements().stream()
-                    .map(s -> new ReceiptSettlementPreviewItemRes(s.invoiceId(), s.installmentId(), "Settlement", money(s.settledAmount()), money(s.settledAmount())))
+                    .map(s -> new ReceiptSettlementPreviewItemRes(s.invoiceId(), s.installmentId(), "Settlement", money(s.settledAmount()), money(s.settledAmount()), false))
                     .toList();
             String settlementPrefix = "REC-";
             int settlementSequence = nextSettlementReferenceSequence(org, settlementPrefix);
@@ -328,6 +332,9 @@ public class ReceiptServiceImpl implements ReceiptService {
             }
             if (type == ReceiptType.NON_CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
                 throw new BadRequestException("Non-customer receipts cannot have overpayments", "Non-customer receipts cannot have overpayments", ErrorCode.VALIDATION_ERROR);
+            }
+            if (type == ReceiptType.NON_CUSTOMER) {
+                updateNonCustomerInvoiceStatuses(items, SalesInvoiceStatus.SETTLED);
             }
         } else {
             UnrecognizedReceipt u = new UnrecognizedReceipt();
@@ -363,6 +370,9 @@ public class ReceiptServiceImpl implements ReceiptService {
         }
         receipt.setStatus(ReceiptStatus.REVERSED);
         receiptRepository.save(receipt);
+        if (receipt.getReceiptType() == ReceiptType.NON_CUSTOMER) {
+            reopenNonCustomerInvoices(receiptId);
+        }
         monetaryAccountRepository.findById(receipt.getMonetaryAccountId()).ifPresent(cash -> {
             BigDecimal amount = money(receipt.getPaidAmount());
             cash.setCurrentBalance(cash.getCurrentBalance().subtract(amount));
@@ -708,15 +718,19 @@ public class ReceiptServiceImpl implements ReceiptService {
                     BigDecimal due = money(i.getAmount()).subtract(money(settlementRepository.sumPostedSettledByInstallmentId(i.getId())));
                     if (due.compareTo(ZERO) <= 0) continue;
                     currentDue = currentDue.add(due);
-                    dueItems.add(new ReceiptSettlementPreviewItemRes(invoice.getId(), i.getId(), invoice.getInvoiceNo() + " - " + i.getLabel(), due, ZERO));
+                    dueItems.add(new ReceiptSettlementPreviewItemRes(invoice.getId(), i.getId(), invoice.getInvoiceNo() + " - " + i.getLabel(), due, ZERO, i.getDueDate() != null && i.getDueDate().isBefore(LocalDate.now(ZoneOffset.UTC))));
                 }
             } else {
                 BigDecimal due = money(invoice.getGrandTotalPayable()).subtract(money(settlementRepository.sumPostedSettledByInvoiceId(invoice.getId())));
                 if (due.compareTo(ZERO) <= 0) continue;
                 currentDue = currentDue.add(due);
-                dueItems.add(new ReceiptSettlementPreviewItemRes(invoice.getId(), null, invoice.getInvoiceNo(), due, ZERO));
+                dueItems.add(new ReceiptSettlementPreviewItemRes(invoice.getId(), null, invoice.getInvoiceNo(), due, ZERO, false));
             }
         }
+
+        dueItems.sort(Comparator
+                .comparing((ReceiptSettlementPreviewItemRes item) -> isOverdueInstallment(item.installmentId()) ? 0 : 1)
+                .thenComparing(ReceiptSettlementPreviewItemRes::invoiceNo, Comparator.nullsLast(String::compareToIgnoreCase)));
 
         BigDecimal remain = money(paidAmount);
         BigDecimal allocated = ZERO;
@@ -725,7 +739,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             BigDecimal allocate = remain.compareTo(ZERO) > 0 ? item.dueAmount().min(remain) : ZERO;
             remain = remain.subtract(allocate);
             allocated = allocated.add(allocate);
-            resultItems.add(new ReceiptSettlementPreviewItemRes(item.invoiceId(), item.installmentId(), item.invoiceNo(), item.dueAmount(), allocate));
+            resultItems.add(new ReceiptSettlementPreviewItemRes(item.invoiceId(), item.installmentId(), item.invoiceNo(), item.dueAmount(), allocate, item.overdue()));
         }
         return new SettlementComputation(money(currentDue), money(allocated), resultItems);
     }
@@ -747,6 +761,50 @@ public class ReceiptServiceImpl implements ReceiptService {
 
     private BigDecimal money(BigDecimal value) {
         return value == null ? ZERO : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void updateNonCustomerInvoiceStatuses(List<ReceiptSettlementPreviewItemRes> items, SalesInvoiceStatus status) {
+        if (items == null || items.isEmpty()) return;
+        Set<Long> invoiceIds = items.stream()
+                .map(ReceiptSettlementPreviewItemRes::invoiceId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (invoiceIds.isEmpty()) return;
+        for (Long invoiceId : invoiceIds) {
+            salesInvoiceRepository.findByIdAndDeletedAtIsNull(invoiceId).ifPresent(invoice -> {
+                if (invoice.getSaleType() == me.nimnakse.water_management.sales.invoices.entity.SaleType.NON_CUSTOMER) {
+                    invoice.setStatus(status);
+                    salesInvoiceRepository.save(invoice);
+                }
+            });
+        }
+    }
+
+    private void reopenNonCustomerInvoices(Long receiptId) {
+        List<ReceiptSettlement> settlements = settlementRepository.findByReceipt_Id(receiptId);
+        Set<Long> invoiceIds = settlements.stream()
+                .filter(rs -> rs.getSettlementType() == ReceiptSettlementType.INVOICE)
+                .map(ReceiptSettlement::getInvoiceId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (invoiceIds.isEmpty()) return;
+        for (Long invoiceId : invoiceIds) {
+            salesInvoiceRepository.findByIdAndDeletedAtIsNull(invoiceId).ifPresent(invoice -> {
+                if (invoice.getSaleType() == me.nimnakse.water_management.sales.invoices.entity.SaleType.NON_CUSTOMER
+                        && invoice.getStatus() == SalesInvoiceStatus.SETTLED) {
+                    invoice.setStatus(SalesInvoiceStatus.POSTED);
+                    salesInvoiceRepository.save(invoice);
+                }
+            });
+        }
+    }
+
+    private boolean isOverdueInstallment(Long installmentId) {
+        if (installmentId == null) return false;
+        return installmentRepository.findById(installmentId)
+                .map(SalesInvoiceInstallment::getDueDate)
+                .map(dueDate -> dueDate.isBefore(LocalDate.now(ZoneOffset.UTC)))
+                .orElse(false);
     }
 
     private String blank(String value) {
