@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.receipts.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import me.nimnakse.water_management.common.entity.CreatedOnlyEntity;
 
 @Entity
@@ -16,6 +17,9 @@ public class UnrecognizedReceipt extends CreatedOnlyEntity {
     @Column(name = "liability_account_id", nullable = false)
     private Long liabilityAccountId;
 
+    @Column(name = "allocated_amount", nullable = false, precision = 14, scale = 2)
+    private BigDecimal allocatedAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private UnrecognizedReceiptStatus status = UnrecognizedReceiptStatus.OPEN;
@@ -26,6 +30,8 @@ public class UnrecognizedReceipt extends CreatedOnlyEntity {
     public void setReceipt(Receipt receipt) { this.receipt = receipt; }
     public Long getLiabilityAccountId() { return liabilityAccountId; }
     public void setLiabilityAccountId(Long liabilityAccountId) { this.liabilityAccountId = liabilityAccountId; }
+    public BigDecimal getAllocatedAmount() { return allocatedAmount; }
+    public void setAllocatedAmount(BigDecimal allocatedAmount) { this.allocatedAmount = allocatedAmount; }
     public UnrecognizedReceiptStatus getStatus() { return status; }
     public void setStatus(UnrecognizedReceiptStatus status) { this.status = status; }
 }

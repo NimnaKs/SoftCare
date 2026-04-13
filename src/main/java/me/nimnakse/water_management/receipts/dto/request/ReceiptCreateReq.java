@@ -21,6 +21,6 @@ public record ReceiptCreateReq(
         @NotBlank String receiptType,
         Long liabilityAccountId,
         String updateMobileNumber,
+        Long sourceUnrecognizedReceiptId,
         @Valid List<ReceiptSettlementReq> settlements
 ) {}
-

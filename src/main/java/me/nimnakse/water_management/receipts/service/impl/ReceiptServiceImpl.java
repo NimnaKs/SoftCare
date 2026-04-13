@@ -149,6 +149,7 @@ public class ReceiptServiceImpl implements ReceiptService {
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
 
+        Set<Long> receiptIds = paged.getContent().stream().map(Receipt::getId).collect(Collectors.toSet());
         Set<Long> connectionIds = paged.getContent().stream().map(Receipt::getConnectionId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> cashIds = paged.getContent().stream().map(Receipt::getMonetaryAccountId).collect(Collectors.toSet());
         Set<Long> methodIds = paged.getContent().stream().map(Receipt::getPaymentMethodId).collect(Collectors.toSet());
@@ -158,15 +159,24 @@ public class ReceiptServiceImpl implements ReceiptService {
                 .stream().collect(Collectors.toMap(Member::getId, x -> x));
         Map<Long, MonetaryAccount> cash = monetaryAccountRepository.findAllById(cashIds).stream().collect(Collectors.toMap(MonetaryAccount::getId, x -> x));
         Map<Long, PaymentMethodLookup> methods = paymentMethodRepository.findAllById(methodIds).stream().collect(Collectors.toMap(PaymentMethodLookup::getId, x -> x));
+        Map<Long, UnrecognizedReceipt> unrecognizedByReceiptId = unrecognizedReceiptRepository.findByReceipt_IdIn(receiptIds).stream()
+                .collect(Collectors.toMap(u -> u.getReceipt().getId(), x -> x));
 
         List<ReceiptListRes> items = new ArrayList<>();
         for (Receipt r : paged.getContent()) {
             PaymentMethodLookup pm = methods.get(r.getPaymentMethodId());
             if (paymentMethod != null && !paymentMethod.isBlank() && pm != null && !paymentMethod.equalsIgnoreCase(pm.getCode())) continue;
+            UnrecognizedReceipt unrecognized = unrecognizedByReceiptId.get(r.getId());
+            if (typeFilter == ReceiptType.UNRECOGNIZED && (unrecognized == null || unrecognized.getStatus() != UnrecognizedReceiptStatus.OPEN)) continue;
             if (typeFilter != null && r.getReceiptType() != typeFilter) continue;
             Connection c = r.getConnectionId() == null ? null : connections.get(r.getConnectionId());
             Member m = c == null ? null : members.get(c.getMemberId());
             MonetaryAccount ca = cash.get(r.getMonetaryAccountId());
+            BigDecimal amount = money(r.getPaidAmount());
+            if (r.getReceiptType() == ReceiptType.UNRECOGNIZED && unrecognized != null) {
+                amount = amount.subtract(money(unrecognized.getAllocatedAmount()));
+            }
+            if (amount.compareTo(ZERO) < 0) amount = ZERO;
             items.add(new ReceiptListRes(
                     r.getId(),
                     r.getReceiptNo(),
@@ -175,7 +185,7 @@ public class ReceiptServiceImpl implements ReceiptService {
                     c == null ? null : c.getAccountNumber(),
                     m == null ? null : memberName(m),
                     r.getCreatedAt(),
-                    money(r.getPaidAmount()),
+                    amount,
                     r.getReferenceText(),
                     r.getMonetaryAccountId(),
                     ca == null ? null : ca.getAccountName(),
@@ -253,6 +263,13 @@ public class ReceiptServiceImpl implements ReceiptService {
 
         ReceiptType type = parseReceiptType(request.receiptType());
         boolean allowOverpayment = Boolean.TRUE.equals(request.allowOverpayment());
+        boolean validatingSource = request.sourceUnrecognizedReceiptId() != null;
+        UnrecognizedReceipt sourceUnrecognized = null;
+        if (validatingSource) {
+            sourceUnrecognized = unrecognizedReceiptRepository.findById(request.sourceUnrecognizedReceiptId())
+                    .orElseThrow(() -> new NotFoundException("Unrecognized receipt not found", "Unrecognized receipt not found", ErrorCode.NOT_FOUND));
+            checkOrg(sourceUnrecognized.getOrgUnitId());
+        }
         Connection connection = null;
         if (request.connectionId() != null) {
             connection = connectionRepository.findById(request.connectionId())
@@ -291,15 +308,17 @@ public class ReceiptServiceImpl implements ReceiptService {
             receipt.setCustomerMobileUpdated(mobile);
         }
         receipt = receiptRepository.save(receipt);
-        cash.setCurrentBalance(cash.getCurrentBalance().add(money(request.paidAmount())));
-        monetaryAccountRepository.save(cash);
-        monetaryTransactionService.recordTransaction(
-                cash.getId(),
-                money(request.paidAmount()),
-                MonetaryTransaction.TransactionType.TRANSFER_IN,
-                receipt.getReceiptNo(),
-                "Receipt posted: " + receipt.getReceiptNo(),
-                receipt.getId());
+        if (!validatingSource) {
+            cash.setCurrentBalance(cash.getCurrentBalance().add(money(request.paidAmount())));
+            monetaryAccountRepository.save(cash);
+            monetaryTransactionService.recordTransaction(
+                    cash.getId(),
+                    money(request.paidAmount()),
+                    MonetaryTransaction.TransactionType.TRANSFER_IN,
+                    receipt.getReceiptNo(),
+                    "Receipt posted: " + receipt.getReceiptNo(),
+                    receipt.getId());
+        }
 
         if (type != ReceiptType.UNRECOGNIZED) {
             List<ReceiptSettlementPreviewItemRes> items = (request.settlements() == null || request.settlements().isEmpty())
@@ -322,19 +341,38 @@ public class ReceiptServiceImpl implements ReceiptService {
                 settlementRepository.save(rs);
                 allocated = allocated.add(money(item.settleAmount()));
             }
-            if (type == ReceiptType.CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
-                if (!allowOverpayment) {
-                    throw new BadRequestException("Overpayment is not allowed", "Overpayment is not allowed", ErrorCode.VALIDATION_ERROR);
+            if (!validatingSource) {
+                if (type == ReceiptType.CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
+                    if (!allowOverpayment) {
+                        throw new BadRequestException("Overpayment is not allowed", "Overpayment is not allowed", ErrorCode.VALIDATION_ERROR);
+                    }
+                    BigDecimal overpayment = money(request.paidAmount()).subtract(allocated);
+                    LiabilityAccount overpaymentAccount = resolveLiabilityAccount("OVER_PAYMENT", 4L);
+                    saveSettlement(receipt, org, null, null, overpayment, ReceiptSettlementType.OVERPAYMENT, overpaymentAccount.getId(), "REC-CR-");
                 }
-                BigDecimal overpayment = money(request.paidAmount()).subtract(allocated);
-                LiabilityAccount overpaymentAccount = resolveLiabilityAccount("OVER_PAYMENT", 4L);
-                saveSettlement(receipt, org, null, null, overpayment, ReceiptSettlementType.OVERPAYMENT, overpaymentAccount.getId(), "REC-CR-");
-            }
-            if (type == ReceiptType.NON_CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
-                throw new BadRequestException("Non-customer receipts cannot have overpayments", "Non-customer receipts cannot have overpayments", ErrorCode.VALIDATION_ERROR);
-            }
-            if (type == ReceiptType.NON_CUSTOMER) {
-                updateNonCustomerInvoiceStatuses(items, SalesInvoiceStatus.SETTLED);
+                if (type == ReceiptType.NON_CUSTOMER && money(request.paidAmount()).compareTo(allocated) > 0) {
+                    throw new BadRequestException("Non-customer receipts cannot have overpayments", "Non-customer receipts cannot have overpayments", ErrorCode.VALIDATION_ERROR);
+                }
+                if (type == ReceiptType.NON_CUSTOMER) {
+                    updateNonCustomerInvoiceStatuses(items, SalesInvoiceStatus.SETTLED);
+                }
+            } else {
+                receipt.setPaidAmount(money(allocated));
+                receiptRepository.save(receipt);
+                if (sourceUnrecognized != null) {
+                    BigDecimal newAllocated = money(sourceUnrecognized.getAllocatedAmount()).add(money(allocated));
+                    sourceUnrecognized.setAllocatedAmount(newAllocated);
+                    BigDecimal remaining = money(sourceUnrecognized.getReceipt().getPaidAmount()).subtract(newAllocated);
+                    if (remaining.compareTo(ZERO) <= 0) {
+                        sourceUnrecognized.setStatus(type == ReceiptType.CUSTOMER ? UnrecognizedReceiptStatus.SETTLED_AS_CUSTOMER : UnrecognizedReceiptStatus.SETTLED_AS_NON_CUSTOMER);
+                    } else {
+                        sourceUnrecognized.setStatus(UnrecognizedReceiptStatus.OPEN);
+                    }
+                    unrecognizedReceiptRepository.save(sourceUnrecognized);
+                }
+                if (type == ReceiptType.NON_CUSTOMER) {
+                    updateNonCustomerInvoiceStatuses(items, SalesInvoiceStatus.SETTLED);
+                }
             }
         } else {
             UnrecognizedReceipt u = new UnrecognizedReceipt();
@@ -438,7 +476,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             try {
                 Connection c = connectionRepository.findByOrgUnitIdAndAccountNumber(batch.getOrgUnitId(), row.getAccountNumber())
                         .orElseThrow(() -> new BadRequestException("Connection not found", "Connection not found", ErrorCode.VALIDATION_ERROR));
-                create(new ReceiptCreateReq(cashAccountId, "CASH", c.getId(), c.getAccountNumber(), row.getPaidAmount(), null, "BULK-" + row.getId(), "Bulk upload", Boolean.FALSE, "CUSTOMER", null, null, List.<ReceiptSettlementReq>of()));
+                create(new ReceiptCreateReq(cashAccountId, "CASH", c.getId(), c.getAccountNumber(), row.getPaidAmount(), null, "BULK-" + row.getId(), "Bulk upload", Boolean.FALSE, "CUSTOMER", null, null, null, List.<ReceiptSettlementReq>of()));
                 row.setStatus(BulkReceiptUploadRowStatus.POSTED);
                 row.setErrorMessage(null);
             } catch (Exception ex) {
