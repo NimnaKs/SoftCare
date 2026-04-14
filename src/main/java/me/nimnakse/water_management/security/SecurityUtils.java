@@ -19,6 +19,18 @@ public final class SecurityUtils {
         return null;
     }
 
+    public static Long getAgencyId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        Object details = authentication.getDetails();
+        if (details instanceof JwtAuthenticationDetails jwtDetails) {
+            return jwtDetails.getAgencyId();
+        }
+        return null;
+    }
+
     public static boolean hasAnyAppScope(me.nimnakse.water_management.roles.entity.RoleAppScope... scopes) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

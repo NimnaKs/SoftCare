@@ -51,6 +51,12 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**")
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/connections/by-account-number/**")
+                                                .hasAnyAuthority("APP_SCOPE_AGENCY_APP", "APP_SCOPE_BRANCH_APP")
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/receipts/preview-settlement")
+                                                .hasAnyAuthority("APP_SCOPE_AGENCY_APP", "APP_SCOPE_BRANCH_APP")
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/revenue-main-categories/**",
                                                                 "/revenue-accounts/**",
                                                                 "/fixed-asset-master-categories/**",

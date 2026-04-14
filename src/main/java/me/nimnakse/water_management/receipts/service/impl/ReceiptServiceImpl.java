@@ -8,6 +8,8 @@ import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.agencies.entity.Agency;
+import me.nimnakse.water_management.agencies.repository.AgencyRepository;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
 import me.nimnakse.water_management.members.entity.Member;
@@ -74,6 +76,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final ReceiptRepository receiptRepository;
     private final ReceiptSettlementRepository settlementRepository;
     private final ConnectionRepository connectionRepository;
+    private final AgencyRepository agencyRepository;
     private final MemberRepository memberRepository;
     private final MonetaryAccountRepository monetaryAccountRepository;
     private final MonetaryTransactionService monetaryTransactionService;
@@ -95,6 +98,7 @@ public class ReceiptServiceImpl implements ReceiptService {
             ReceiptRepository receiptRepository,
             ReceiptSettlementRepository settlementRepository,
             ConnectionRepository connectionRepository,
+            AgencyRepository agencyRepository,
             MemberRepository memberRepository,
             MonetaryAccountRepository monetaryAccountRepository,
             MonetaryTransactionService monetaryTransactionService,
@@ -115,6 +119,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         this.receiptRepository = receiptRepository;
         this.settlementRepository = settlementRepository;
         this.connectionRepository = connectionRepository;
+        this.agencyRepository = agencyRepository;
         this.memberRepository = memberRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
         this.monetaryTransactionService = monetaryTransactionService;
@@ -790,8 +795,19 @@ public class ReceiptServiceImpl implements ReceiptService {
 
     private Long requireOrg() {
         Long org = organizationAccessService.resolveOrgUnitId();
-        if (org == null) throw new BadRequestException("Organization is required", "Organization is required", ErrorCode.VALIDATION_ERROR);
-        return org;
+        if (org != null) {
+            return org;
+        }
+        Long agencyId = me.nimnakse.water_management.security.SecurityUtils.getAgencyId();
+        if (agencyId != null) {
+            Agency agency = agencyRepository.findByIdAndDeletedAtIsNull(agencyId)
+                    .orElseThrow(() -> new NotFoundException("Agency not found", "Agency not found", ErrorCode.NOT_FOUND));
+            if (agency.getOrganization() == null || agency.getOrganization().getOrgUnitId() == null) {
+                throw new BadRequestException("Organization is required", "Organization is required", ErrorCode.VALIDATION_ERROR);
+            }
+            return agency.getOrganization().getOrgUnitId();
+        }
+        throw new BadRequestException("Organization is required", "Organization is required", ErrorCode.VALIDATION_ERROR);
     }
 
     private void checkOrg(Long targetOrg) {

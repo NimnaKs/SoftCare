@@ -105,7 +105,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
             Long organizationId = extractOrganizationId(claims);
-            authentication.setDetails(new JwtAuthenticationDetails(request, organizationId));
+            Long agencyId = extractAgencyId(claims);
+            authentication.setDetails(new JwtAuthenticationDetails(request, organizationId, agencyId));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             log.info("Authentication SUCCESS for user={} scopes={}", username, dbScopes);
@@ -165,6 +166,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         log.debug("Organization ID claim has unexpected type: {}", value.getClass().getName());
+        return null;
+    }
+
+    private Long extractAgencyId(Claims claims) {
+        Object value = claims.get("agencyId");
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text) {
+            String trimmed = text.trim();
+            if (trimmed.isEmpty()) {
+                return null;
+            }
+            try {
+                return Long.parseLong(trimmed);
+            } catch (NumberFormatException ex) {
+                log.debug("Agency ID claim is not a valid number: {}", trimmed);
+                return null;
+            }
+        }
+        log.debug("Agency ID claim has unexpected type: {}", value.getClass().getName());
         return null;
     }
 }
