@@ -7,10 +7,9 @@ import java.time.LocalDate;
 public record AgencyBillPaymentRes(
         Long id,
         Long agencyId,
-        Long cashAccountId,
-        String cashAccountName,
-        Long paymentMethodId,
-        String paymentMethodName,
+        Long connectionId,
+        String connectionAccountNumber,
+        String memberName,
         String referenceText,
         LocalDate paidDate,
         BigDecimal billAmount,

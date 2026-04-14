@@ -37,6 +37,15 @@ public class AgencyBillPayment extends BaseEntity {
     @Column(name = "payment_method_name", length = 255)
     private String paymentMethodName;
 
+    @Column(name = "connection_id")
+    private Long connectionId;
+
+    @Column(name = "connection_account_number", length = 50)
+    private String connectionAccountNumber;
+
+    @Column(name = "member_name", length = 255)
+    private String memberName;
+
     @Column(name = "reference_text", nullable = false, length = 255)
     private String referenceText;
 
