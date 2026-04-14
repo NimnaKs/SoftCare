@@ -7,6 +7,7 @@ import me.nimnakse.water_management.agencies.entity.BillingMode;
 public record AgencyRes(
                 Long id,
                 Long organizationId,
+                String organizationCode,
                 String businessName,
                 String mobileNumber,
                 String nicNumber,

@@ -133,6 +133,7 @@ public class AgencyServiceImpl implements AgencyService {
         return new AgencyRes(
                 agency.getId(),
                 agency.getOrganization().getOrgUnitId(),
+                agency.getOrganization().getOrganizationCode(),
                 agency.getBusinessName(),
                 agency.getMobileNumber(),
                 agency.getNicNumber(),
