@@ -268,7 +268,8 @@ public class ReceiptServiceImpl implements ReceiptService {
         UnrecognizedReceipt sourceUnrecognized = null;
         if (validatingSource) {
             sourceUnrecognized = unrecognizedReceiptRepository.findById(request.sourceUnrecognizedReceiptId())
-                    .orElseThrow(() -> new NotFoundException("Unrecognized receipt not found", "Unrecognized receipt not found", ErrorCode.NOT_FOUND));
+                    .orElseGet(() -> unrecognizedReceiptRepository.findByReceipt_Id(request.sourceUnrecognizedReceiptId())
+                            .orElseThrow(() -> new NotFoundException("Unrecognized receipt not found", "Unrecognized receipt not found", ErrorCode.NOT_FOUND)));
             checkOrg(sourceUnrecognized.getOrgUnitId());
         }
         Connection connection = null;
