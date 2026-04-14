@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record AgencyBillPaymentCreateReq(
-        Long cashAccountId,
-        Long paymentMethodId,
         String reference,
         LocalDate paidDate,
         BigDecimal amount

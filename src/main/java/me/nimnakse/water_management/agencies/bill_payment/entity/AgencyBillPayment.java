@@ -25,16 +25,16 @@ public class AgencyBillPayment extends BaseEntity {
     @Column(name = "agency_id", insertable = false, updatable = false)
     private Long agencyId;
 
-    @Column(name = "cash_account_id", nullable = false)
+    @Column(name = "cash_account_id")
     private Long cashAccountId;
 
-    @Column(name = "cash_account_name", nullable = false, length = 255)
+    @Column(name = "cash_account_name", length = 255)
     private String cashAccountName;
 
-    @Column(name = "payment_method_id", nullable = false)
+    @Column(name = "payment_method_id")
     private Long paymentMethodId;
 
-    @Column(name = "payment_method_name", nullable = false, length = 255)
+    @Column(name = "payment_method_name", length = 255)
     private String paymentMethodName;
 
     @Column(name = "reference_text", nullable = false, length = 255)

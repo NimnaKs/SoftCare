@@ -2,14 +2,11 @@ package me.nimnakse.water_management.agencies.bill_payment.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import me.nimnakse.water_management.agencies.bill_payment.dto.request.AgencyBillPaymentCreateReq;
 import me.nimnakse.water_management.agencies.bill_payment.dto.response.AgencyBalanceRes;
 import me.nimnakse.water_management.agencies.bill_payment.dto.response.AgencyBillPaymentRes;
@@ -21,9 +18,7 @@ import me.nimnakse.water_management.agencies.dto.response.AgencyTopupCashAccount
 import me.nimnakse.water_management.agencies.entity.Agency;
 import me.nimnakse.water_management.agencies.repository.AgencyRepository;
 import me.nimnakse.water_management.cash_accounts.entity.MonetaryAccount;
-import me.nimnakse.water_management.cash_accounts.entity.MonetaryTransaction;
 import me.nimnakse.water_management.cash_accounts.repository.MonetaryAccountRepository;
-import me.nimnakse.water_management.cash_accounts.service.MonetaryTransactionService;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
@@ -54,7 +49,6 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
 
     private final AgencyRepository agencyRepository;
     private final MonetaryAccountRepository monetaryAccountRepository;
-    private final MonetaryTransactionService monetaryTransactionService;
     private final PaymentMethodLookupRepository paymentMethodLookupRepository;
     private final AgencyBillPaymentRepository billPaymentRepository;
     private final SubscriptionPaymentRequestRepository subscriptionPaymentRequestRepository;
@@ -64,7 +58,6 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
     public AgencyBillPaymentServiceImpl(
             AgencyRepository agencyRepository,
             MonetaryAccountRepository monetaryAccountRepository,
-            MonetaryTransactionService monetaryTransactionService,
             PaymentMethodLookupRepository paymentMethodLookupRepository,
             AgencyBillPaymentRepository billPaymentRepository,
             SubscriptionPaymentRequestRepository subscriptionPaymentRequestRepository,
@@ -72,7 +65,6 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
             OrganizationAccessService organizationAccessService) {
         this.agencyRepository = agencyRepository;
         this.monetaryAccountRepository = monetaryAccountRepository;
-        this.monetaryTransactionService = monetaryTransactionService;
         this.paymentMethodLookupRepository = paymentMethodLookupRepository;
         this.billPaymentRepository = billPaymentRepository;
         this.subscriptionPaymentRequestRepository = subscriptionPaymentRequestRepository;
@@ -99,6 +91,9 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
     @Transactional(readOnly = true)
     @Override
     public List<PaymentMethodRes> listPaymentMethods(Long cashAccountId) {
+        if (cashAccountId == null) {
+            return List.of();
+        }
         Agency agency = resolveCurrentAgency();
         resolveAllowedAccount(agency, cashAccountId);
 
@@ -121,14 +116,13 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
                 agency.getBusinessName(),
                 normalize(agency.getWalletAmount()),
                 normalize(agency.getCreditLimit()),
-                normalize(agency.getServiceChargePercent()));
+                normalize(agency.getSubscriptionFee()));
     }
 
     @Transactional
     @Override
     public AgencyBillPaymentRes create(AgencyBillPaymentCreateReq request) {
-        if (request == null || request.cashAccountId() == null || request.paymentMethodId() == null
-                || request.paidDate() == null || request.amount() == null) {
+        if (request == null || request.paidDate() == null || request.amount() == null) {
             throw new BadRequestException("Required fields are missing", "අවශ්‍ය ක්ෂේත්‍ර හිස්ව ඇත", ErrorCode.VALIDATION_ERROR);
         }
         if (!StringUtils.hasText(request.reference())) {
@@ -139,63 +133,35 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         }
 
         Agency agency = resolveCurrentAgency();
-        MonetaryAccount cashAccount = resolveAllowedAccount(agency, request.cashAccountId());
-        if (!Boolean.TRUE.equals(cashAccount.getIsActive())) {
-            throw new BadRequestException("Cash account is inactive", "මුදල් ගිණුම අක්‍රියයි", ErrorCode.VALIDATION_ERROR);
-        }
-
-        PaymentMethodLookup paymentMethod = paymentMethodLookupRepository.findById(request.paymentMethodId())
-                .filter(method -> Boolean.TRUE.equals(method.getIsActive()))
-                .orElseThrow(() -> new BadRequestException("Invalid payment method", "වැරදි ගෙවීමේ ක්‍රමය", ErrorCode.VALIDATION_ERROR));
-
-        PaymentMethodCode code = parsePaymentMethodCode(paymentMethod.getCode());
-        if (!ALLOWED_METHOD_CODES.contains(code)) {
-            throw new BadRequestException("Selected payment method is not allowed", "තෝරාගත් ගෙවීමේ ක්‍රමය භාවිතා කළ නොහැක",
-                    ErrorCode.VALIDATION_ERROR);
-        }
-
         BigDecimal billAmount = normalize(request.amount());
-        BigDecimal serviceChargePercent = normalize(agency.getServiceChargePercent());
-        BigDecimal serviceChargeAmount = billAmount.multiply(serviceChargePercent)
-                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-        BigDecimal totalAmount = billAmount.add(serviceChargeAmount).setScale(2, RoundingMode.HALF_UP);
-
+        BigDecimal subscriptionFeeAmount = normalize(agency.getSubscriptionFee());
         BigDecimal currentWallet = normalize(agency.getWalletAmount());
-        BigDecimal currentCashBalance = normalize(cashAccount.getCurrentBalance());
-        if (currentWallet.compareTo(totalAmount) < 0) {
+        BigDecimal currentSubscriptionBalance = normalize(agency.getCreditLimit());
+
+        if (currentWallet.compareTo(billAmount) < 0) {
             throw new BadRequestException("Insufficient wallet balance", "වොලට් ශේෂය ප්‍රමාණවත් නොවේ", ErrorCode.VALIDATION_ERROR);
         }
-        if (currentCashBalance.compareTo(totalAmount) < 0) {
-            throw new BadRequestException("Insufficient cash account balance", "මුදල් ගිණුම් ශේෂය ප්‍රමාණවත් නොවේ",
-                    ErrorCode.VALIDATION_ERROR);
+        if (currentSubscriptionBalance.compareTo(subscriptionFeeAmount) < 0) {
+            throw new BadRequestException("Insufficient subscription balance", "දායක ශේෂය ප්‍රමාණවත් නොවේ", ErrorCode.VALIDATION_ERROR);
         }
 
-        cashAccount.setCurrentBalance(currentCashBalance.subtract(totalAmount));
-        agency.setWalletAmount(currentWallet.subtract(totalAmount));
+        agency.setWalletAmount(currentWallet.subtract(billAmount));
+        agency.setCreditLimit(currentSubscriptionBalance.subtract(subscriptionFeeAmount));
 
         AgencyBillPayment payment = new AgencyBillPayment();
         payment.setAgency(agency);
-        payment.setCashAccountId(cashAccount.getId());
-        payment.setCashAccountName(cashAccount.getAccountName());
-        payment.setPaymentMethodId(paymentMethod.getId());
-        payment.setPaymentMethodName(paymentMethod.getName());
+        payment.setCashAccountId(null);
+        payment.setCashAccountName(null);
+        payment.setPaymentMethodId(null);
+        payment.setPaymentMethodName(null);
         payment.setReferenceText(request.reference().trim());
         payment.setPaidDate(request.paidDate());
         payment.setBillAmount(billAmount);
-        payment.setServiceChargeAmount(serviceChargeAmount);
-        payment.setTotalAmount(totalAmount);
+        payment.setServiceChargeAmount(subscriptionFeeAmount);
+        payment.setTotalAmount(billAmount.add(subscriptionFeeAmount));
 
         AgencyBillPayment saved = billPaymentRepository.save(payment);
         agencyRepository.save(agency);
-        monetaryAccountRepository.save(cashAccount);
-
-        monetaryTransactionService.recordTransaction(
-                cashAccount.getId(),
-                totalAmount.negate(),
-                MonetaryTransaction.TransactionType.EXPENSE,
-                saved.getReferenceText(),
-                "Agency bill payment. Service charge: " + serviceChargeAmount,
-                saved.getId());
 
         return toResponse(saved, agency.getWalletAmount());
     }
@@ -211,16 +177,17 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
                         .map(payment -> new AgencyLedgerEntryRes(
                                 "BILL_PAYMENT",
                                 payment.getReferenceText(),
-                                payment.getCashAccountName(),
-                                payment.getPaymentMethodName(),
+                                "-",
+                                "-",
                                 payment.getPaidDate(),
                                 payment.getBillAmount(),
                                 payment.getServiceChargeAmount(),
-                                payment.getTotalAmount().negate(),
+                                payment.getBillAmount().negate(),
                                 normalize(agency.getWalletAmount()),
                                 normalize(agency.getCreditLimit()),
                                 payment.getCreatedAt()))
                         .toList());
+
         return entries.stream()
                 .sorted(Comparator.comparing(AgencyLedgerEntryRes::createdAt).reversed())
                 .toList();
@@ -254,10 +221,10 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         entries.addAll(
                 billPaymentRepository.findByAgencyIdOrderByCreatedAtDesc(agency.getId()).stream()
                         .map(payment -> new AgencyLedgerEntryRes(
-                                "BILL_PAYMENT_SERVICE_CHARGE",
+                                "BILL_PAYMENT_SUBSCRIPTION_FEE",
                                 payment.getReferenceText(),
-                                payment.getCashAccountName(),
-                                payment.getPaymentMethodName(),
+                                "-",
+                                "-",
                                 payment.getPaidDate(),
                                 payment.getServiceChargeAmount(),
                                 payment.getServiceChargeAmount(),

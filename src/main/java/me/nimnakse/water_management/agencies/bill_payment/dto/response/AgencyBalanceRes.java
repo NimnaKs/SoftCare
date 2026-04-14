@@ -7,6 +7,6 @@ public record AgencyBalanceRes(
         String agencyName,
         BigDecimal walletBalance,
         BigDecimal subscriptionBalance,
-        BigDecimal serviceChargePercent
+        BigDecimal subscriptionFee
 ) {
 }
