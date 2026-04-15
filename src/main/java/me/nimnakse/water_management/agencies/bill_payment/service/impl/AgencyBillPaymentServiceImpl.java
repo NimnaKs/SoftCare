@@ -128,7 +128,6 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         Agency agency = resolveCurrentAgency();
         Connection connection = connectionRepository.findByOrgUnitIdAndAccountNumber(agency.getOrganization().getOrgUnitId(), request.accountNumber().trim())
                 .orElseThrow(() -> new NotFoundException("Connection not found", "Connection not found", ErrorCode.NOT_FOUND));
-        checkOrg(connection.getOrgUnitId());
         Member member = memberRepository.findById(connection.getMemberId())
                 .orElseThrow(() -> new NotFoundException("Member not found", "Member not found", ErrorCode.NOT_FOUND));
 
@@ -277,13 +276,6 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         Long agencyId = principal.getUser().getAgency().getId();
         return agencyRepository.findByIdAndDeletedAtIsNull(agencyId)
                 .orElseThrow(() -> new NotFoundException("Agency not found", "Agency not found", ErrorCode.NOT_FOUND));
-    }
-
-    private void checkOrg(Long targetOrg) {
-        Long current = organizationAccessService.resolveOrgUnitId();
-        if (!Objects.equals(current, targetOrg)) {
-            throw new NotFoundException("Record not found", "Record not found", ErrorCode.NOT_FOUND);
-        }
     }
 
     private Set<Long> collectConnectionInvoiceIds(Long connectionId) {
