@@ -1,0 +1,3 @@
+package me.nimnakse.water_management.utility_bills.dto.response;
+import java.math.BigDecimal; import java.util.List;
+public record UtilityBillCalculatorRes(Long tariffId, Integer previousReading, Integer currentReading, Integer unitsConsumed, BigDecimal usageCharge, BigDecimal fixedCharge, BigDecimal lateFeeAmount, BigDecimal redBillAmount, BigDecimal totalAmount, String lateFeeMethod, String redBillMethod, List<UtilityBillCalculatorLineRes> lines) {}
