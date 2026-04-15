@@ -111,12 +111,10 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
     @Override
     @Transactional
     public AgencyBillPaymentRes create(AgencyBillPaymentCreateReq request) {
-        if (request == null || request.connectionId() == null || request.paidDate() == null || request.amount() == null) {
+        if (request == null || !StringUtils.hasText(request.accountNumber()) || request.paidDate() == null || request.amount() == null) {
             throw new BadRequestException("Required fields are missing", "Required fields are missing", ErrorCode.VALIDATION_ERROR);
         }
-        if (!StringUtils.hasText(request.reference())) {
-            throw new BadRequestException("Reference is required", "Reference is required", ErrorCode.VALIDATION_ERROR);
-        }
+        
         if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Amount must be greater than zero", "Amount must be greater than zero", ErrorCode.VALIDATION_ERROR);
         }
@@ -128,7 +126,7 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         }
 
         Agency agency = resolveCurrentAgency();
-        Connection connection = connectionRepository.findById(request.connectionId())
+        Connection connection = connectionRepository.findByOrgUnitIdAndAccountNumber(agency.getOrganization().getOrgUnitId(), request.accountNumber().trim())
                 .orElseThrow(() -> new NotFoundException("Connection not found", "Connection not found", ErrorCode.NOT_FOUND));
         checkOrg(connection.getOrgUnitId());
         Member member = memberRepository.findById(connection.getMemberId())

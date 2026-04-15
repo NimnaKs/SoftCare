@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record AgencyBillPaymentCreateReq(
-        Long connectionId,
+        String accountNumber,
         String reference,
         LocalDate paidDate,
         BigDecimal amount,
