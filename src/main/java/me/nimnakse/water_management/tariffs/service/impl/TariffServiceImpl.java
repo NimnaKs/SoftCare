@@ -49,7 +49,7 @@ public class TariffServiceImpl implements TariffService {
         Tariff tariff = new Tariff();
         populateEntity(tariff, request.name(), request.description(), orgUnitId,
                 request.newConnectionFee(), request.reconnectionFee(), request.reconnectionCreditLimit(),
-                request.meterDigits(), request.avgMonthlyMaxConsumption(), request.chargingMethod(),
+                request.meterDigits(), request.avgMonthlyMaxConsumption(), request.zeroConsumptionCharge(), request.chargingMethod(),
                 request.slabs(), request.lateFees());
 
         return toResponse(tariffRepository.save(tariff));
@@ -71,7 +71,7 @@ public class TariffServiceImpl implements TariffService {
 
         populateEntity(tariff, request.name(), request.description(), orgUnitId,
                 request.newConnectionFee(), request.reconnectionFee(), request.reconnectionCreditLimit(),
-                request.meterDigits(), request.avgMonthlyMaxConsumption(), request.chargingMethod(),
+                request.meterDigits(), request.avgMonthlyMaxConsumption(), request.zeroConsumptionCharge(), request.chargingMethod(),
                 request.slabs(), request.lateFees());
 
         return toResponse(tariffRepository.save(tariff));
@@ -79,7 +79,7 @@ public class TariffServiceImpl implements TariffService {
 
     private void populateEntity(Tariff tariff, String name, String description, Long orgUnitId,
             Double newConnectionFee, Double reconnectionFee, Double reconnectionCreditLimit,
-            Integer meterDigits, Double avgMonthlyMaxConsumption, String chargingMethod,
+            Integer meterDigits, Double avgMonthlyMaxConsumption, Double zeroConsumptionCharge, String chargingMethod,
             List<TariffSlabReq> slabs, List<TariffLateFeeReq> lateFees) {
 
         tariff.setOrgUnitId(orgUnitId);
@@ -90,6 +90,7 @@ public class TariffServiceImpl implements TariffService {
         tariff.setReconnectionCreditLimit(reconnectionCreditLimit);
         tariff.setMeterDigits(meterDigits);
         tariff.setAvgMonthlyMaxConsumption(avgMonthlyMaxConsumption);
+        tariff.setZeroConsumptionCharge(zeroConsumptionCharge);
         tariff.setChargingMethod(chargingMethod);
 
         // Manage Slabs
@@ -189,6 +190,7 @@ public class TariffServiceImpl implements TariffService {
                 tariff.getReconnectionCreditLimit(),
                 tariff.getMeterDigits(),
                 tariff.getAvgMonthlyMaxConsumption(),
+                tariff.getZeroConsumptionCharge(),
                 tariff.getChargingMethod(),
                 slabResponses,
                 lateFeeResponses,

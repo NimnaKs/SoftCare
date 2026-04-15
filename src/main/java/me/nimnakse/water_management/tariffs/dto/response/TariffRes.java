@@ -13,6 +13,7 @@ public record TariffRes(
         Double reconnectionCreditLimit,
         Integer meterDigits,
         Double avgMonthlyMaxConsumption,
+        Double zeroConsumptionCharge,
         String chargingMethod,
         List<TariffSlabRes> slabs,
         List<TariffLateFeeRes> lateFees,

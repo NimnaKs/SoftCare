@@ -339,6 +339,7 @@ CREATE TABLE tariffs (
                          id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                          name        VARCHAR(255) NOT NULL UNIQUE,
                          description VARCHAR(500) NULL,
+                         zero_consumption_charge DOUBLE NULL,
                          created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4;

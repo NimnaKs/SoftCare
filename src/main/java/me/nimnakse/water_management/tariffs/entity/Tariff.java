@@ -41,6 +41,9 @@ public class Tariff extends BaseEntity {
     @Column(name = "avg_monthly_max_consumption")
     private Double avgMonthlyMaxConsumption;
 
+    @Column(name = "zero_consumption_charge")
+    private Double zeroConsumptionCharge;
+
     @Column(name = "charging_method")
     private String chargingMethod; // e.g., "Gap"
 

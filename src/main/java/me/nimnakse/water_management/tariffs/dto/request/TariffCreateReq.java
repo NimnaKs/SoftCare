@@ -12,6 +12,7 @@ public record TariffCreateReq(
         Double reconnectionCreditLimit,
         Integer meterDigits,
         Double avgMonthlyMaxConsumption,
+        Double zeroConsumptionCharge,
         String chargingMethod,
         List<TariffSlabReq> slabs,
         List<TariffLateFeeReq> lateFees) {
