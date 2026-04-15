@@ -8,5 +8,7 @@ import me.nimnakse.water_management.meter_reader_assignments.dto.response.MeterR
 public interface MeterReaderAssignmentService {
     List<MeterReaderAssignmentReaderRes> listReaders(Long orgUnitId);
     List<MeterReaderAssignmentRes> list(Long orgUnitId);
+    List<MeterReaderAssignmentRes> listActive(Long orgUnitId);
     List<MeterReaderAssignmentRes> create(MeterReaderAssignmentCreateReq request);
+    MeterReaderAssignmentRes end(Long assignmentId);
 }

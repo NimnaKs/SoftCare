@@ -12,6 +12,7 @@ import me.nimnakse.water_management.meter_reader_assignments.service.MeterReader
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,9 +44,22 @@ public class MeterReaderAssignmentController {
         return ResponseEntity.ok(ApiResponse.success(service.list(orgUnitId)));
     }
 
+    @GetMapping("/active")
+    @Operation(summary = "List active assignments", description = "Lists active reader billing-zone assignments for a branch.")
+    public ResponseEntity<ApiResponse<List<MeterReaderAssignmentRes>>> listActive(
+            @RequestParam(required = false) Long orgUnitId) {
+        return ResponseEntity.ok(ApiResponse.success(service.listActive(orgUnitId)));
+    }
+
     @PostMapping
     @Operation(summary = "Save assignments", description = "Assigns one or more billing zones to a meter app reader.")
     public ResponseEntity<ApiResponse<List<MeterReaderAssignmentRes>>> create(@Valid @RequestBody MeterReaderAssignmentCreateReq request) {
         return ResponseEntity.ok(ApiResponse.success(service.create(request)));
+    }
+
+    @PostMapping("/{assignmentId}/end")
+    @Operation(summary = "End assignment", description = "Ends a reader billing-zone assignment immediately.")
+    public ResponseEntity<ApiResponse<MeterReaderAssignmentRes>> end(@PathVariable Long assignmentId) {
+        return ResponseEntity.ok(ApiResponse.success(service.end(assignmentId)));
     }
 }

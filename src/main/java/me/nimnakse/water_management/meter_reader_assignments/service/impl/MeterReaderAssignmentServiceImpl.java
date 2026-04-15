@@ -71,6 +71,16 @@ public class MeterReaderAssignmentServiceImpl implements MeterReaderAssignmentSe
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<MeterReaderAssignmentRes> listActive(Long orgUnitId) {
+        Long resolved = resolveOrgUnitId(orgUnitId);
+        return assignmentRepository.findByOrgUnit_IdOrderByAssignedFromDesc(resolved).stream()
+                .map(this::toResponse)
+                .filter(MeterReaderAssignmentRes::active)
+                .toList();
+    }
+
     @Transactional
     @Override
     public List<MeterReaderAssignmentRes> create(MeterReaderAssignmentCreateReq request) {
@@ -127,10 +137,25 @@ public class MeterReaderAssignmentServiceImpl implements MeterReaderAssignmentSe
         return list(resolved);
     }
 
+    @Transactional
+    @Override
+    public MeterReaderAssignmentRes end(Long assignmentId) {
+        MeterReaderZoneAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new NotFoundException("Assignment not found", "Assignment not found", ErrorCode.NOT_FOUND));
+        accessService.enforceOrgUnitAccess(assignment.getOrgUnit().getId());
+        if (assignment.getAssignedTo() != null && assignment.getAssignedTo().isBefore(LocalDate.now())) {
+            throw new BadRequestException("Assignment is already closed", "Assignment is already closed");
+        }
+        assignment.setAssignedTo(LocalDate.now().minusDays(1));
+        return toResponse(assignmentRepository.save(assignment));
+    }
+
     private MeterReaderAssignmentRes toResponse(MeterReaderZoneAssignment assignment) {
         BillingZone zone = billingZoneRepository.findById(assignment.getBillingZoneId()).orElse(null);
         User reader = assignment.getReaderUser();
-        boolean active = assignment.getAssignedTo() == null || !assignment.getAssignedTo().isBefore(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        boolean active = !assignment.getAssignedFrom().isAfter(today)
+                && (assignment.getAssignedTo() == null || !assignment.getAssignedTo().isBefore(today));
         return new MeterReaderAssignmentRes(
                 assignment.getId(),
                 assignment.getOrgUnit().getId(),
