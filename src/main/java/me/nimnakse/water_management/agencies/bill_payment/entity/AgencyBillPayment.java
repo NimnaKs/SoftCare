@@ -46,7 +46,7 @@ public class AgencyBillPayment extends BaseEntity {
     @Column(name = "member_name", length = 255)
     private String memberName;
 
-    @Column(name = "reference_text", nullable = false, length = 255)
+    @Column(name = "reference_text", length = 255)
     private String referenceText;
 
     @Column(name = "paid_date", nullable = false)

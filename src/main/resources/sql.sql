@@ -521,7 +521,7 @@ CREATE TABLE agency_bill_payments (
     connection_id BIGINT NULL,
     connection_account_number VARCHAR(50) NULL,
     member_name VARCHAR(255) NULL,
-    reference_text VARCHAR(255) NOT NULL,
+    reference_text VARCHAR(255) NULL,
     paid_date DATE NOT NULL,
     bill_amount DECIMAL(14,2) NOT NULL,
     service_charge_amount DECIMAL(14,2) NOT NULL DEFAULT 0.00,
