@@ -164,7 +164,7 @@ public class AgencyBillPaymentServiceImpl implements AgencyBillPaymentService {
         payment.setConnectionId(connection.getId());
         payment.setConnectionAccountNumber(connection.getAccountNumber());
         payment.setMemberName(resolveMemberName(member));
-        payment.setReferenceText(request.reference().trim());
+        payment.setReferenceText(StringUtils.hasText(request.reference()) ? request.reference().trim() : null);
         payment.setPaidDate(request.paidDate());
         payment.setBillAmount(billAmount);
         payment.setServiceChargeAmount(subscriptionFeeAmount);
