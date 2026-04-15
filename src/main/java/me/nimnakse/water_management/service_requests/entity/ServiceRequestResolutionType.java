@@ -1,0 +1,14 @@
+package me.nimnakse.water_management.service_requests.entity;
+
+public enum ServiceRequestResolutionType {
+    NEW_SERVICE_CONNECTION,
+    SERVICE_DISCONNECTED_NON_PAYMENT,
+    SERVICE_DISCONNECTED_CUSTOMER_REQUEST,
+    SERVICE_RECONNECTED,
+    NEW_METER_INSTALLED,
+    METER_REPAIRED,
+    METER_READING_ADJUSTED,
+    SERVICE_LINE_REPAIRED,
+    MAIN_LINE_REPAIRED,
+    OTHER
+}
