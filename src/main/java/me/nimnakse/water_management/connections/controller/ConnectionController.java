@@ -12,6 +12,7 @@ import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWithPremisesReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
 import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
+import me.nimnakse.water_management.connections.dto.response.ConnectionProfileRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
 import me.nimnakse.water_management.connections.service.ConnectionService;
@@ -65,6 +66,12 @@ public class ConnectionController {
     @Operation(summary = "Get connection balance", description = "Fetches debit, credit, and upcoming balance summary for a connection.")
     public ResponseEntity<ApiResponse<ConnectionBalanceRes>> getBalance(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(connectionService.getBalance(id)));
+    }
+
+    @GetMapping("/{id:\\d+}/profile")
+    @Operation(summary = "Get connection profile", description = "Fetches profile sections for the connection details view.")
+    public ResponseEntity<ApiResponse<ConnectionProfileRes>> getProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(connectionService.getProfile(id)));
     }
 
     @PutMapping("/{id:\\d+}")

@@ -21,6 +21,7 @@ import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWith
 import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
 import me.nimnakse.water_management.connections.dto.request.PremisesCreationMode;
 import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
+import me.nimnakse.water_management.connections.dto.response.ConnectionProfileRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
 import me.nimnakse.water_management.connections.entity.Connection;
@@ -52,6 +53,10 @@ import me.nimnakse.water_management.members.dto.response.MemberSummaryRes;
 import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
+import me.nimnakse.water_management.gn_divisions.entity.GnDivision;
+import me.nimnakse.water_management.valves.entity.Valve;
+import me.nimnakse.water_management.societies.entity.Society;
+import me.nimnakse.water_management.clusters.entity.Cluster;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallment;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallmentStatus;
@@ -303,6 +308,73 @@ public class ConnectionServiceImpl implements ConnectionService {
                 money(balance.currentDue()),
                 money(balance.total()),
                 balance.openSettlements());
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ConnectionProfileRes getProfile(Long id) {
+        Connection connection = connectionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Connection not found", "Connection not found", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(connection.getOrgUnitId());
+
+        Member member = memberRepository.findById(connection.getMemberId())
+                .orElseThrow(() -> new NotFoundException("Member not found", "Member not found", ErrorCode.NOT_FOUND));
+
+        String type = member.getMembershipType() == MemberType.CORPORATE ? "Corporate" : "Personal";
+        String name = member.getMembershipType() == MemberType.CORPORATE
+                ? MemberNameFormatter.formatCorporateDisplayName(member.getCorporateName())
+                : MemberNameFormatter.formatPersonalDisplayName(member.getFullName());
+        String fullName = member.getMembershipType() == MemberType.CORPORATE
+                ? trimToNull(member.getCorporateName())
+                : trimToNull(member.getFullName());
+        String nic = trimToNull(member.getNicNew());
+        if (nic == null) nic = trimToNull(member.getNicOld());
+        String cif = trimToNull(member.getMembershipCode());
+        String billingZoneName = connection.getBillingZoneId() == null
+                ? null
+                : billingZoneRepository.findById(connection.getBillingZoneId()).map(b -> b.getZoneName()).orElse(null);
+        String gnDivisionName = connection.getGnDivisionId() == null
+                ? null
+                : gnDivisionRepository.findById(connection.getGnDivisionId()).map(x -> x.getName()).orElse(null);
+        String valveName = connection.getValveId() == null
+                ? null
+                : valveRepository.findById(connection.getValveId()).map(x -> x.getName()).orElse(null);
+        String societyName = connection.getSocietyId() == null
+                ? null
+                : societyRepository.findById(connection.getSocietyId()).map(x -> x.getName()).orElse(null);
+        String clusterName = connection.getClusterId() == null
+                ? null
+                : clusterRepository.findById(connection.getClusterId()).map(x -> x.getName()).orElse(null);
+        String address = buildAddress(connection);
+        String premisesNumber = connection.getPremisesId() == null
+                ? null
+                : premisesRepository.findById(connection.getPremisesId()).map(Premises::getPremisesCode).orElse(null);
+        List<String> otherConnections = connectionRepository.findByMemberId(member.getId()).stream()
+                .filter(item -> !Objects.equals(item.getId(), connection.getId()))
+                .map(Connection::getAccountNumber)
+                .toList();
+
+        return new ConnectionProfileRes(
+                toResponse(connection),
+                type,
+                name,
+                fullName,
+                nic,
+                cif,
+                trimToNull(connection.getMobileNumber()),
+                trimToNull(connection.getFixedLineNumber()),
+                trimToNull(connection.getSecondaryNumber()),
+                premisesNumber,
+                trimToNull(connection.getHouseNumber()),
+                trimToNull(connection.getHouseName()),
+                trimToNull(connection.getHouseNickname()),
+                address,
+                billingZoneName,
+                gnDivisionName,
+                valveName,
+                societyName,
+                clusterName,
+                otherConnections);
     }
 
     @Transactional
