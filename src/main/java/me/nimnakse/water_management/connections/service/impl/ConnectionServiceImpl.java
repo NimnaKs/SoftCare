@@ -24,6 +24,7 @@ import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRe
 import me.nimnakse.water_management.connections.dto.response.ConnectionProfileRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
+import me.nimnakse.water_management.connections.dto.response.OtherConnectionRes;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
@@ -349,9 +350,9 @@ public class ConnectionServiceImpl implements ConnectionService {
         String premisesNumber = connection.getPremisesId() == null
                 ? null
                 : premisesRepository.findById(connection.getPremisesId()).map(Premises::getPremisesCode).orElse(null);
-        List<String> otherConnections = connectionRepository.findByMemberId(member.getId()).stream()
+        List<OtherConnectionRes> otherConnections = connectionRepository.findByMemberId(member.getId()).stream()
                 .filter(item -> !Objects.equals(item.getId(), connection.getId()))
-                .map(Connection::getAccountNumber)
+                .map(item -> new OtherConnectionRes(item.getAccountNumber(), item.getStatus()))
                 .toList();
 
         return new ConnectionProfileRes(
