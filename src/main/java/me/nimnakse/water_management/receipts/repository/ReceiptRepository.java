@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -37,4 +38,12 @@ public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
 
     @Query("select max(r.receiptNo) from Receipt r where r.orgUnitId = :orgUnitId and r.receiptNo like concat(:prefix, '%')")
     String findMaxReceiptNoByPrefixAndOrgUnitId(@Param("orgUnitId") Long orgUnitId, @Param("prefix") String prefix);
+
+    @Query("""
+            select coalesce(sum(r.paidAmount), 0)
+            from Receipt r
+            where r.connectionId = :connectionId
+              and r.status = me.nimnakse.water_management.receipts.entity.ReceiptStatus.POSTED
+            """)
+    BigDecimal sumPostedPaidAmountByConnectionId(@Param("connectionId") Long connectionId);
 }

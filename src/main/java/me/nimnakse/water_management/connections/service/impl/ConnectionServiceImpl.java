@@ -1,5 +1,9 @@
 package me.nimnakse.water_management.connections.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +20,7 @@ import me.nimnakse.water_management.connections.dto.request.ConnectionCreateReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWithPremisesReq;
 import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
 import me.nimnakse.water_management.connections.dto.request.PremisesCreationMode;
+import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
 import me.nimnakse.water_management.connections.entity.Connection;
@@ -34,6 +39,11 @@ import me.nimnakse.water_management.premises.dto.response.PremisesValidationRes;
 import me.nimnakse.water_management.premises.entity.Premises;
 import me.nimnakse.water_management.premises.repository.PremisesRepository;
 import me.nimnakse.water_management.premises.service.PremisesService;
+import me.nimnakse.water_management.receipts.dto.response.ReceiptSettlementPreviewItemRes;
+import me.nimnakse.water_management.receipts.repository.ReceiptRepository;
+import me.nimnakse.water_management.receipts.repository.ReceiptSettlementRepository;
+import me.nimnakse.water_management.receipts.repository.SalesInvoiceConnectionLookupRepository;
+import me.nimnakse.water_management.receipts.repository.SalesInvoiceInstallmentLookupRepository;
 import me.nimnakse.water_management.societies.repository.SocietyRepository;
 import me.nimnakse.water_management.tariffs.repository.TariffRepository;
 import me.nimnakse.water_management.valves.repository.ValveRepository;
@@ -42,6 +52,10 @@ import me.nimnakse.water_management.members.dto.response.MemberSummaryRes;
 import me.nimnakse.water_management.members.entity.Member;
 import me.nimnakse.water_management.members.entity.MemberType;
 import me.nimnakse.water_management.members.repository.MemberRepository;
+import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
+import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallment;
+import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallmentStatus;
+import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -65,6 +79,10 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final OrganizationAccessService organizationAccessService;
     private final PremisesService premisesService;
     private final OrgUnitRepository orgUnitRepository;
+    private final ReceiptRepository receiptRepository;
+    private final ReceiptSettlementRepository receiptSettlementRepository;
+    private final SalesInvoiceConnectionLookupRepository invoiceConnectionRepository;
+    private final SalesInvoiceInstallmentLookupRepository installmentRepository;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
@@ -78,7 +96,11 @@ public class ConnectionServiceImpl implements ConnectionService {
             AddressLineRepository addressLineRepository,
             OrganizationAccessService organizationAccessService,
             PremisesService premisesService,
-            OrgUnitRepository orgUnitRepository) {
+            OrgUnitRepository orgUnitRepository,
+            ReceiptRepository receiptRepository,
+            ReceiptSettlementRepository receiptSettlementRepository,
+            SalesInvoiceConnectionLookupRepository invoiceConnectionRepository,
+            SalesInvoiceInstallmentLookupRepository installmentRepository) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.premisesRepository = premisesRepository;
@@ -92,6 +114,10 @@ public class ConnectionServiceImpl implements ConnectionService {
         this.organizationAccessService = organizationAccessService;
         this.premisesService = premisesService;
         this.orgUnitRepository = orgUnitRepository;
+        this.receiptRepository = receiptRepository;
+        this.receiptSettlementRepository = receiptSettlementRepository;
+        this.invoiceConnectionRepository = invoiceConnectionRepository;
+        this.installmentRepository = installmentRepository;
     }
 
     @Transactional
@@ -258,6 +284,25 @@ public class ConnectionServiceImpl implements ConnectionService {
                         "සම්බන්ධතාවය සොයාගත නොහැක", ErrorCode.NOT_FOUND));
         enforceOrganizationScope(connection.getOrgUnitId());
         return toResponse(connection);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ConnectionBalanceRes getBalance(Long id) {
+        Connection connection = connectionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Connection not found",
+                        "à·ƒà¶¸à·Šà¶¶à¶±à·Šà¶°à¶­à·à·€à¶º à·ƒà·œà¶ºà·à¶œà¶­ à¶±à·œà·„à·à¶š", ErrorCode.NOT_FOUND));
+        enforceOrganizationScope(connection.getOrgUnitId());
+        BalanceComputation balance = computeBalance(connection.getId());
+        return new ConnectionBalanceRes(
+                connection.getId(),
+                connection.getAccountNumber(),
+                money(balance.debits()),
+                money(balance.credits()),
+                money(balance.upcoming()),
+                money(balance.currentDue()),
+                money(balance.total()),
+                balance.openSettlements());
     }
 
     @Transactional
@@ -870,7 +915,101 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
     }
 
+    private BalanceComputation computeBalance(Long connectionId) {
+        List<me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceConnection> links = invoiceConnectionRepository.findByConnectionId(connectionId);
+        List<SalesInvoice> invoices = links.stream()
+                .map(me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceConnection::getInvoice)
+                .filter(Objects::nonNull)
+                .filter(invoice -> invoice.getStatus() == SalesInvoiceStatus.POSTED || invoice.getStatus() == SalesInvoiceStatus.SETTLED)
+                .sorted(java.util.Comparator.comparing(SalesInvoice::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .toList();
+
+        java.util.Map<Long, List<SalesInvoiceInstallment>> byInvoice = new java.util.HashMap<>();
+        List<Long> invoiceIds = invoices.stream().map(SalesInvoice::getId).toList();
+        if (!invoiceIds.isEmpty()) {
+            for (SalesInvoiceInstallment installment : installmentRepository.findByInvoiceIdInAndStatusNot(invoiceIds, SalesInvoiceInstallmentStatus.PAID)) {
+                byInvoice.computeIfAbsent(installment.getInvoice().getId(), ignored -> new ArrayList<>()).add(installment);
+            }
+            byInvoice.values().forEach(items -> items.sort(java.util.Comparator.comparing(SalesInvoiceInstallment::getInstallmentNo)));
+        }
+
+        BigDecimal debits = BigDecimal.ZERO;
+        BigDecimal upcoming = BigDecimal.ZERO;
+        List<ReceiptSettlementPreviewItemRes> openSettlements = new ArrayList<>();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+        for (SalesInvoice invoice : invoices) {
+            List<SalesInvoiceInstallment> installments = byInvoice.get(invoice.getId());
+            if (installments != null && !installments.isEmpty()) {
+                for (SalesInvoiceInstallment installment : installments) {
+                    BigDecimal settled = money(receiptSettlementRepository.sumPostedSettledByInstallmentId(installment.getId()));
+                    BigDecimal due = money(installment.getAmount()).subtract(settled);
+                    if (due.compareTo(BigDecimal.ZERO) <= 0) {
+                        continue;
+                    }
+
+                    boolean future = installment.getDueDate() != null && installment.getDueDate().isAfter(today);
+                    if (future) {
+                        upcoming = upcoming.add(due);
+                    } else {
+                        debits = debits.add(due);
+                    }
+                    openSettlements.add(new ReceiptSettlementPreviewItemRes(
+                            invoice.getId(),
+                            installment.getId(),
+                            invoice.getInvoiceNo() + " - " + installment.getLabel(),
+                            due,
+                            BigDecimal.ZERO,
+                            installment.getDueDate() != null && installment.getDueDate().isBefore(today)));
+                }
+            } else {
+                BigDecimal settled = money(receiptSettlementRepository.sumPostedSettledByInvoiceId(invoice.getId()));
+                BigDecimal due = money(invoice.getGrandTotalPayable()).subtract(settled);
+                if (due.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                debits = debits.add(due);
+                openSettlements.add(new ReceiptSettlementPreviewItemRes(
+                        invoice.getId(),
+                        null,
+                        invoice.getInvoiceNo(),
+                        due,
+                        BigDecimal.ZERO,
+                        false));
+            }
+        }
+
+        BigDecimal postedReceipts = money(receiptRepository.sumPostedPaidAmountByConnectionId(connectionId));
+        BigDecimal appliedReceipts = money(receiptSettlementRepository.sumPostedSettledByConnectionId(connectionId));
+        BigDecimal credits = postedReceipts.subtract(appliedReceipts);
+        if (credits.compareTo(BigDecimal.ZERO) < 0) {
+            credits = BigDecimal.ZERO;
+        }
+
+        BigDecimal currentDue = debits.add(upcoming);
+        BigDecimal total = currentDue.subtract(credits);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+
+        return new BalanceComputation(debits, credits, upcoming, currentDue, total, openSettlements);
+    }
+
+    private BigDecimal money(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
     private void enforceOrganizationScope(Long memberOrgUnitId) {
         organizationAccessService.enforceOrgUnitAccess(memberOrgUnitId);
+    }
+
+    private record BalanceComputation(
+            BigDecimal debits,
+            BigDecimal credits,
+            BigDecimal upcoming,
+            BigDecimal currentDue,
+            BigDecimal total,
+            List<ReceiptSettlementPreviewItemRes> openSettlements) {
     }
 }
