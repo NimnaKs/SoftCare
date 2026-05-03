@@ -24,6 +24,7 @@ public class UtilityBill extends BaseEntity {
  @Column(name="red_bill_method", length=255) private String redBillMethod;
  @Column(name="custom_note", length=1000) private String customNote;
  @Enumerated(EnumType.STRING) @Column(name="status", nullable=false, length=20) private UtilityBillStatus status = UtilityBillStatus.OPEN;
+ @Column(name="created_by") private Long createdBy;
  @Column(name="meter_read_date") private LocalDate meterReadDate;
  @Column(name="closed_date") private LocalDate closedDate;
 }
