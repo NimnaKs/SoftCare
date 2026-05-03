@@ -33,6 +33,7 @@ public record SalesInvoiceRes(
         SalesInvoiceInventoryPolicyRes inventoryPolicy,
         List<SalesInvoiceInstallmentRes> installments,
         List<SalesInvoiceConnectionRes> connections,
+        String createdByUsername,
         Instant createdAt,
         Instant updatedAt
 ) {

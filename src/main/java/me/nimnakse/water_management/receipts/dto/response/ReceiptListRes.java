@@ -16,6 +16,7 @@ public record ReceiptListRes(
         String description,
         Long cashAccountId,
         String cashAccountName,
+        String createdByUsername,
         String paymentMethod,
         String statementStatus,
         String transactionStatus,

@@ -39,6 +39,8 @@ import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallmen
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.security.UserPrincipal;
+import me.nimnakse.water_management.users.entity.User;
+import me.nimnakse.water_management.users.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -93,6 +95,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final OrganizationAccessService organizationAccessService;
     private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
 
     public ReceiptServiceImpl(
             ReceiptRepository receiptRepository,
@@ -114,7 +117,8 @@ public class ReceiptServiceImpl implements ReceiptService {
             ReceiptAuditLogRepository auditLogRepository,
             SalesInvoiceRepository salesInvoiceRepository,
             OrganizationAccessService organizationAccessService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            UserRepository userRepository
     ) {
         this.receiptRepository = receiptRepository;
         this.settlementRepository = settlementRepository;
@@ -136,6 +140,7 @@ public class ReceiptServiceImpl implements ReceiptService {
         this.salesInvoiceRepository = salesInvoiceRepository;
         this.organizationAccessService = organizationAccessService;
         this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -164,6 +169,10 @@ public class ReceiptServiceImpl implements ReceiptService {
                 .stream().collect(Collectors.toMap(Member::getId, x -> x));
         Map<Long, MonetaryAccount> cash = monetaryAccountRepository.findAllById(cashIds).stream().collect(Collectors.toMap(MonetaryAccount::getId, x -> x));
         Map<Long, PaymentMethodLookup> methods = paymentMethodRepository.findAllById(methodIds).stream().collect(Collectors.toMap(PaymentMethodLookup::getId, x -> x));
+        Map<Long, String> usernames = loadUsernames(paged.getContent().stream()
+                .map(Receipt::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
         Map<Long, UnrecognizedReceipt> unrecognizedByReceiptId = unrecognizedReceiptRepository.findByReceipt_IdIn(receiptIds).stream()
                 .collect(Collectors.toMap(u -> u.getReceipt().getId(), x -> x));
 
@@ -195,6 +204,7 @@ public class ReceiptServiceImpl implements ReceiptService {
                     r.getReferenceText(),
                     r.getMonetaryAccountId(),
                     ca == null ? null : ca.getAccountName(),
+                    usernames.get(r.getCreatedBy()),
                     pm == null ? null : pm.getCode(),
                     r.getStatus().name(),
                     r.getStatus() == ReceiptStatus.POSTED ? "SUCCESS" : "REVERSED",
@@ -652,6 +662,14 @@ public class ReceiptServiceImpl implements ReceiptService {
         return null;
     }
 
+    private Map<Long, String> loadUsernames(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername));
+    }
+
     private void saveAudit(Long receiptId, ReceiptAuditAction action, String reason) {
         ReceiptAuditLog log = new ReceiptAuditLog();
         log.setReceiptId(receiptId);
@@ -891,9 +909,6 @@ public class ReceiptServiceImpl implements ReceiptService {
             List<ReceiptSettlementPreviewItemRes> items
     ) {}
 }
-
-
-
 
 
 

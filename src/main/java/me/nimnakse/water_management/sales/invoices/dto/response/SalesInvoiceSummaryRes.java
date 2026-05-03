@@ -15,6 +15,7 @@ public record SalesInvoiceSummaryRes(
         Long billingZoneId,
         BigDecimal grandTotalPayable,
         Boolean isRecurring,
+        String createdByUsername,
         Instant createdAt,
         Instant updatedAt
 ) {

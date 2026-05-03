@@ -66,12 +66,17 @@ import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
 import me.nimnakse.water_management.sales.invoices.repository.SalesInvoiceRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import me.nimnakse.water_management.security.UserPrincipal;
+import me.nimnakse.water_management.users.entity.User;
+import me.nimnakse.water_management.users.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class SalesInvoiceServiceImpl implements SalesInvoiceService {
@@ -81,6 +86,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     private final RevenueAccountRepository revenueAccountRepository;
     private final ConnectionRepository connectionRepository;
     private final MemberRepository memberRepository;
+    private final UserRepository userRepository;
     private final OrganizationAccessService organizationAccessService;
     private final InventoryConsumptionService inventoryConsumptionService;
 
@@ -89,12 +95,14 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
             RevenueAccountRepository revenueAccountRepository,
             ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
+            UserRepository userRepository,
             OrganizationAccessService organizationAccessService,
             InventoryConsumptionService inventoryConsumptionService) {
         this.invoiceRepository = invoiceRepository;
         this.revenueAccountRepository = revenueAccountRepository;
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
+        this.userRepository = userRepository;
         this.organizationAccessService = organizationAccessService;
         this.inventoryConsumptionService = inventoryConsumptionService;
     }
@@ -125,6 +133,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         invoice.setCustomerNic(trimToNull(request.customerNic()));
         invoice.setCustomerAddress(trimToNull(request.customerAddress()));
         invoice.setCustomerMobile(trimToNull(request.customerMobile()));
+        invoice.setCreatedBy(currentUserId());
         invoice.setDownPayment(request.installmentSetup() == null ? null : scale(request.installmentSetup().downPayment()));
         invoice.setNumberOfInstallments(request.installmentSetup() == null ? null : request.installmentSetup().numberOfInstallments());
         invoice.setDownPaymentDate(request.installmentSetup() == null ? null : request.installmentSetup().downPaymentDate());
@@ -169,13 +178,17 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         Page<SalesInvoice> result = saleType == null
                 ? invoiceRepository.findByDeletedAtIsNull(pageRequest)
                 : invoiceRepository.findByDeletedAtIsNullAndSaleType(saleType, pageRequest);
+        Map<Long, String> usernames = loadUsernames(result.getContent().stream()
+                .map(SalesInvoice::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
         List<SalesInvoiceSummaryRes> items = result.getContent().stream()
                 .peek(inv -> {
                     if (inv.getOrgUnitId() != null) {
                         organizationAccessService.enforceOrgUnitAccess(inv.getOrgUnitId());
                     }
                 })
-                .map(this::toSummaryRes)
+                .map(inv -> toSummaryRes(inv, usernames.get(inv.getCreatedBy())))
                 .toList();
         return new PageResponse<>(items, result.getTotalElements(), result.getTotalPages(), result.getNumber(),
                 result.getSize());
@@ -517,6 +530,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         clone.setBillingMethod(source.getBillingMethod());
         clone.setStatus(SalesInvoiceStatus.POSTED);
         clone.setOrgUnitId(source.getOrgUnitId());
+        clone.setCreatedBy(currentUserId());
         clone.setBillingZoneId(zoneId);
         clone.setCustomerName(source.getCustomerName());
         clone.setCustomerNic(source.getCustomerNic());
@@ -653,7 +667,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     }
 
     private SalesInvoiceRes toRes(SalesInvoice invoice) {
-        return new SalesInvoiceRes(invoice.getId(), invoice.getInvoiceNo(), invoice.getSaleType(), invoice.getBillingMethod(), invoice.getStatus(), invoice.getOrgUnitId(), invoice.getBillingZoneId(), invoice.getCustomerName(), invoice.getCustomerNic(), invoice.getCustomerAddress(), invoice.getCustomerMobile(), invoice.getRevenueTotal(), invoice.getSalesExpenseTotal(), invoice.getConsumptionExpenseTotal(), invoice.getGrandTotalPayable(), invoice.getHasInventoryIssue(), invoice.getIsRecurring(), invoice.getRecurringEnabled(), invoice.getDownPayment(), invoice.getNumberOfInstallments(), invoice.getRevenueLines().stream().map(this::toRevenueLineRes).toList(), invoice.getInventoryItems().stream().map(this::toInventoryItemRes).toList(), invoice.getInventoryPolicy() == null ? null : new SalesInvoiceInventoryPolicyRes(invoice.getInventoryPolicy().getRecordAs(), invoice.getInventoryPolicy().getChargedFromCustomer()), invoice.getInstallments().stream().map(this::toInstallmentRes).toList(), invoice.getConnections().stream().map(this::toConnectionRes).toList(), invoice.getCreatedAt(), invoice.getUpdatedAt());
+        return new SalesInvoiceRes(invoice.getId(), invoice.getInvoiceNo(), invoice.getSaleType(), invoice.getBillingMethod(), invoice.getStatus(), invoice.getOrgUnitId(), invoice.getBillingZoneId(), invoice.getCustomerName(), invoice.getCustomerNic(), invoice.getCustomerAddress(), invoice.getCustomerMobile(), invoice.getRevenueTotal(), invoice.getSalesExpenseTotal(), invoice.getConsumptionExpenseTotal(), invoice.getGrandTotalPayable(), invoice.getHasInventoryIssue(), invoice.getIsRecurring(), invoice.getRecurringEnabled(), invoice.getDownPayment(), invoice.getNumberOfInstallments(), invoice.getRevenueLines().stream().map(this::toRevenueLineRes).toList(), invoice.getInventoryItems().stream().map(this::toInventoryItemRes).toList(), invoice.getInventoryPolicy() == null ? null : new SalesInvoiceInventoryPolicyRes(invoice.getInventoryPolicy().getRecordAs(), invoice.getInventoryPolicy().getChargedFromCustomer()), invoice.getInstallments().stream().map(this::toInstallmentRes).toList(), invoice.getConnections().stream().map(this::toConnectionRes).toList(), resolveUsername(invoice.getCreatedBy()), invoice.getCreatedAt(), invoice.getUpdatedAt());
     }
 
     private SalesInvoiceRevenueLineRes toRevenueLineRes(SalesInvoiceRevenueLine line) {
@@ -676,7 +690,7 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         return new RecurringInvoiceRes(invoice.getId(), invoice.getInvoiceNo(), invoice.getBillingZoneId(), invoice.getRecurringEnabled(), invoice.getGrandTotalPayable(), invoice.getCreatedAt(), invoice.getUpdatedAt());
     }
 
-    private SalesInvoiceSummaryRes toSummaryRes(SalesInvoice invoice) {
+    private SalesInvoiceSummaryRes toSummaryRes(SalesInvoice invoice, String createdByUsername) {
         return new SalesInvoiceSummaryRes(
                 invoice.getId(),
                 invoice.getInvoiceNo(),
@@ -686,8 +700,36 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
                 invoice.getBillingZoneId(),
                 invoice.getGrandTotalPayable(),
                 invoice.getIsRecurring(),
+                createdByUsername,
                 invoice.getCreatedAt(),
                 invoice.getUpdatedAt());
+    }
+
+    private Map<Long, String> loadUsernames(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername));
+    }
+
+    private String resolveUsername(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId).map(User::getUsername).orElse(null);
+    }
+
+    private Long currentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getPrincipal() == null) {
+            return null;
+        }
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getUser().getId();
+        }
+        return null;
     }
 
     private void applyTotals(SalesInvoice invoice, SalesInvoiceTotals totals) {

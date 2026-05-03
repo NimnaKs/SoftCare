@@ -44,6 +44,9 @@ public class SalesInvoice extends BaseEntity {
     @Column(name = "org_unit_id")
     private Long orgUnitId;
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     @Column(name = "billing_zone_id")
     private Long billingZoneId;
 
@@ -148,6 +151,14 @@ public class SalesInvoice extends BaseEntity {
 
     public void setOrgUnitId(Long orgUnitId) {
         this.orgUnitId = orgUnitId;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 
     public Long getBillingZoneId() {
