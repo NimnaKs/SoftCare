@@ -21,6 +21,7 @@ import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
 import me.nimnakse.water_management.sales.invoices.repository.SalesInvoiceRepository;
 import me.nimnakse.water_management.security.OrganizationAccessService;
+import me.nimnakse.water_management.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,8 @@ class SalesInvoiceServiceImplTest {
     private OrganizationAccessService organizationAccessService;
     @Mock
     private InventoryConsumptionService inventoryConsumptionService;
+    @Mock
+    private UserRepository userRepository;
 
     private SalesInvoiceServiceImpl service;
 
@@ -51,6 +54,7 @@ class SalesInvoiceServiceImplTest {
                 revenueAccountRepository,
                 connectionRepository,
                 memberRepository,
+                userRepository,
                 organizationAccessService,
                 inventoryConsumptionService);
     }
