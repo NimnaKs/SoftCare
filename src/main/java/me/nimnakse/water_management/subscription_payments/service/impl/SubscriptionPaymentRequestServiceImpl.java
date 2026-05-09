@@ -14,6 +14,8 @@ import me.nimnakse.water_management.subscription_payments.entity.SubscriptionPay
 import me.nimnakse.water_management.subscription_payments.entity.SubscriptionPaymentRequestStatus;
 import me.nimnakse.water_management.subscription_payments.repository.SubscriptionPaymentRequestRepository;
 import me.nimnakse.water_management.subscription_payments.service.SubscriptionPaymentRequestService;
+import me.nimnakse.water_management.roles.entity.RoleAppScope;
+import me.nimnakse.water_management.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -156,6 +158,7 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
             BigDecimal amount,
             MultipartFile file
     ) {
+        requireAppScope(RoleAppScope.AGENCY_APP);
         if (agencyId == null) {
             throw new BadRequestException("Agency is required", "Agency is required", ErrorCode.VALIDATION_ERROR);
         }
@@ -213,6 +216,7 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
     @Transactional
     @Override
     public SubscriptionPaymentRequestRes proceed(Long id) {
+        requireAppScope(RoleAppScope.ADMIN_PORTAL);
         SubscriptionPaymentRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Request not found", "Request not found", ErrorCode.NOT_FOUND));
 
@@ -269,6 +273,16 @@ public class SubscriptionPaymentRequestServiceImpl implements SubscriptionPaymen
 
     private PaymentMethodRes toPaymentMethodRes(PaymentMethodLookup method) {
         return new PaymentMethodRes(method.getId(), method.getCode(), method.getName(), method.getIsActive());
+    }
+
+    private void requireAppScope(RoleAppScope scope) {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new BadRequestException("Unauthorized", "Unauthorized", ErrorCode.VALIDATION_ERROR);
+        }
+        if (!principal.getAppScopes().contains(scope)) {
+            throw new BadRequestException("Access denied", "Access denied", ErrorCode.VALIDATION_ERROR);
+        }
     }
 
     private SubscriptionPaymentRequestRes toRes(SubscriptionPaymentRequest e, String methodName) {
