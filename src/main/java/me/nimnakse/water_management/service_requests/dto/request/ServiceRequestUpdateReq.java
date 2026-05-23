@@ -2,7 +2,6 @@ package me.nimnakse.water_management.service_requests.dto.request;
 
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestCategory;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestGroup;
-import me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus;
 
 public record ServiceRequestUpdateReq(
         Long connectionId,
@@ -10,7 +9,5 @@ public record ServiceRequestUpdateReq(
         ServiceRequestGroup requestGroup,
         ServiceRequestCategory category,
         String description,
-        String contactMobileNumber,
-        Integer expiryDays,
-        ServiceRequestStatus status
+        String contactMobileNumber
 ) {}

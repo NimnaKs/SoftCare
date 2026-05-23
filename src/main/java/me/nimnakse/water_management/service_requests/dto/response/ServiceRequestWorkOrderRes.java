@@ -14,6 +14,8 @@ public record ServiceRequestWorkOrderRes(
         String notes,
         ServiceRequestWorkOrderStatus status,
         List<ServiceRequestWorkOrderEmployeeRes> employees,
+        Long createdBy,
+        Long updatedBy,
         Instant createdAt,
         Instant updatedAt
 ) {}

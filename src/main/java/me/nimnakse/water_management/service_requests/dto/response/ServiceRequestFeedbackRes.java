@@ -7,5 +7,8 @@ public record ServiceRequestFeedbackRes(
         Long id,
         Long serviceRequestId,
         ServiceRequestFinalResponse finalResponse,
+        String remarks,
+        Long updatedBy,
+        Instant createdAt,
         Instant updatedAt
 ) {}

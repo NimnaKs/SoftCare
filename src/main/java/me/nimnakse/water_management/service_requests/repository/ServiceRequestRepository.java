@@ -13,6 +13,8 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
 
     Page<ServiceRequest> findByOrgUnitIdAndStatusOrderBySavedAtDesc(Long orgUnitId, ServiceRequestStatus status, Pageable pageable);
 
+    List<ServiceRequest> findByOrgUnitIdOrderBySavedAtDesc(Long orgUnitId);
+
     List<ServiceRequest> findByOrgUnitIdAndStatusNotOrderBySavedAtDesc(Long orgUnitId, ServiceRequestStatus status);
 
     List<ServiceRequest> findByOrgUnitIdAndConnectionIdOrderBySavedAtDesc(Long orgUnitId, Long connectionId);

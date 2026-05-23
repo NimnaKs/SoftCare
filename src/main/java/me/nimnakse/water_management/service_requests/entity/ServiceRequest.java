@@ -15,11 +15,23 @@ import me.nimnakse.water_management.common.entity.BaseEntity;
 @Entity
 @Table(name = "service_requests")
 public class ServiceRequest extends BaseEntity {
+    @Column(name = "ticket_no", nullable = false, length = 50)
+    private String ticketNo;
+
     @Column(name = "org_unit_id", nullable = false)
     private Long orgUnitId;
 
     @Column(name = "connection_id")
     private Long connectionId;
+
+    @Column(name = "account_number", length = 100)
+    private String accountNumber;
+
+    @Column(name = "customer_name_snapshot", length = 255)
+    private String customerNameSnapshot;
+
+    @Column(name = "contact_mobile_number", length = 50)
+    private String contactMobileNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "request_group", nullable = false)
@@ -29,24 +41,34 @@ public class ServiceRequest extends BaseEntity {
     @Column(nullable = false)
     private ServiceRequestCategory category;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 2000)
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ServiceRequestStatus status = ServiceRequestStatus.OPEN;
+    private ServiceRequestStatus status = ServiceRequestStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_stage", nullable = false)
+    private ServiceRequestStageType currentStage = ServiceRequestStageType.REQUEST;
 
     @Column(name = "saved_at", nullable = false)
     private Instant savedAt;
 
+    @Column(name = "submitted_at")
+    private Instant submittedAt;
+
+    @Column(name = "last_paused_at")
+    private Instant lastPausedAt;
+
     @Column(name = "closed_at")
     private Instant closedAt;
 
-    @Column(name = "expiry_days", nullable = false)
-    private Integer expiryDays = 7;
+    @Column(name = "expiry_at")
+    private Instant expiryAt;
 
-    @Column(name = "contact_mobile_number")
-    private String contactMobileNumber;
+    @Column(name = "total_paused_minutes", nullable = false)
+    private Long totalPausedMinutes = 0L;
 
     @Column(name = "connection_tariff_id")
     private Long connectionTariffId;

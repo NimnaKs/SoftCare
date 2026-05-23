@@ -12,5 +12,5 @@ public record ServiceRequestCreateReq(
         @NotNull ServiceRequestCategory category,
         @NotBlank String description,
         String contactMobileNumber,
-        Integer expiryDays
+        Boolean saveAsDraft
 ) {}

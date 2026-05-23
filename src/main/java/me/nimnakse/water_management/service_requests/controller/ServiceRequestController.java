@@ -20,7 +20,15 @@ import me.nimnakse.water_management.service_requests.dto.response.ServiceRequest
 import me.nimnakse.water_management.service_requests.dto.response.ServiceRequestWorkOrderRes;
 import me.nimnakse.water_management.service_requests.service.ServiceRequestService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/service-requests")
@@ -61,6 +69,11 @@ public class ServiceRequestController {
         return ResponseEntity.ok(ApiResponse.success(service.update(id, request)));
     }
 
+    @PostMapping("/{id}/submit")
+    public ResponseEntity<ApiResponse<ServiceRequestDetailRes>> submit(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(service.submit(id)));
+    }
+
     @PostMapping("/{id}/pause")
     public ResponseEntity<ApiResponse<ServiceRequestDetailRes>> pause(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(service.pause(id)));
@@ -69,6 +82,11 @@ public class ServiceRequestController {
     @PostMapping("/{id}/resume")
     public ResponseEntity<ApiResponse<ServiceRequestDetailRes>> resume(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(service.resume(id)));
+    }
+
+    @PostMapping("/{id}/resolve")
+    public ResponseEntity<ApiResponse<ServiceRequestDetailRes>> resolve(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(service.resolve(id)));
     }
 
     @PostMapping("/{id}/close")
