@@ -12,7 +12,6 @@ import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
-import me.nimnakse.water_management.organization.service.OrganizationAccessService;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequest;
@@ -31,6 +30,7 @@ import me.nimnakse.water_management.service_requests.repository.ServiceRequestWo
 import me.nimnakse.water_management.service_requests.repository.ServiceRequestWorkOrderRepository;
 import me.nimnakse.water_management.tariffs.repository.TariffRepository;
 import me.nimnakse.water_management.utility_bills.repository.UtilityBillRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
