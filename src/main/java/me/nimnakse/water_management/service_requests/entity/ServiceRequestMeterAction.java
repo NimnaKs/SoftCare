@@ -6,6 +6,9 @@ public enum ServiceRequestMeterAction {
     REINSTALLED,
     REPLACED,
     REPAIRED,
+    READ,
+    ASSESSED,
+    ESTIMATED,
     ADJUSTED,
     NONE
 }

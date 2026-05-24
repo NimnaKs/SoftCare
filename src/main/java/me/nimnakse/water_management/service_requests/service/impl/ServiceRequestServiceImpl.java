@@ -387,6 +387,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         entity.setLastPausedAt(null);
         entity.setUpdatedBy(currentUserId());
         ServiceRequest saved = serviceRequestRepository.save(entity);
+        applyFinalConnectionState(saved);
         markStageCompleted(saved.getId(), ServiceRequestStageType.FEEDBACK);
         markStageCompleted(saved.getId(), ServiceRequestStageType.CLOSED);
         addTimeline(saved.getId(), ServiceRequestStageType.CLOSED, ServiceRequestEventType.CLOSED, "Request closed", null);
@@ -809,7 +810,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 solution.setAfterConnectionStatus(currentConnectionStatus);
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
-                solution.setMeterAction(ServiceRequestMeterAction.ADJUSTED);
+                solution.setMeterAction(ServiceRequestMeterAction.READ);
             }
             case SERVICE_LINE_REPAIRED -> {
                 solution.setBeforeConnectionStatus(currentConnectionStatus);
@@ -847,7 +848,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private void applySolution(ServiceRequest request, ServiceRequestSolution solution) {
         try {
-            applyConnectionStateChange(request, solution);
             if (Boolean.TRUE.equals(solution.getRequiresReconnectionFee())
                     && solution.getReconnectionFeeAmount() != null
                     && solution.getReconnectionFeeAmount().compareTo(ZERO) > 0
@@ -864,19 +864,23 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
     }
 
-    private void applyConnectionStateChange(ServiceRequest request, ServiceRequestSolution solution) {
+    private void applyFinalConnectionState(ServiceRequest request) {
         if (request.getConnectionId() == null) return;
+        ServiceRequestSolution solution = solutionRepository.findTopByServiceRequestIdOrderByUpdatedAtDesc(request.getId()).orElse(null);
+        if (solution == null) return;
+
         Connection connection = currentConnection(request);
         if (connection == null) return;
+
         ConnectionStatus target = switch (solution.getResolutionType()) {
             case NEW_SERVICE_CONNECTION_INSTALLED, SERVICE_RECONNECTED -> ConnectionStatus.CONNECTED;
             case SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT, SERVICE_DISCONNECTED_UPON_CUSTOMER_REQUEST -> ConnectionStatus.DISCONNECTED;
             default -> connection.getStatus();
         };
-        if (target != null && target != connection.getStatus()) {
-            connection.setStatus(target);
-            connectionRepository.save(connection);
-        }
+        if (target == null || target == connection.getStatus()) return;
+
+        connection.setStatus(target);
+        connectionRepository.save(connection);
     }
 
     private BigDecimal resolveReconnectionFee(Long tariffId) {
