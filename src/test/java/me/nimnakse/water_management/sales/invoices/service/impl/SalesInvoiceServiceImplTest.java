@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import me.nimnakse.water_management.common.exception.BadRequestException;
@@ -15,10 +16,15 @@ import me.nimnakse.water_management.inventory.consumptions.service.InventoryCons
 import me.nimnakse.water_management.members.repository.MemberRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.dto.ConnectionIncludeMode;
+import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceCreateReq;
+import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceInventoryItemReq;
+import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceInventoryPolicyReq;
 import me.nimnakse.water_management.sales.invoices.dto.request.SalesInvoiceConnectionPreviewReq;
 import me.nimnakse.water_management.sales.invoices.entity.SaleType;
+import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInventoryRecordAs;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
+import me.nimnakse.water_management.sales.invoices.entity.BillingMethod;
 import me.nimnakse.water_management.sales.invoices.repository.SalesInvoiceRepository;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import me.nimnakse.water_management.users.repository.UserRepository;
@@ -106,6 +112,49 @@ class SalesInvoiceServiceImplTest {
         when(salesInvoiceRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(invoice));
 
         assertThrows(BadRequestException.class, () -> service.reverseNonCustomerInvoice(10L));
+    }
+
+    @Test
+    void createDraftInvoiceAllowsInventoryConsumptionWithoutRevenueLines() {
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        when(salesInvoiceRepository.findMaxInvoiceNoByPrefixAndOrgUnitId("INV-", null)).thenReturn(null);
+        when(salesInvoiceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SalesInvoiceCreateReq request = new SalesInvoiceCreateReq(
+                null,
+                null,
+                SaleType.NON_CUSTOMER,
+                BillingMethod.ONE_TIME,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(new SalesInvoiceInventoryItemReq(
+                        77L,
+                        "B-001",
+                        null,
+                        null,
+                        null,
+                        "Template #77 batch B-001",
+                        new BigDecimal("10.00"),
+                        "PCS",
+                        new BigDecimal("5.00"),
+                        new BigDecimal("50.00"))),
+                new SalesInvoiceInventoryPolicyReq(SalesInvoiceInventoryRecordAs.INVENTORY_CONSUMPTION, false),
+                null,
+                null,
+                null,
+                null);
+
+        var response = service.createDraftInvoice(request);
+
+        assertEquals(0, response.revenueTotal().compareTo(BigDecimal.ZERO));
+        assertEquals(0, response.salesExpenseTotal().compareTo(BigDecimal.ZERO));
+        assertEquals(0, response.consumptionExpenseTotal().compareTo(new BigDecimal("50.00")));
+        assertEquals(0, response.grandTotalPayable().compareTo(BigDecimal.ZERO));
+        assertEquals(SalesInvoiceInventoryRecordAs.INVENTORY_CONSUMPTION, response.inventoryPolicy().recordAs());
+        assertEquals(Boolean.FALSE, response.inventoryPolicy().chargedFromCustomer());
     }
 }
 

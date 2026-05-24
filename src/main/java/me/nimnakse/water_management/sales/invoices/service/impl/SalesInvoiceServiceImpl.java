@@ -276,6 +276,13 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     }
 
     private void validateCreateRequest(SalesInvoiceCreateReq request) {
+        boolean hasRevenueLines = request.revenueLines() != null && !request.revenueLines().isEmpty();
+        boolean hasInventoryItems = request.inventoryItems() != null && !request.inventoryItems().isEmpty();
+        if (!hasRevenueLines && !hasInventoryItems) {
+            throw new BadRequestException(
+                    "At least one revenue line or inventory issue is required",
+                    "At least one revenue line or inventory issue is required");
+        }
         if (request.saleType() == SaleType.CUSTOMER) {
             boolean hasIds = request.selectedConnectionIds() != null && !request.selectedConnectionIds().isEmpty();
             boolean hasAccountNumbers = request.selectedConnectionAccountNumbers() != null
@@ -298,6 +305,9 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
     }
 
     private List<SalesInvoiceRevenueLine> buildRevenueLines(SalesInvoice invoice, List<SalesInvoiceRevenueLineReq> reqLines) {
+        if (reqLines == null || reqLines.isEmpty()) {
+            return List.of();
+        }
         Set<Long> accountIds = reqLines.stream().map(SalesInvoiceRevenueLineReq::revenueAccountId).collect(Collectors.toSet());
         Map<Long, RevenueAccount> accounts = revenueAccountRepository.findAllById(accountIds).stream().collect(Collectors.toMap(RevenueAccount::getId, a -> a));
         if (accounts.size() != accountIds.size()) {
@@ -355,13 +365,10 @@ public class SalesInvoiceServiceImpl implements SalesInvoiceService {
         }
         SalesInvoiceInventoryPolicy policy = new SalesInvoiceInventoryPolicy();
         policy.setInvoice(invoice);
-        if (saleType == SaleType.NON_CUSTOMER) {
-            policy.setRecordAs(SalesInvoiceInventoryRecordAs.SALES_REVENUE);
-            policy.setChargedFromCustomer(Boolean.TRUE);
-        } else {
-            policy.setRecordAs(req.recordAs());
-            policy.setChargedFromCustomer(req.chargedFromCustomer());
-        }
+        policy.setRecordAs(req.recordAs());
+        policy.setChargedFromCustomer(req.recordAs() == SalesInvoiceInventoryRecordAs.INVENTORY_CONSUMPTION
+                ? Boolean.FALSE
+                : req.chargedFromCustomer());
         return policy;
     }
 
