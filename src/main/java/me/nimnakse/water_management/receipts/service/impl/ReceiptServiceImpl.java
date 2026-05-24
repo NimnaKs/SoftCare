@@ -795,6 +795,36 @@ public class ReceiptServiceImpl implements ReceiptService {
             }
         }
 
+        BigDecimal credits = money(receiptRepository.sumPostedPaidAmountByConnectionId(connectionId))
+                .subtract(money(settlementRepository.sumPostedSettledByConnectionId(connectionId)));
+        if (credits.compareTo(ZERO) < 0) {
+            credits = ZERO;
+        }
+
+        if (credits.compareTo(ZERO) > 0 && !dueItems.isEmpty()) {
+            BigDecimal remainingCredit = credits;
+            List<ReceiptSettlementPreviewItemRes> adjusted = new ArrayList<>();
+            currentDue = ZERO;
+            for (ReceiptSettlementPreviewItemRes item : dueItems) {
+                BigDecimal creditApplied = remainingCredit.compareTo(ZERO) > 0 ? item.dueAmount().min(remainingCredit) : ZERO;
+                BigDecimal netDue = item.dueAmount().subtract(creditApplied);
+                remainingCredit = remainingCredit.subtract(creditApplied);
+                if (netDue.compareTo(ZERO) <= 0) {
+                    continue;
+                }
+                currentDue = currentDue.add(netDue);
+                adjusted.add(new ReceiptSettlementPreviewItemRes(
+                        item.invoiceId(),
+                        item.installmentId(),
+                        item.invoiceNo(),
+                        netDue,
+                        ZERO,
+                        item.overdue()));
+            }
+            dueItems = adjusted;
+            credits = remainingCredit;
+        }
+
         dueItems.sort(Comparator
                 .comparing((ReceiptSettlementPreviewItemRes item) -> isOverdueInstallment(item.installmentId()) ? 0 : 1)
                 .thenComparing(ReceiptSettlementPreviewItemRes::invoiceNo, Comparator.nullsLast(String::compareToIgnoreCase)));
@@ -909,7 +939,6 @@ public class ReceiptServiceImpl implements ReceiptService {
             List<ReceiptSettlementPreviewItemRes> items
     ) {}
 }
-
 
 
 

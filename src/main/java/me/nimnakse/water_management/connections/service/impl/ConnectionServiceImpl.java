@@ -1125,10 +1125,30 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
 
         BigDecimal currentDue = debits.add(upcoming);
-        BigDecimal total = currentDue.subtract(credits);
-        if (total.compareTo(BigDecimal.ZERO) < 0) {
-            total = BigDecimal.ZERO;
+        if (credits.compareTo(BigDecimal.ZERO) > 0 && !openSettlements.isEmpty()) {
+            BigDecimal remainingCredit = credits;
+            List<ReceiptSettlementPreviewItemRes> adjusted = new ArrayList<>();
+            currentDue = BigDecimal.ZERO;
+            for (ReceiptSettlementPreviewItemRes item : openSettlements) {
+                BigDecimal creditApplied = remainingCredit.compareTo(BigDecimal.ZERO) > 0 ? item.dueAmount().min(remainingCredit) : BigDecimal.ZERO;
+                BigDecimal netDue = item.dueAmount().subtract(creditApplied);
+                remainingCredit = remainingCredit.subtract(creditApplied);
+                if (netDue.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                currentDue = currentDue.add(netDue);
+                adjusted.add(new ReceiptSettlementPreviewItemRes(
+                        item.invoiceId(),
+                        item.installmentId(),
+                        item.invoiceNo(),
+                        netDue,
+                        BigDecimal.ZERO,
+                        item.overdue()));
+            }
+            openSettlements = adjusted;
+            credits = remainingCredit;
         }
+        BigDecimal total = currentDue;
 
         return new BalanceComputation(debits, credits, upcoming, currentDue, total, openSettlements);
     }
