@@ -21,6 +21,7 @@ import me.nimnakse.water_management.connections.dto.request.ConnectionCreateWith
 import me.nimnakse.water_management.connections.dto.request.ConnectionUpdateReq;
 import me.nimnakse.water_management.connections.dto.request.PremisesCreationMode;
 import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
+import me.nimnakse.water_management.connections.dto.response.ConnectionMeterReadingRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionProfileRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionRes;
 import me.nimnakse.water_management.connections.dto.response.ConnectionSearchRes;
@@ -46,8 +47,16 @@ import me.nimnakse.water_management.receipts.repository.ReceiptRepository;
 import me.nimnakse.water_management.receipts.repository.ReceiptSettlementRepository;
 import me.nimnakse.water_management.receipts.repository.SalesInvoiceConnectionLookupRepository;
 import me.nimnakse.water_management.receipts.repository.SalesInvoiceInstallmentLookupRepository;
+import me.nimnakse.water_management.security.OrganizationAccessService;
+import me.nimnakse.water_management.service_requests.entity.ServiceRequest;
+import me.nimnakse.water_management.service_requests.entity.ServiceRequestMeterAction;
+import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolution;
+import me.nimnakse.water_management.service_requests.repository.ServiceRequestRepository;
+import me.nimnakse.water_management.service_requests.repository.ServiceRequestSolutionRepository;
 import me.nimnakse.water_management.societies.repository.SocietyRepository;
 import me.nimnakse.water_management.tariffs.repository.TariffRepository;
+import me.nimnakse.water_management.users.entity.User;
+import me.nimnakse.water_management.users.repository.UserRepository;
 import me.nimnakse.water_management.valves.repository.ValveRepository;
 import me.nimnakse.water_management.connections.service.ConnectionService;
 import me.nimnakse.water_management.members.dto.response.MemberSummaryRes;
@@ -62,7 +71,6 @@ import me.nimnakse.water_management.sales.invoices.entity.SalesInvoice;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallment;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceInstallmentStatus;
 import me.nimnakse.water_management.sales.invoices.entity.SalesInvoiceStatus;
-import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -89,6 +97,9 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final ReceiptSettlementRepository receiptSettlementRepository;
     private final SalesInvoiceConnectionLookupRepository invoiceConnectionRepository;
     private final SalesInvoiceInstallmentLookupRepository installmentRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final ServiceRequestSolutionRepository serviceRequestSolutionRepository;
+    private final UserRepository userRepository;
 
     public ConnectionServiceImpl(ConnectionRepository connectionRepository,
             MemberRepository memberRepository,
@@ -106,7 +117,10 @@ public class ConnectionServiceImpl implements ConnectionService {
             ReceiptRepository receiptRepository,
             ReceiptSettlementRepository receiptSettlementRepository,
             SalesInvoiceConnectionLookupRepository invoiceConnectionRepository,
-            SalesInvoiceInstallmentLookupRepository installmentRepository) {
+            SalesInvoiceInstallmentLookupRepository installmentRepository,
+            ServiceRequestRepository serviceRequestRepository,
+            ServiceRequestSolutionRepository serviceRequestSolutionRepository,
+            UserRepository userRepository) {
         this.connectionRepository = connectionRepository;
         this.memberRepository = memberRepository;
         this.premisesRepository = premisesRepository;
@@ -124,6 +138,9 @@ public class ConnectionServiceImpl implements ConnectionService {
         this.receiptSettlementRepository = receiptSettlementRepository;
         this.invoiceConnectionRepository = invoiceConnectionRepository;
         this.installmentRepository = installmentRepository;
+        this.serviceRequestRepository = serviceRequestRepository;
+        this.serviceRequestSolutionRepository = serviceRequestSolutionRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -354,6 +371,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .filter(item -> !Objects.equals(item.getId(), connection.getId()))
                 .map(item -> new OtherConnectionRes(item.getAccountNumber(), item.getStatus()))
                 .toList();
+        List<ConnectionMeterReadingRes> meterReadings = loadMeterReadings(connection);
 
         return new ConnectionProfileRes(
                 toResponse(connection),
@@ -375,6 +393,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 valveName,
                 societyName,
                 clusterName,
+                meterReadings,
                 otherConnections);
     }
 
@@ -546,6 +565,51 @@ public class ConnectionServiceImpl implements ConnectionService {
                 tariffName,
                 connection.getCreatedAt(),
                 connection.getUpdatedAt());
+    }
+
+    private List<ConnectionMeterReadingRes> loadMeterReadings(Connection connection) {
+        return serviceRequestRepository.findByOrgUnitIdAndConnectionIdOrderBySavedAtDesc(connection.getOrgUnitId(), connection.getId()).stream()
+                .map(request -> {
+                    ServiceRequestSolution solution = serviceRequestSolutionRepository.findTopByServiceRequestIdOrderByUpdatedAtDesc(request.getId()).orElse(null);
+                    if (solution == null || solution.getMeterAction() == null || solution.getMeterAction() == ServiceRequestMeterAction.NONE) {
+                        return null;
+                    }
+                    return new ConnectionMeterReadingRes(
+                            request.getTicketNo(),
+                            solution.getSerialNumber(),
+                            meterActionLabel(solution.getMeterAction()),
+                            solution.getAppliedAt() != null ? solution.getAppliedAt() : request.getClosedAt(),
+                            solution.getMeterReading(),
+                            resolveUsername(solution.getAppliedBy())
+                    );
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private String meterActionLabel(ServiceRequestMeterAction action) {
+        if (action == null) {
+            return null;
+        }
+        return switch (action) {
+            case INSTALLED -> "A new meter has been installed. (New Connection Only)";
+            case UNINSTALLED -> "Meter has been disconnected";
+            case REINSTALLED -> "A meter has been reinstalled after disconnection.";
+            case REPLACED -> "A new meter has been installed to replace an inactive meter (not for a new connection).";
+            case REPAIRED -> "Meter has been repaired.";
+            case READ -> "Meter reading has been taken (includes corrected bills).";
+            case ASSESSED -> "Meter reading has been assessed.";
+            case ESTIMATED -> "Reading has been estimated.";
+            case ADJUSTED -> "Meter reading has been adjusted.";
+            case NONE -> null;
+        };
+    }
+
+    private String resolveUsername(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId).map(User::getUsername).orElse("Unknown");
     }
 
     private String generateAccountNumber(Member member) {

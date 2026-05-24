@@ -22,5 +22,6 @@ public record ConnectionProfileRes(
         String valveName,
         String societyName,
         String clusterName,
+        List<ConnectionMeterReadingRes> meterReadings,
         List<OtherConnectionRes> otherRegisteredConnections) {
 }
