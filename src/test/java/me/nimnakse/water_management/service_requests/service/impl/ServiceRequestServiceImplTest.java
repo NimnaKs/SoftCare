@@ -15,6 +15,7 @@ import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequest;
+import me.nimnakse.water_management.service_requests.entity.ServiceRequestGroup;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestResolutionType;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolution;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolutionStatus;
@@ -31,6 +32,7 @@ import me.nimnakse.water_management.service_requests.repository.ServiceRequestWo
 import me.nimnakse.water_management.service_requests.repository.ServiceRequestWorkOrderRepository;
 import me.nimnakse.water_management.tariffs.repository.TariffRepository;
 import me.nimnakse.water_management.utility_bills.repository.UtilityBillRepository;
+import me.nimnakse.water_management.utility_bills.entity.UtilityBillStatus;
 import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,6 +139,60 @@ class ServiceRequestServiceImplTest {
     }
 
     @Test
+    void upsertSolutionMarksNewInstallAsPendingToConnected() {
+        ServiceRequest request = requestForSolution(5L, 14L, 100L, ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED);
+        Connection connection = connection(14L, 100L, ConnectionStatus.PENDING);
+        stubSolutionFlow(request, connection);
+
+        var response = service.upsertSolution(5L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED,
+                "SYS-1234567890",
+                1,
+                null,
+                null
+        ));
+
+        assertEquals("PENDING", response.beforeConnectionStatus());
+        assertEquals("CONNECTED", response.afterConnectionStatus());
+    }
+
+    @Test
+    void upsertSolutionMarksDisconnectedComplaintsAsActiveToDisconnected() {
+        ServiceRequest request = requestForSolution(6L, 15L, 100L, ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT);
+        Connection connection = connection(15L, 100L, ConnectionStatus.CONNECTED);
+        stubSolutionFlow(request, connection);
+
+        var response = service.upsertSolution(6L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT,
+                null,
+                null,
+                null,
+                null
+        ));
+
+        assertEquals("CONNECTED", response.beforeConnectionStatus());
+        assertEquals("DISCONNECTED", response.afterConnectionStatus());
+    }
+
+    @Test
+    void upsertSolutionIgnoresConnectionStateForLineRepairAndOtherActions() {
+        ServiceRequest request = requestForSolution(7L, 16L, 100L, ServiceRequestResolutionType.SERVICE_LINE_REPAIRED);
+        Connection connection = connection(16L, 100L, ConnectionStatus.CONNECTED);
+        stubSolutionFlow(request, connection);
+
+        var response = service.upsertSolution(7L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.SERVICE_LINE_REPAIRED,
+                null,
+                null,
+                null,
+                "Pipe repaired"
+        ));
+
+        assertEquals("N/A", response.beforeConnectionStatus());
+        assertEquals("N/A", response.afterConnectionStatus());
+    }
+
+    @Test
     void updateMobileNumberUpdatesLinkedConnectionNumber() {
         ServiceRequest request = request(4L, 13L, 100L);
         request.setCurrentStage(ServiceRequestStageType.REQUEST);
@@ -159,6 +215,15 @@ class ServiceRequestServiceImplTest {
         request.setOrgUnitId(orgUnitId);
         request.setStatus(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.RESOLVED);
         request.setCurrentStage(ServiceRequestStageType.FEEDBACK);
+        return request;
+    }
+
+    private ServiceRequest requestForSolution(Long requestId, Long connectionId, Long orgUnitId, ServiceRequestResolutionType resolutionType) {
+        ServiceRequest request = request(requestId, connectionId, orgUnitId);
+        request.setRequestGroup(ServiceRequestGroup.CONNECTION_METER_SERVICE);
+        request.setStatus(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.IN_PROGRESS);
+        request.setCurrentStage(ServiceRequestStageType.SOLUTION);
+        request.setConnectionTariffId(1L);
         return request;
     }
 
@@ -216,5 +281,27 @@ class ServiceRequestServiceImplTest {
         when(stageRepository.findByServiceRequestIdOrderByIdAsc(requestId)).thenReturn(List.of());
         when(timelineRepository.findByServiceRequestIdOrderByCreatedAtAsc(requestId)).thenReturn(List.of());
         when(solutionRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
+    }
+
+    private void stubSolutionFlow(ServiceRequest request, Connection connection) {
+        Long requestId = request.getId();
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        when(serviceRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(connectionRepository.findById(connection.getId())).thenReturn(Optional.of(connection));
+        when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(solutionRepository.save(any(ServiceRequestSolution.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stageRepository.findByServiceRequestIdAndStageType(eq(requestId), any(ServiceRequestStageType.class)))
+                .thenReturn(Optional.empty());
+        when(stageRepository.save(any(ServiceRequestStage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(timelineRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(materialConsumptionRepository.findByServiceRequestId(requestId)).thenReturn(Optional.empty());
+        when(feedbackRepository.findByServiceRequestId(requestId)).thenReturn(Optional.empty());
+        when(workOrderRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
+        when(stageRepository.findByServiceRequestIdOrderByIdAsc(requestId)).thenReturn(List.of());
+        when(timelineRepository.findByServiceRequestIdOrderByCreatedAtAsc(requestId)).thenReturn(List.of());
+        when(solutionRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
+        when(solutionRepository.findTopByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(Optional.empty());
+        when(utilityBillRepository.findByOrgUnitIdAndStatusAndDeletedAtIsNullOrderByBillingZoneIdAscAccountNumberAsc(eq(100L), any(UtilityBillStatus.class)))
+                .thenReturn(List.of());
     }
 }

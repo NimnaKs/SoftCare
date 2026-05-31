@@ -768,10 +768,9 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private void deriveSolutionState(ServiceRequest request, ServiceRequestSolution solution) {
         Connection connection = currentConnection(request);
-        String currentConnectionStatus = connection == null || connection.getStatus() == null ? "N/A" : connection.getStatus().name();
         switch (solution.getResolutionType()) {
             case NEW_SERVICE_CONNECTION_INSTALLED -> {
-                solution.setBeforeConnectionStatus(connection == null ? "PENDING" : currentConnectionStatus);
+                solution.setBeforeConnectionStatus(ConnectionStatus.PENDING.name());
                 solution.setAfterConnectionStatus(ConnectionStatus.CONNECTED.name());
                 solution.setBeforeMeterStatus("N/A");
                 solution.setAfterMeterStatus("ACTIVE");
@@ -792,20 +791,21 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 solution.setMeterAction(ServiceRequestMeterAction.REINSTALLED);
             }
             case NEW_METER_REPLACED -> {
-                solution.setBeforeConnectionStatus(currentConnectionStatus);
-                solution.setAfterConnectionStatus(currentConnectionStatus);
+                solution.setBeforeConnectionStatus(ConnectionStatus.CONNECTED.name());
+                solution.setAfterConnectionStatus(ConnectionStatus.CONNECTED.name());
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
                 solution.setMeterAction(ServiceRequestMeterAction.REPLACED);
             }
             case METER_REPAIRED -> {
-                solution.setBeforeConnectionStatus(currentConnectionStatus);
-                solution.setAfterConnectionStatus(currentConnectionStatus);
+                solution.setBeforeConnectionStatus(ConnectionStatus.CONNECTED.name());
+                solution.setAfterConnectionStatus(ConnectionStatus.CONNECTED.name());
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
                 solution.setMeterAction(ServiceRequestMeterAction.REPAIRED);
             }
             case METER_READING_ADJUSTED -> {
+                String currentConnectionStatus = connection == null || connection.getStatus() == null ? "N/A" : connection.getStatus().name();
                 solution.setBeforeConnectionStatus(currentConnectionStatus);
                 solution.setAfterConnectionStatus(currentConnectionStatus);
                 solution.setBeforeMeterStatus("ACTIVE");
@@ -813,7 +813,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 solution.setMeterAction(ServiceRequestMeterAction.READ);
             }
             case SERVICE_LINE_REPAIRED -> {
-                solution.setBeforeConnectionStatus(currentConnectionStatus);
+                solution.setBeforeConnectionStatus("N/A");
                 solution.setAfterConnectionStatus("N/A");
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
@@ -827,7 +827,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 solution.setMeterAction(ServiceRequestMeterAction.NONE);
             }
             case OTHER_RESOLUTION -> {
-                solution.setBeforeConnectionStatus(currentConnectionStatus);
+                solution.setBeforeConnectionStatus("N/A");
                 solution.setAfterConnectionStatus("N/A");
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
