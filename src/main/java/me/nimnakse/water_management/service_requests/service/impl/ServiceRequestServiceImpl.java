@@ -603,7 +603,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     @Transactional
     public ServiceRequestFeedbackRes upsertFeedback(Long serviceRequestId, ServiceRequestFeedbackReq request) {
         ServiceRequest sr = loadRequest(serviceRequestId);
-        rejectIfClosed(sr);
         ServiceRequestFeedback entity = feedbackRepository.findByServiceRequestId(serviceRequestId)
                 .orElseGet(ServiceRequestFeedback::new);
         entity.setServiceRequestId(sr.getId());

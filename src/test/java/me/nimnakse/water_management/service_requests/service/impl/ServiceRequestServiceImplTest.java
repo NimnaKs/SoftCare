@@ -21,8 +21,10 @@ import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
 import me.nimnakse.water_management.service_requests.dto.request.ServiceRequestCreateReq;
+import me.nimnakse.water_management.service_requests.dto.request.ServiceRequestFeedbackReq;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequest;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestGroup;
+import me.nimnakse.water_management.service_requests.entity.ServiceRequestFinalResponse;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestResolutionType;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolution;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolutionStatus;
@@ -366,6 +368,34 @@ class ServiceRequestServiceImplTest {
         assertEquals("0733333333", response.contactMobileNumber());
         assertEquals("0733333333", connection.getMobileNumber());
         verify(connectionRepository).save(connection);
+    }
+
+    @Test
+    void upsertFeedbackAllowsEditingClosedRequest() {
+        ServiceRequest request = request(5L, 14L, 100L);
+        request.setStatus(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED);
+        request.setCurrentStage(ServiceRequestStageType.CLOSED);
+        request.setTicketNo("SR-000005");
+
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        when(serviceRequestRepository.findById(5L)).thenReturn(Optional.of(request));
+        when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stageRepository.findByServiceRequestIdAndStageType(eq(5L), any(ServiceRequestStageType.class)))
+                .thenReturn(Optional.empty());
+        when(stageRepository.save(any(ServiceRequestStage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(timelineRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(feedbackRepository.findByServiceRequestId(5L)).thenReturn(Optional.empty());
+        when(feedbackRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.upsertFeedback(5L, new ServiceRequestFeedbackReq(
+                ServiceRequestFinalResponse.NO_ANSWER,
+                "Customer called back later"
+        ));
+
+        assertEquals(ServiceRequestFinalResponse.NO_ANSWER, response.finalResponse());
+        assertEquals("Customer called back later", response.remarks());
+        verify(feedbackRepository).save(any());
+        verify(serviceRequestRepository).save(request);
     }
 
     private ServiceRequest request(Long requestId, Long connectionId, Long orgUnitId) {
