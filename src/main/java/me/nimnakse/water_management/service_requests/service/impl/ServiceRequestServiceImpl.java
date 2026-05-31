@@ -19,6 +19,7 @@ import me.nimnakse.water_management.common.api.PageResponse;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.common.exception.ErrorCode;
 import me.nimnakse.water_management.common.exception.NotFoundException;
+import me.nimnakse.water_management.common.util.ValidationUtils;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
@@ -399,9 +400,11 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     public ServiceRequestDetailRes updateMobileNumber(Long id, ServiceRequestMobileNumberReq request) {
         ServiceRequest entity = loadRequest(id);
         rejectIfClosed(entity);
-        entity.setContactMobileNumber(trimToNull(request.contactMobileNumber()));
+        String mobileNumber = normalizeMobileNumber(request.contactMobileNumber());
+        entity.setContactMobileNumber(mobileNumber);
         entity.setUpdatedBy(currentUserId());
         ServiceRequest saved = serviceRequestRepository.save(entity);
+        syncConnectionMobileNumber(saved, mobileNumber);
         addTimeline(saved.getId(), saved.getCurrentStage(), ServiceRequestEventType.MOBILE_UPDATED, "Contact mobile updated", null);
         return toDetailRes(saved);
     }
@@ -1177,6 +1180,26 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private String resolveMobileNumber(Connection connection, String requested) {
         if (StringUtils.hasText(requested)) return requested.trim();
         return connection == null ? null : connection.getMobileNumber();
+    }
+
+    private String normalizeMobileNumber(String mobileNumber) {
+        String trimmed = trimToNull(mobileNumber);
+        if (!ValidationUtils.isValidSriLankaMobile(trimmed)) {
+            throw validation("Mobile number must be a 10-digit number starting with 07");
+        }
+        return trimmed;
+    }
+
+    private void syncConnectionMobileNumber(ServiceRequest request, String mobileNumber) {
+        Connection connection = currentConnection(request);
+        if (connection == null) {
+            return;
+        }
+        if (Objects.equals(connection.getMobileNumber(), mobileNumber)) {
+            return;
+        }
+        connection.setMobileNumber(mobileNumber);
+        connectionRepository.save(connection);
     }
 
     private String resolveCustomerName(Connection connection) {

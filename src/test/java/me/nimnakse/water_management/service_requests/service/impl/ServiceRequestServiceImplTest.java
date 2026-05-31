@@ -20,6 +20,7 @@ import me.nimnakse.water_management.service_requests.entity.ServiceRequestSoluti
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestSolutionStatus;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestStage;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestStageType;
+import me.nimnakse.water_management.service_requests.dto.request.ServiceRequestMobileNumberReq;
 import me.nimnakse.water_management.service_requests.repository.ServiceRequestFeedbackRepository;
 import me.nimnakse.water_management.service_requests.repository.ServiceRequestMaterialConsumptionRepository;
 import me.nimnakse.water_management.service_requests.repository.ServiceRequestRepository;
@@ -135,6 +136,23 @@ class ServiceRequestServiceImplTest {
         assertEquals(ConnectionStatus.CONNECTED, connection.getStatus());
     }
 
+    @Test
+    void updateMobileNumberUpdatesLinkedConnectionNumber() {
+        ServiceRequest request = request(4L, 13L, 100L);
+        request.setCurrentStage(ServiceRequestStageType.REQUEST);
+        request.setContactMobileNumber("0711111111");
+        Connection connection = connection(13L, 100L, ConnectionStatus.CONNECTED);
+        connection.setMobileNumber("0722222222");
+
+        stubMobileUpdateFlow(request, connection);
+
+        service.updateMobileNumber(4L, new ServiceRequestMobileNumberReq("0733333333"));
+
+        assertEquals("0733333333", request.getContactMobileNumber());
+        assertEquals("0733333333", connection.getMobileNumber());
+        verify(connectionRepository).save(connection);
+    }
+
     private ServiceRequest request(Long requestId, Long connectionId, Long orgUnitId) {
         ServiceRequest request = new ServiceRequest();
         request.setId(requestId);
@@ -180,5 +198,24 @@ class ServiceRequestServiceImplTest {
         when(workOrderRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
         when(stageRepository.findByServiceRequestIdOrderByIdAsc(requestId)).thenReturn(List.of());
         when(timelineRepository.findByServiceRequestIdOrderByCreatedAtAsc(requestId)).thenReturn(List.of());
+    }
+
+    private void stubMobileUpdateFlow(ServiceRequest request, Connection connection) {
+        Long requestId = request.getId();
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        when(serviceRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(connectionRepository.findById(connection.getId())).thenReturn(Optional.of(connection));
+        when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(connectionRepository.save(any(Connection.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stageRepository.findByServiceRequestIdAndStageType(eq(requestId), any(ServiceRequestStageType.class)))
+                .thenReturn(Optional.empty());
+        when(stageRepository.save(any(ServiceRequestStage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(timelineRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(materialConsumptionRepository.findByServiceRequestId(requestId)).thenReturn(Optional.empty());
+        when(feedbackRepository.findByServiceRequestId(requestId)).thenReturn(Optional.empty());
+        when(workOrderRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
+        when(stageRepository.findByServiceRequestIdOrderByIdAsc(requestId)).thenReturn(List.of());
+        when(timelineRepository.findByServiceRequestIdOrderByCreatedAtAsc(requestId)).thenReturn(List.of());
+        when(solutionRepository.findByServiceRequestIdOrderByUpdatedAtDesc(requestId)).thenReturn(List.of());
     }
 }
