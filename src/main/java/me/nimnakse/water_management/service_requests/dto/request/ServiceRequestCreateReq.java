@@ -11,6 +11,5 @@ public record ServiceRequestCreateReq(
         @NotNull ServiceRequestGroup requestGroup,
         @NotNull ServiceRequestCategory category,
         @NotBlank String description,
-        String contactMobileNumber,
         Boolean saveAsDraft
 ) {}

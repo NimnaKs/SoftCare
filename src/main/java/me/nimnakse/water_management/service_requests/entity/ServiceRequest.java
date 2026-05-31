@@ -24,14 +24,8 @@ public class ServiceRequest extends BaseEntity {
     @Column(name = "connection_id")
     private Long connectionId;
 
-    @Column(name = "account_number", length = 100)
-    private String accountNumber;
-
     @Column(name = "customer_name_snapshot", length = 255)
     private String customerNameSnapshot;
-
-    @Column(name = "contact_mobile_number", length = 50)
-    private String contactMobileNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "request_group", nullable = false)

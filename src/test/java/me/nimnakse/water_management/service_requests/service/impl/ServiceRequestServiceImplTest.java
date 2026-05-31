@@ -140,15 +140,14 @@ class ServiceRequestServiceImplTest {
     void updateMobileNumberUpdatesLinkedConnectionNumber() {
         ServiceRequest request = request(4L, 13L, 100L);
         request.setCurrentStage(ServiceRequestStageType.REQUEST);
-        request.setContactMobileNumber("0711111111");
         Connection connection = connection(13L, 100L, ConnectionStatus.CONNECTED);
         connection.setMobileNumber("0722222222");
 
         stubMobileUpdateFlow(request, connection);
 
-        service.updateMobileNumber(4L, new ServiceRequestMobileNumberReq("0733333333"));
+        var response = service.updateMobileNumber(4L, new ServiceRequestMobileNumberReq("0733333333"));
 
-        assertEquals("0733333333", request.getContactMobileNumber());
+        assertEquals("0733333333", response.contactMobileNumber());
         assertEquals("0733333333", connection.getMobileNumber());
         verify(connectionRepository).save(connection);
     }

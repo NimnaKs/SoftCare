@@ -8,6 +8,5 @@ public record ServiceRequestUpdateReq(
         String accountNumber,
         ServiceRequestGroup requestGroup,
         ServiceRequestCategory category,
-        String description,
-        String contactMobileNumber
+        String description
 ) {}

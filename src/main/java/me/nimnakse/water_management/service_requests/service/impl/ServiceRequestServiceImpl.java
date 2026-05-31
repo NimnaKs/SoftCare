@@ -170,9 +170,10 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             Page<ServiceRequest> paged = parsedStatus == null
                     ? serviceRequestRepository.findAll(pageable)
                     : serviceRequestRepository.findAll(pageable).map(Function.identity());
+            Map<Long, Connection> connections = loadConnections(paged.getContent());
             List<ServiceRequestListRes> items = paged.getContent().stream()
                     .filter(sr -> parsedStatus == null || sr.getStatus() == parsedStatus)
-                    .map(this::toListRes)
+                    .map(sr -> toListRes(sr, connections))
                     .toList();
             return new PageResponse<>(items, parsedStatus == null ? paged.getTotalElements() : items.size(),
                     parsedStatus == null ? paged.getTotalPages() : 1, paged.getNumber(), paged.getSize());
@@ -180,7 +181,8 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         Page<ServiceRequest> paged = parsedStatus == null
                 ? serviceRequestRepository.findByOrgUnitIdOrderBySavedAtDesc(orgUnitId, pageable)
                 : serviceRequestRepository.findByOrgUnitIdAndStatusOrderBySavedAtDesc(orgUnitId, parsedStatus, pageable);
-        return new PageResponse<>(paged.getContent().stream().map(this::toListRes).toList(),
+        Map<Long, Connection> connections = loadConnections(paged.getContent());
+        return new PageResponse<>(paged.getContent().stream().map(sr -> toListRes(sr, connections)).toList(),
                 paged.getTotalElements(), paged.getTotalPages(), paged.getNumber(), paged.getSize());
     }
 
@@ -197,10 +199,11 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         long pausedCount = requests.stream().filter(r -> r.getStatus() == ServiceRequestStatus.PAUSED).count();
         long resolvedCount = requests.stream().filter(r -> r.getStatus() == ServiceRequestStatus.RESOLVED).count();
         long closedCount = requests.stream().filter(r -> r.getStatus() == ServiceRequestStatus.CLOSED).count();
+        Map<Long, Connection> connections = loadConnections(requests);
         List<ServiceRequestListRes> expired = requests.stream()
                 .filter(this::isExpired)
                 .sorted(Comparator.comparing(ServiceRequest::getSavedAt).reversed())
-                .map(this::toListRes)
+                .map(sr -> toListRes(sr, connections))
                 .toList();
         return new ServiceRequestDashboardRes(
                 draftCount,
@@ -230,9 +233,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         entity.setTicketNo(nextTicketNo());
         entity.setOrgUnitId(orgUnitId);
         entity.setConnectionId(connection == null ? null : connection.getId());
-        entity.setAccountNumber(connection == null ? trimToNull(request.accountNumber()) : connection.getAccountNumber());
         entity.setCustomerNameSnapshot(connection == null ? null : resolveCustomerName(connection));
-        entity.setContactMobileNumber(resolveMobileNumber(connection, request.contactMobileNumber()));
         entity.setConnectionTariffId(connection == null ? null : connection.getTariffId());
         entity.setRequestGroup(request.requestGroup());
         entity.setCategory(request.category());
@@ -267,7 +268,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         String targetDescription = request.description() == null ? entity.getDescription() : request.description();
         validateRequestHeader(targetGroup,
                 request.connectionId() != null ? request.connectionId() : entity.getConnectionId(),
-                request.accountNumber() != null ? request.accountNumber() : entity.getAccountNumber(),
+                request.accountNumber(),
                 targetDescription);
         Connection connection = request.connectionId() != null || StringUtils.hasText(request.accountNumber())
                 ? resolveConnection(entity.getOrgUnitId(), request.connectionId(), request.accountNumber(), targetGroup)
@@ -275,16 +276,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         entity.setRequestGroup(targetGroup);
         if (request.category() != null) entity.setCategory(request.category());
         if (request.description() != null) entity.setDescription(request.description().trim());
-        if (request.contactMobileNumber() != null) entity.setContactMobileNumber(trimToNull(request.contactMobileNumber()));
         if (connection != null) {
             entity.setConnectionId(connection.getId());
-            entity.setAccountNumber(connection.getAccountNumber());
             entity.setCustomerNameSnapshot(resolveCustomerName(connection));
             entity.setConnectionTariffId(connection.getTariffId());
         } else if (!ACCOUNT_REQUIRED_GROUPS.contains(targetGroup)) {
             entity.setConnectionId(null);
             entity.setConnectionTariffId(null);
-            if (request.accountNumber() != null) entity.setAccountNumber(trimToNull(request.accountNumber()));
         }
         entity.setUpdatedBy(currentUserId());
         ServiceRequest saved = serviceRequestRepository.save(entity);
@@ -302,7 +300,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         if (entity.getStatus() != ServiceRequestStatus.DRAFT) {
             return toDetailRes(entity);
         }
-        validateRequestHeader(entity.getRequestGroup(), entity.getConnectionId(), entity.getAccountNumber(), entity.getDescription());
+        validateRequestHeader(entity.getRequestGroup(), entity.getConnectionId(), null, entity.getDescription());
         entity.setStatus(ServiceRequestStatus.SUBMITTED);
         entity.setSubmittedAt(Instant.now());
         entity.setExpiryAt(entity.getSubmittedAt().plus(Duration.ofDays(7)));
@@ -401,7 +399,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         ServiceRequest entity = loadRequest(id);
         rejectIfClosed(entity);
         String mobileNumber = normalizeMobileNumber(request.contactMobileNumber());
-        entity.setContactMobileNumber(mobileNumber);
         entity.setUpdatedBy(currentUserId());
         ServiceRequest saved = serviceRequestRepository.save(entity);
         syncConnectionMobileNumber(saved, mobileNumber);
@@ -910,7 +907,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 request.getCustomerNameSnapshot(),
                 null,
                 null,
-                request.getContactMobileNumber(),
+                resolveContactMobileNumber(connection),
                 List.of(new SalesInvoiceRevenueLineReq(label, account.getId(), request.getTicketNo(), amount)),
                 null,
                 null,
@@ -955,14 +952,15 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
     }
 
-    private ServiceRequestListRes toListRes(ServiceRequest request) {
+    private ServiceRequestListRes toListRes(ServiceRequest request, Map<Long, Connection> connections) {
         long elapsed = elapsedMinutes(request);
+        Connection connection = connectionForRequest(request, connections);
         return new ServiceRequestListRes(
                 request.getId(),
                 request.getTicketNo(),
                 request.getOrgUnitId(),
                 request.getConnectionId(),
-                request.getAccountNumber(),
+                resolveAccountNumber(connection),
                 request.getRequestGroup(),
                 request.getCategory(),
                 request.getDescription(),
@@ -971,7 +969,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 request.getSavedAt(),
                 request.getSubmittedAt(),
                 request.getClosedAt(),
-                request.getContactMobileNumber(),
+                resolveContactMobileNumber(connection),
                 elapsed,
                 formatElapsed(elapsed),
                 isExpired(request)
@@ -980,6 +978,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private ServiceRequestDetailRes toDetailRes(ServiceRequest request) {
         long elapsed = elapsedMinutes(request);
+        Connection connection = currentConnection(request);
         List<ServiceRequestStageRes> stages = stageRepository.findByServiceRequestIdOrderByIdAsc(request.getId()).stream()
                 .map(this::toStageRes)
                 .toList();
@@ -1003,7 +1002,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 request.getTicketNo(),
                 request.getOrgUnitId(),
                 request.getConnectionId(),
-                request.getAccountNumber(),
+                resolveAccountNumber(connection),
                 request.getConnectionTariffId(),
                 request.getRequestGroup(),
                 request.getCategory(),
@@ -1016,7 +1015,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 request.getClosedAt(),
                 request.getExpiryAt(),
                 request.getTotalPausedMinutes(),
-                request.getContactMobileNumber(),
+                resolveContactMobileNumber(connection),
                 elapsed,
                 formatElapsed(elapsed),
                 isExpired(request),
@@ -1177,11 +1176,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         return connectionRepository.findById(request.getConnectionId()).orElse(null);
     }
 
-    private String resolveMobileNumber(Connection connection, String requested) {
-        if (StringUtils.hasText(requested)) return requested.trim();
-        return connection == null ? null : connection.getMobileNumber();
-    }
-
     private String normalizeMobileNumber(String mobileNumber) {
         String trimmed = trimToNull(mobileNumber);
         if (!ValidationUtils.isValidSriLankaMobile(trimmed)) {
@@ -1200,6 +1194,33 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
         connection.setMobileNumber(mobileNumber);
         connectionRepository.save(connection);
+    }
+
+    private String resolveAccountNumber(Connection connection) {
+        return connection == null ? null : connection.getAccountNumber();
+    }
+
+    private String resolveContactMobileNumber(Connection connection) {
+        return connection == null ? null : connection.getMobileNumber();
+    }
+
+    private Map<Long, Connection> loadConnections(List<ServiceRequest> requests) {
+        Set<Long> connectionIds = requests.stream()
+                .map(ServiceRequest::getConnectionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (connectionIds.isEmpty()) {
+            return Map.of();
+        }
+        return connectionRepository.findByIdIn(connectionIds.stream().toList()).stream()
+                .collect(Collectors.toMap(Connection::getId, Function.identity()));
+    }
+
+    private Connection connectionForRequest(ServiceRequest request, Map<Long, Connection> connections) {
+        if (request.getConnectionId() == null) {
+            return null;
+        }
+        return connections.get(request.getConnectionId());
     }
 
     private String resolveCustomerName(Connection connection) {
