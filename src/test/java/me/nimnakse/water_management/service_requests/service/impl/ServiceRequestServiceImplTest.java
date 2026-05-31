@@ -7,12 +7,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.connections.service.ConnectionService;
+import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
 import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
@@ -69,6 +72,8 @@ class ServiceRequestServiceImplTest {
     @Mock
     private ConnectionRepository connectionRepository;
     @Mock
+    private ConnectionService connectionService;
+    @Mock
     private EmployeeRepository employeeRepository;
     @Mock
     private TariffRepository tariffRepository;
@@ -95,6 +100,7 @@ class ServiceRequestServiceImplTest {
                 materialConsumptionRepository,
                 feedbackRepository,
                 connectionRepository,
+                connectionService,
                 employeeRepository,
                 tariffRepository,
                 utilityBillRepository,
@@ -161,7 +167,7 @@ class ServiceRequestServiceImplTest {
         ));
 
         assertEquals("PENDING", response.beforeConnectionStatus());
-        assertEquals("PENDING", response.afterConnectionStatus());
+        assertEquals("CONNECTED", response.afterConnectionStatus());
     }
 
     @Test
@@ -182,10 +188,29 @@ class ServiceRequestServiceImplTest {
     }
 
     @Test
+    void upsertSolutionRejectsCustomerRequestDisconnectWhenBalanceIsPositive() {
+        ServiceRequest request = requestForSolution(9L, 18L, 100L, ServiceRequestResolutionType.SERVICE_DISCONNECTED_UPON_CUSTOMER_REQUEST);
+        Connection connection = connection(18L, 100L, ConnectionStatus.CONNECTED);
+        stubSolutionFlow(request, connection);
+        when(connectionService.getBalance(18L)).thenReturn(balance(18L, new BigDecimal("100.00")));
+
+        var ex = assertThrows(BadRequestException.class, () -> service.upsertSolution(9L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.SERVICE_DISCONNECTED_UPON_CUSTOMER_REQUEST,
+                null,
+                null,
+                null,
+                null
+        )));
+
+        assertEquals("Service disconnection upon customer request is only allowed when the account balance is LKR 0.00 or below", ex.getMessage());
+    }
+
+    @Test
     void upsertSolutionMarksDisconnectedComplaintsAsActiveToDisconnected() {
         ServiceRequest request = requestForSolution(6L, 15L, 100L, ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT);
         Connection connection = connection(15L, 100L, ConnectionStatus.CONNECTED);
         stubSolutionFlow(request, connection);
+        when(connectionService.getBalance(15L)).thenReturn(balance(15L, new BigDecimal("250.00")));
 
         var response = service.upsertSolution(6L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
                 ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT,
@@ -197,6 +222,24 @@ class ServiceRequestServiceImplTest {
 
         assertEquals("CONNECTED", response.beforeConnectionStatus());
         assertEquals("DISCONNECTED", response.afterConnectionStatus());
+    }
+
+    @Test
+    void upsertSolutionRejectsNonPaymentDisconnectWhenBalanceIsNegative() {
+        ServiceRequest request = requestForSolution(10L, 19L, 100L, ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT);
+        Connection connection = connection(19L, 100L, ConnectionStatus.CONNECTED);
+        stubSolutionFlow(request, connection);
+        when(connectionService.getBalance(19L)).thenReturn(balance(19L, new BigDecimal("-5.00")));
+
+        var ex = assertThrows(BadRequestException.class, () -> service.upsertSolution(10L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT,
+                null,
+                null,
+                null,
+                null
+        )));
+
+        assertEquals("Service disconnection due to non-payment is only allowed when the account balance is LKR 0.00 or above", ex.getMessage());
     }
 
     @Test
@@ -359,6 +402,19 @@ class ServiceRequestServiceImplTest {
         connection.setOrgUnitId(orgUnitId);
         connection.setStatus(status);
         return connection;
+    }
+
+    private ConnectionBalanceRes balance(Long connectionId, BigDecimal currentDue) {
+        return new ConnectionBalanceRes(
+                connectionId,
+                "1170001",
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                currentDue,
+                currentDue,
+                List.of()
+        );
     }
 
     private void stubCloseFlow(ServiceRequest request, ServiceRequestSolution solution, Connection connection) {

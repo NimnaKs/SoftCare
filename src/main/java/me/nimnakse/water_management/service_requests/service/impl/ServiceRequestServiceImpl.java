@@ -23,6 +23,8 @@ import me.nimnakse.water_management.common.util.ValidationUtils;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.connections.dto.response.ConnectionBalanceRes;
+import me.nimnakse.water_management.connections.service.ConnectionService;
 import me.nimnakse.water_management.employees.entity.Employee;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.entity.RevenueAccount;
@@ -125,6 +127,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final SalesInvoiceService salesInvoiceService;
     private final RevenueAccountRepository revenueAccountRepository;
     private final OrganizationAccessService organizationAccessService;
+    private final ConnectionService connectionService;
 
     public ServiceRequestServiceImpl(
             ServiceRequestRepository serviceRequestRepository,
@@ -136,6 +139,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             ServiceRequestMaterialConsumptionRepository materialConsumptionRepository,
             ServiceRequestFeedbackRepository feedbackRepository,
             ConnectionRepository connectionRepository,
+            ConnectionService connectionService,
             EmployeeRepository employeeRepository,
             TariffRepository tariffRepository,
             UtilityBillRepository utilityBillRepository,
@@ -152,6 +156,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         this.materialConsumptionRepository = materialConsumptionRepository;
         this.feedbackRepository = feedbackRepository;
         this.connectionRepository = connectionRepository;
+        this.connectionService = connectionService;
         this.employeeRepository = employeeRepository;
         this.tariffRepository = tariffRepository;
         this.utilityBillRepository = utilityBillRepository;
@@ -629,20 +634,41 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private void validateSolutionRequest(ServiceRequest sr, ServiceRequestSolutionReq request) {
         validateResolutionAllowed(sr.getRequestGroup(), request.resolutionType());
-        if (request.resolutionType() == ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED) {
-            Connection connection = currentConnection(sr);
-            if (connection == null || connection.getStatus() != ConnectionStatus.PENDING) {
-                throw validation("New service connection installed is only allowed for pending connections");
-            }
-        }
+        Connection connection = currentConnection(sr);
         switch (request.resolutionType()) {
-            case NEW_SERVICE_CONNECTION_INSTALLED, SERVICE_RECONNECTED, NEW_METER_REPLACED, METER_REPAIRED -> {
+            case NEW_SERVICE_CONNECTION_INSTALLED -> {
+                ensureConnectionStatus(connection, ConnectionStatus.PENDING, "New service connection installed is only allowed for pending connections");
+                if (!StringUtils.hasText(request.serialNumber())) throw validation("Serial number is required");
+                if (request.meterReading() == null) throw validation("Meter reading is required");
+            }
+            case SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT -> {
+                ensureConnectionStatus(connection, ConnectionStatus.CONNECTED, "Service disconnection due to non-payment is only allowed for connected connections");
+                if (resolveCurrentDue(connection).compareTo(ZERO) < 0) {
+                    throw validation("Service disconnection due to non-payment is only allowed when the account balance is LKR 0.00 or above");
+                }
+            }
+            case SERVICE_DISCONNECTED_UPON_CUSTOMER_REQUEST -> {
+                ensureConnectionStatus(connection, ConnectionStatus.CONNECTED, "Service disconnection upon customer request is only allowed for connected connections");
+                if (resolveCurrentDue(connection).compareTo(ZERO) > 0) {
+                    throw validation("Service disconnection upon customer request is only allowed when the account balance is LKR 0.00 or below");
+                }
+            }
+            case SERVICE_RECONNECTED -> {
+                ensureConnectionStatus(connection, ConnectionStatus.DISCONNECTED, "Service reconnection is only allowed for disconnected connections");
+                if (!StringUtils.hasText(request.serialNumber())) throw validation("Serial number is required");
+                if (request.meterReading() == null) throw validation("Meter reading is required");
+            }
+            case NEW_METER_REPLACED, METER_REPAIRED -> {
+                ensureConnectionStatus(connection, ConnectionStatus.CONNECTED, "This resolution is only allowed for connected connections");
                 if (!StringUtils.hasText(request.serialNumber())) throw validation("Serial number is required");
                 if (request.meterReading() == null) throw validation("Meter reading is required");
             }
             case METER_READING_ADJUSTED -> {
                 if (request.meterReading() == null) throw validation("Meter reading is required");
                 if (!StringUtils.hasText(request.adjustmentDescription())) throw validation("Adjustment description is required");
+            }
+            case SERVICE_LINE_REPAIRED -> {
+                if (!StringUtils.hasText(request.description())) throw validation("Description is required");
             }
             case MAIN_LINE_REPAIRED, OTHER_RESOLUTION -> {
                 if (!StringUtils.hasText(request.description())) throw validation("Description is required");
@@ -781,7 +807,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         switch (solution.getResolutionType()) {
             case NEW_SERVICE_CONNECTION_INSTALLED -> {
                 solution.setBeforeConnectionStatus(ConnectionStatus.PENDING.name());
-                solution.setAfterConnectionStatus(ConnectionStatus.PENDING.name());
+                solution.setAfterConnectionStatus(ConnectionStatus.CONNECTED.name());
                 solution.setBeforeMeterStatus("N/A");
                 solution.setAfterMeterStatus("ACTIVE");
                 solution.setMeterAction(ServiceRequestMeterAction.INSTALLED);
@@ -820,13 +846,14 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 solution.setAfterConnectionStatus(currentConnectionStatus);
                 solution.setBeforeMeterStatus("ACTIVE");
                 solution.setAfterMeterStatus("ACTIVE");
-                solution.setMeterAction(ServiceRequestMeterAction.READ);
+                solution.setMeterAction(ServiceRequestMeterAction.ADJUSTED);
             }
             case SERVICE_LINE_REPAIRED -> {
-                solution.setBeforeConnectionStatus("N/A");
-                solution.setAfterConnectionStatus("N/A");
-                solution.setBeforeMeterStatus("ACTIVE");
-                solution.setAfterMeterStatus("ACTIVE");
+                String currentConnectionStatus = connection == null || connection.getStatus() == null ? "N/A" : connection.getStatus().name();
+                solution.setBeforeConnectionStatus(currentConnectionStatus);
+                solution.setAfterConnectionStatus(currentConnectionStatus);
+                solution.setBeforeMeterStatus("N/A");
+                solution.setAfterMeterStatus("N/A");
                 solution.setMeterAction(ServiceRequestMeterAction.NONE);
             }
             case MAIN_LINE_REPAIRED -> {
@@ -839,8 +866,8 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             case OTHER_RESOLUTION -> {
                 solution.setBeforeConnectionStatus("N/A");
                 solution.setAfterConnectionStatus("N/A");
-                solution.setBeforeMeterStatus("ACTIVE");
-                solution.setAfterMeterStatus("ACTIVE");
+                solution.setBeforeMeterStatus("N/A");
+                solution.setAfterMeterStatus("N/A");
                 solution.setMeterAction(ServiceRequestMeterAction.NONE);
             }
         }
@@ -892,6 +919,12 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
         connection.setStatus(target);
         connectionRepository.save(connection);
+    }
+
+    private void ensureConnectionStatus(Connection connection, ConnectionStatus expected, String message) {
+        if (connection == null || connection.getStatus() != expected) {
+            throw validation(message);
+        }
     }
 
     private BigDecimal resolveReconnectionFee(Long tariffId) {
@@ -946,6 +979,12 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                         request.getOrgUnitId(), UtilityBillStatus.OPEN)
                 .stream()
                 .anyMatch(bill -> Objects.equals(bill.getConnectionId(), request.getConnectionId()));
+    }
+
+    private BigDecimal resolveCurrentDue(Connection connection) {
+        if (connection == null || connection.getId() == null) return ZERO;
+        ConnectionBalanceRes balance = connectionService.getBalance(connection.getId());
+        return balance == null || balance.currentDue() == null ? ZERO : balance.currentDue();
     }
 
     private void replaceWorkOrderEmployees(Long workOrderId, List<Long> employeeIds) {
