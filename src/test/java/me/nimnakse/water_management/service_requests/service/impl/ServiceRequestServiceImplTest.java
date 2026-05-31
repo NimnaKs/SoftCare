@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import me.nimnakse.water_management.connections.entity.Connection;
@@ -14,6 +15,7 @@ import me.nimnakse.water_management.connections.repository.ConnectionRepository;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
+import me.nimnakse.water_management.service_requests.dto.request.ServiceRequestCreateReq;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequest;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestGroup;
 import me.nimnakse.water_management.service_requests.entity.ServiceRequestResolutionType;
@@ -37,6 +39,10 @@ import me.nimnakse.water_management.security.OrganizationAccessService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -190,6 +196,98 @@ class ServiceRequestServiceImplTest {
 
         assertEquals("N/A", response.beforeConnectionStatus());
         assertEquals("N/A", response.afterConnectionStatus());
+    }
+
+    @Test
+    void createAllowsDistributionLineIssueWithoutWaterAccount() {
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(100L);
+        when(serviceRequestRepository.findAll()).thenReturn(List.of());
+        when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stageRepository.save(any(ServiceRequestStage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(timelineRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(new ServiceRequestCreateReq(
+                null,
+                null,
+                ServiceRequestGroup.DISTRIBUTION_LINE_ISSUE,
+                me.nimnakse.water_management.service_requests.entity.ServiceRequestCategory.WATER_SUPPLY_PRESSURE_ISSUES,
+                "Pipe leak on main road",
+                false
+        ));
+
+        assertEquals(ServiceRequestGroup.DISTRIBUTION_LINE_ISSUE, response.requestGroup());
+        assertEquals(null, response.accountNumber());
+    }
+
+    @Test
+    void createAllowsOtherIssueWithoutWaterAccount() {
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(100L);
+        when(serviceRequestRepository.findAll()).thenReturn(List.of());
+        when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stageRepository.save(any(ServiceRequestStage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(timelineRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(new ServiceRequestCreateReq(
+                null,
+                null,
+                ServiceRequestGroup.OTHER_ISSUES,
+                me.nimnakse.water_management.service_requests.entity.ServiceRequestCategory.OTHER,
+                "General issue without connection",
+                false
+        ));
+
+        assertEquals(ServiceRequestGroup.OTHER_ISSUES, response.requestGroup());
+        assertEquals(null, response.accountNumber());
+    }
+
+    @Test
+    void listUsesPageableStatusFilterWhenOrgUnitMissing() {
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        ServiceRequest request = new ServiceRequest();
+        request.setId(99L);
+        request.setTicketNo("SR-000099");
+        request.setOrgUnitId(5L);
+        request.setStatus(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED);
+        request.setRequestGroup(ServiceRequestGroup.CUSTOMER_COMPLAINT);
+        request.setCategory(me.nimnakse.water_management.service_requests.entity.ServiceRequestCategory.OTHER);
+        request.setDescription("Closed request");
+        request.setSavedAt(Instant.parse("2026-05-31T00:00:00Z"));
+        request.setCurrentStage(ServiceRequestStageType.FEEDBACK);
+        Page<ServiceRequest> page = new PageImpl<>(List.of(request), PageRequest.of(0, 20), 1);
+        when(serviceRequestRepository.findByStatusOrderBySavedAtDesc(eq(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED), any(Pageable.class)))
+                .thenReturn(page);
+
+        var response = service.list(0, 20, "CLOSED");
+
+        assertEquals(1, response.totalItems());
+        assertEquals(1, response.totalPages());
+        assertEquals(1, response.items().size());
+        verify(serviceRequestRepository).findByStatusOrderBySavedAtDesc(eq(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED), any(Pageable.class));
+    }
+
+    @Test
+    void listUsesOpenFilterWhenStatusIsOpen() {
+        when(organizationAccessService.resolveOrgUnitId()).thenReturn(null);
+        ServiceRequest request = new ServiceRequest();
+        request.setId(100L);
+        request.setTicketNo("SR-000100");
+        request.setOrgUnitId(5L);
+        request.setStatus(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.SUBMITTED);
+        request.setRequestGroup(ServiceRequestGroup.CUSTOMER_COMPLAINT);
+        request.setCategory(me.nimnakse.water_management.service_requests.entity.ServiceRequestCategory.OTHER);
+        request.setDescription("Open request");
+        request.setSavedAt(Instant.parse("2026-05-31T00:00:00Z"));
+        request.setCurrentStage(ServiceRequestStageType.WORK_ORDER);
+        Page<ServiceRequest> page = new PageImpl<>(List.of(request), PageRequest.of(0, 20), 1);
+        when(serviceRequestRepository.findByStatusNotOrderBySavedAtDesc(eq(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED), any(Pageable.class)))
+                .thenReturn(page);
+
+        var response = service.list(0, 20, "OPEN");
+
+        assertEquals(1, response.totalItems());
+        assertEquals(1, response.totalPages());
+        assertEquals(1, response.items().size());
+        verify(serviceRequestRepository).findByStatusNotOrderBySavedAtDesc(eq(me.nimnakse.water_management.service_requests.entity.ServiceRequestStatus.CLOSED), any(Pageable.class));
     }
 
     @Test

@@ -165,20 +165,24 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     public PageResponse<ServiceRequestListRes> list(int page, int size, String status) {
         Long orgUnitId = organizationAccessService.resolveOrgUnitId();
         Pageable pageable = PageRequest.of(safePage(page), safeSize(size), Sort.by(Sort.Direction.DESC, "savedAt"));
-        ServiceRequestStatus parsedStatus = parseStatus(status);
+        String normalizedStatus = trimToNull(status);
+        boolean openOnly = isOpenFilter(normalizedStatus);
+        ServiceRequestStatus parsedStatus = openOnly ? null : parseStatus(normalizedStatus);
         if (orgUnitId == null) {
-            Page<ServiceRequest> paged = parsedStatus == null
+            Page<ServiceRequest> paged = openOnly
+                    ? serviceRequestRepository.findByStatusNotOrderBySavedAtDesc(ServiceRequestStatus.CLOSED, pageable)
+                    : parsedStatus == null
                     ? serviceRequestRepository.findAll(pageable)
-                    : serviceRequestRepository.findAll(pageable).map(Function.identity());
+                    : serviceRequestRepository.findByStatusOrderBySavedAtDesc(parsedStatus, pageable);
             Map<Long, Connection> connections = loadConnections(paged.getContent());
             List<ServiceRequestListRes> items = paged.getContent().stream()
-                    .filter(sr -> parsedStatus == null || sr.getStatus() == parsedStatus)
                     .map(sr -> toListRes(sr, connections))
                     .toList();
-            return new PageResponse<>(items, parsedStatus == null ? paged.getTotalElements() : items.size(),
-                    parsedStatus == null ? paged.getTotalPages() : 1, paged.getNumber(), paged.getSize());
+            return new PageResponse<>(items, paged.getTotalElements(), paged.getTotalPages(), paged.getNumber(), paged.getSize());
         }
-        Page<ServiceRequest> paged = parsedStatus == null
+        Page<ServiceRequest> paged = openOnly
+                ? serviceRequestRepository.findByOrgUnitIdAndStatusNotOrderBySavedAtDesc(orgUnitId, ServiceRequestStatus.CLOSED, pageable)
+                : parsedStatus == null
                 ? serviceRequestRepository.findByOrgUnitIdOrderBySavedAtDesc(orgUnitId, pageable)
                 : serviceRequestRepository.findByOrgUnitIdAndStatusOrderBySavedAtDesc(orgUnitId, parsedStatus, pageable);
         Map<Long, Connection> connections = loadConnections(paged.getContent());
@@ -1282,6 +1286,10 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         } catch (IllegalArgumentException ex) {
             throw validation("Invalid status: " + value);
         }
+    }
+
+    private boolean isOpenFilter(String value) {
+        return StringUtils.hasText(value) && "OPEN".equalsIgnoreCase(value.trim());
     }
 
     private BigDecimal scale(BigDecimal value) {
