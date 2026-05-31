@@ -1,6 +1,7 @@
 package me.nimnakse.water_management.service_requests.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import me.nimnakse.water_management.connections.entity.Connection;
 import me.nimnakse.water_management.connections.entity.ConnectionStatus;
 import me.nimnakse.water_management.connections.repository.ConnectionRepository;
+import me.nimnakse.water_management.common.exception.BadRequestException;
 import me.nimnakse.water_management.employees.repository.EmployeeRepository;
 import me.nimnakse.water_management.revenue.accounts.repository.RevenueAccountRepository;
 import me.nimnakse.water_management.sales.invoices.service.SalesInvoiceService;
@@ -159,7 +161,24 @@ class ServiceRequestServiceImplTest {
         ));
 
         assertEquals("PENDING", response.beforeConnectionStatus());
-        assertEquals("CONNECTED", response.afterConnectionStatus());
+        assertEquals("PENDING", response.afterConnectionStatus());
+    }
+
+    @Test
+    void upsertSolutionRejectsNewInstallWhenConnectionIsNotPending() {
+        ServiceRequest request = requestForSolution(8L, 17L, 100L, ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED);
+        Connection connection = connection(17L, 100L, ConnectionStatus.CONNECTED);
+        stubSolutionFlow(request, connection);
+
+        var ex = assertThrows(BadRequestException.class, () -> service.upsertSolution(8L, null, new me.nimnakse.water_management.service_requests.dto.request.ServiceRequestSolutionReq(
+                ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED,
+                "SYS-1234567890",
+                1,
+                null,
+                null
+        )));
+
+        assertEquals("New service connection installed is only allowed for pending connections", ex.getMessage());
     }
 
     @Test

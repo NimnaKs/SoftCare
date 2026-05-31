@@ -629,6 +629,12 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private void validateSolutionRequest(ServiceRequest sr, ServiceRequestSolutionReq request) {
         validateResolutionAllowed(sr.getRequestGroup(), request.resolutionType());
+        if (request.resolutionType() == ServiceRequestResolutionType.NEW_SERVICE_CONNECTION_INSTALLED) {
+            Connection connection = currentConnection(sr);
+            if (connection == null || connection.getStatus() != ConnectionStatus.PENDING) {
+                throw validation("New service connection installed is only allowed for pending connections");
+            }
+        }
         switch (request.resolutionType()) {
             case NEW_SERVICE_CONNECTION_INSTALLED, SERVICE_RECONNECTED, NEW_METER_REPLACED, METER_REPAIRED -> {
                 if (!StringUtils.hasText(request.serialNumber())) throw validation("Serial number is required");
@@ -775,7 +781,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         switch (solution.getResolutionType()) {
             case NEW_SERVICE_CONNECTION_INSTALLED -> {
                 solution.setBeforeConnectionStatus(ConnectionStatus.PENDING.name());
-                solution.setAfterConnectionStatus(ConnectionStatus.CONNECTED.name());
+                solution.setAfterConnectionStatus(ConnectionStatus.PENDING.name());
                 solution.setBeforeMeterStatus("N/A");
                 solution.setAfterMeterStatus("ACTIVE");
                 solution.setMeterAction(ServiceRequestMeterAction.INSTALLED);
@@ -877,7 +883,8 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         if (connection == null) return;
 
         ConnectionStatus target = switch (solution.getResolutionType()) {
-            case NEW_SERVICE_CONNECTION_INSTALLED, SERVICE_RECONNECTED -> ConnectionStatus.CONNECTED;
+            case NEW_SERVICE_CONNECTION_INSTALLED -> ConnectionStatus.CONNECTED;
+            case SERVICE_RECONNECTED -> ConnectionStatus.CONNECTED;
             case SERVICE_DISCONNECTED_DUE_TO_NON_PAYMENT, SERVICE_DISCONNECTED_UPON_CUSTOMER_REQUEST -> ConnectionStatus.DISCONNECTED;
             default -> connection.getStatus();
         };
